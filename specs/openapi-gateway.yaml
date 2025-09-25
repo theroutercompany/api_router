@@ -1,0 +1,114 @@
+openapi: 3.1.0
+info:
+  title: API Router Gateway
+  version: 0.1.0
+  description: |
+    Control plane endpoints exposed by the API Router gateway for health, readiness, and metadata.
+servers:
+  - url: https://api.routers.systems
+    description: Production
+  - url: http://localhost:3000
+    description: Local development
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      description: Returns current uptime and build metadata so monitors can confirm the process is alive.
+      tags:
+        - Gateway
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+  /readyz:
+    get:
+      summary: Readiness probe
+      description: Reports readiness status for the gateway and its upstream dependencies.
+      tags:
+        - Gateway
+      responses:
+        '200':
+          description: Gateway is ready to serve traffic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessReport'
+        '503':
+          description: Gateway is degraded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessReport'
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required:
+        - status
+        - uptime
+        - timestamp
+      properties:
+        status:
+          type: string
+          example: ok
+        uptime:
+          type: number
+          format: float
+          example: 42.5
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          nullable: true
+          example: 3d08721
+    ReadinessReport:
+      type: object
+      required:
+        - status
+        - checkedAt
+        - upstreams
+      properties:
+        status:
+          type: string
+          enum: [ready, degraded]
+          example: ready
+        checkedAt:
+          type: string
+          format: date-time
+        upstreams:
+          type: array
+          items:
+            $ref: '#/components/schemas/UpstreamProbe'
+        requestId:
+          type: string
+          example: 5ec0d8ba-5d20-4b78-9c92-43f80663f95e
+        traceId:
+          type: string
+          example: 5ec0d8ba-5d20-4b78-9c92-43f80663f95e
+    UpstreamProbe:
+      type: object
+      required:
+        - name
+        - healthy
+        - checkedAt
+      properties:
+        name:
+          type: string
+          enum: [trade, task]
+        healthy:
+          type: boolean
+        statusCode:
+          type: integer
+          minimum: 100
+          maximum: 599
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        checkedAt:
+          type: string
+          format: date-time

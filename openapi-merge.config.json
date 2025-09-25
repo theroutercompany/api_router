@@ -1,0 +1,8 @@
+{
+  "inputs": [
+    { "inputFile": "./specs/openapi-gateway.yaml" },
+    { "inputFile": "./specs/openapi-trade.yaml" },
+    { "inputFile": "./specs/openapi-task.yaml" }
+  ],
+  "output": "./dist/openapi.json"
+}

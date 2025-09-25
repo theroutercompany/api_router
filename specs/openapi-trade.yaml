@@ -1,0 +1,63 @@
+openapi: 3.1.0
+info:
+  title: Trade Router Proxy
+  version: 1.0.0
+  description: Forwarding contract for trade-prefixed routes served by the gateway.
+paths:
+  /v1/trade/{proxyPath}:
+    parameters:
+      - name: proxyPath
+        in: path
+        description: Remaining path segments forwarded to the trade service.
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Forward trade read requests
+      description: Forwards GET requests to the trade upstream and streams the response back to the client.
+      tags:
+        - Trade
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response from the upstream trade service.
+        '401':
+          description: Missing or invalid bearer token.
+        '403':
+          description: Caller lacks required trade scopes.
+        '502':
+          description: Upstream trade service is unavailable.
+    post:
+      summary: Forward trade mutating requests
+      description: Forwards non-idempotent trade requests (e.g. POST) to the upstream service with idempotency handled by the caller.
+      tags:
+        - Trade
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: JSON payload forwarded to the trade backend.
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Resource created by the trade backend.
+        '202':
+          description: Request accepted for asynchronous processing.
+        '400':
+          description: Upstream validation failed.
+        '401':
+          description: Missing or invalid bearer token.
+        '403':
+          description: Caller lacks required trade scopes.
+        '502':
+          description: Upstream trade service is unavailable.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

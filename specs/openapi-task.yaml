@@ -1,0 +1,61 @@
+openapi: 3.1.0
+info:
+  title: Task Router Proxy
+  version: 1.0.0
+  description: Forwarding contract for task-prefixed routes served by the gateway.
+paths:
+  /v1/task/{proxyPath}:
+    parameters:
+      - name: proxyPath
+        in: path
+        description: Remaining path segments forwarded to the task orchestrator service.
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Forward task read requests
+      description: Forwards GET requests to the task upstream and streams the response back to the client.
+      tags:
+        - Task
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Successful response from the upstream task service.
+        '401':
+          description: Missing or invalid bearer token.
+        '403':
+          description: Caller lacks required task scopes.
+        '502':
+          description: Upstream task service is unavailable.
+    post:
+      summary: Forward task mutating requests
+      description: Forwards POST requests to the task orchestrator, preserving JSON bodies and headers.
+      tags:
+        - Task
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: JSON payload forwarded to the task backend.
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '202':
+          description: Request accepted by the task pipeline.
+        '400':
+          description: Upstream validation failed.
+        '401':
+          description: Missing or invalid bearer token.
+        '403':
+          description: Caller lacks required task scopes.
+        '502':
+          description: Upstream task service is unavailable.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

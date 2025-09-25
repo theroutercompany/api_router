@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: api-router-gateway
+    env: docker
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - fromGroup: api-router-gateway
