@@ -1,9 +1,31 @@
+envVarGroups:
+  - name: api-router-gateway
+    envVars:
+      - key: TRADE_API_URL
+        value: https://trade-router-api.onrender.com
+      - key: TASK_API_URL
+        value: https://task-router-api.onrender.com
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_AUDIENCE
+        value: routers-api
+      - key: JWT_ISSUER
+        value: https://id.routers.systems
+      - key: READINESS_TIMEOUT_MS
+        value: 2000
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 60000
+      - key: RATE_LIMIT_MAX
+        value: 120
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://trade.routers.systems,https://task.routers.systems
+
 services:
   - type: web
     name: api-router-gateway
     env: docker
     plan: starter
-    healthCheckPath: /health
+    healthCheckPath: /readyz
     autoDeploy: true
     envVars:
       - key: NODE_ENV

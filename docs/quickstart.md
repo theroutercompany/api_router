@@ -7,6 +7,7 @@
 5. Generate the HTML API reference: `npm run openapi:docs` (writes `docs/openapi.html`).
 6. Run type safety, linting, and tests: `npm run typecheck`, `npm run lint`, `npm test`.
 7. Use Docker locally to mirror Render: `docker compose up api-gateway` (add Compose file).
+8. Deploy with Render by applying `render.yaml` (see `docs/deployment.md`).
 
 ## Environment variables
 
