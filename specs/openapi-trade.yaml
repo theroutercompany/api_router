@@ -23,11 +23,11 @@ paths:
         '200':
           description: Successful response from the upstream trade service.
         '401':
-          description: Missing or invalid bearer token.
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: Caller lacks required trade scopes.
+          $ref: '#/components/responses/ForbiddenError'
         '502':
-          description: Upstream trade service is unavailable.
+          $ref: '#/components/responses/BadGatewayError'
     post:
       summary: Forward trade mutating requests
       description: Forwards non-idempotent trade requests (e.g. POST) to the upstream service with idempotency handled by the caller.
@@ -48,16 +48,100 @@ paths:
         '202':
           description: Request accepted for asynchronous processing.
         '400':
-          description: Upstream validation failed.
+          $ref: '#/components/responses/BadRequestError'
         '401':
-          description: Missing or invalid bearer token.
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: Caller lacks required trade scopes.
+          $ref: '#/components/responses/ForbiddenError'
         '502':
-          description: Upstream trade service is unavailable.
+          $ref: '#/components/responses/BadGatewayError'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    ProblemJson:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+          example: Authentication Required
+        status:
+          type: integer
+          example: 401
+        detail:
+          type: string
+          example: Missing Authorization header
+        instance:
+          type: string
+          format: uri
+          nullable: true
+        traceId:
+          type: string
+          example: 2ad1d935-6a7a-4c44-8e7d-719040ea74f0
+  responses:
+    UnauthorizedError:
+      description: Missing or invalid bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemJson'
+          examples:
+            missingToken:
+              value:
+                type: about:blank
+                title: Authentication Required
+                status: 401
+                detail: Missing Authorization header
+                traceId: 2ad1d935-6a7a-4c44-8e7d-719040ea74f0
+    ForbiddenError:
+      description: Caller lacks required trade scopes.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemJson'
+          examples:
+            scopeMismatch:
+              value:
+                type: about:blank
+                title: Insufficient Scope
+                status: 403
+                detail: trade.write scope required
+                traceId: 10b8f2bf-8f64-449b-a1eb-b0abf3b3c556
+    BadGatewayError:
+      description: Upstream trade service is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemJson'
+          examples:
+            upstreamDown:
+              value:
+                type: about:blank
+                title: Upstream Service Unavailable
+                status: 502
+                detail: Failed to reach trade service
+                traceId: 891d7efd-a5c1-4b4f-9649-93aefc3662b5
+    BadRequestError:
+      description: Upstream validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemJson'
+          examples:
+            validationError:
+              value:
+                type: about:blank
+                title: Bad Request
+                status: 400
+                detail: Missing required field `id`
+                traceId: b3bf8b06-3fac-4358-9955-4d6653b6f30a

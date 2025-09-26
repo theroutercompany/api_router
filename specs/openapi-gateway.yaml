@@ -23,6 +23,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthStatus'
+              examples:
+                healthy:
+                  summary: Sample uptime response
+                  value:
+                    status: ok
+                    uptime: 12.45
+                    timestamp: '2025-09-26T19:40:00.000Z'
+                    version: 3d08721
   /readyz:
     get:
       summary: Readiness probe
@@ -36,12 +44,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReadinessReport'
+              examples:
+                ready:
+                  summary: All upstreams healthy
+                  value:
+                    status: ready
+                    checkedAt: '2025-09-26T19:40:00.000Z'
+                    upstreams:
+                      - name: trade
+                        healthy: true
+                        statusCode: 200
+                        checkedAt: '2025-09-26T19:39:59.000Z'
+                      - name: task
+                        healthy: true
+                        statusCode: 200
+                        checkedAt: '2025-09-26T19:39:59.000Z'
+                    requestId: 5ec0d8ba-5d20-4b78-9c92-43f80663f95e
+                    traceId: 5ec0d8ba-5d20-4b78-9c92-43f80663f95e
         '503':
           description: Gateway is degraded
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ReadinessReport'
+              examples:
+                degraded:
+                  summary: Task upstream is failing
+                  value:
+                    status: degraded
+                    checkedAt: '2025-09-26T19:40:00.000Z'
+                    upstreams:
+                      - name: trade
+                        healthy: true
+                        statusCode: 200
+                        checkedAt: '2025-09-26T19:39:59.000Z'
+                      - name: task
+                        healthy: false
+                        statusCode: 503
+                        error: 'Health check failed with status 503'
+                        checkedAt: '2025-09-26T19:39:59.000Z'
+                    requestId: 4fb2030d-9fc2-4fd7-8c3c-29ddab685589
+                    traceId: 4fb2030d-9fc2-4fd7-8c3c-29ddab685589
 components:
   schemas:
     HealthStatus:

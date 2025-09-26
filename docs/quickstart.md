@@ -1,7 +1,7 @@
 # Quickstart
 
 1. Install dependencies: `npm install` (Node 18.18+).
-2. Copy the example environment variables: `cp .env.example .env` (or export `JWT_SECRET`, `JWT_AUDIENCE`, `JWT_ISSUER`).
+2. Copy the example environment variables: `cp .env.example .env` and adjust URLs/secrets for your setup.
 3. Launch the development server: `npm run dev`.
 4. Build artifacts for production: `npm run build` (outputs to `dist/`).
 5. Generate the HTML API reference: `npm run openapi:docs` (writes `docs/openapi.html`).
@@ -25,7 +25,7 @@
 | `READINESS_TIMEOUT_MS` | No | Timeout per upstream probe (default `2000`). |
 | `RATE_LIMIT_WINDOW_MS` | No | Rate limit window in ms (default `60000`). |
 | `RATE_LIMIT_MAX` | No | Requests allowed per window (default `120`). |
-| `CORS_ALLOWED_ORIGINS` | No | Comma-separated origin safelist (`*` = allow all). |
+| `CORS_ALLOWED_ORIGINS` | No | Comma-separated origin safelist (`*` = allow all, defaults to `http://localhost:3000`). |
 
 ## Next steps
 

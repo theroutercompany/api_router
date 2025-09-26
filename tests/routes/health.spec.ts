@@ -41,9 +41,14 @@ describe('GET /readyz', () => {
     const body = response.body as {
       status: string;
       upstreams: { healthy: boolean }[];
+      requestId?: string;
+      traceId?: string;
     };
 
     expect(response.status).toBe(200);
+    expect(response.headers['x-request-id']).toBeDefined();
+    expect(body.requestId).toBe(response.headers['x-request-id']);
+    expect(body.traceId).toBeTruthy();
     expect(body.status).toBe('ready');
     expect(body.upstreams).toHaveLength(2);
     expect(body.upstreams.every((u) => u.healthy)).toBe(true);
@@ -59,9 +64,14 @@ describe('GET /readyz', () => {
     const body = response.body as {
       status: string;
       upstreams: { healthy: boolean }[];
+      requestId?: string;
+      traceId?: string;
     };
 
     expect(response.status).toBe(503);
+    expect(response.headers['x-request-id']).toBeDefined();
+    expect(body.requestId).toBe(response.headers['x-request-id']);
+    expect(body.traceId).toBeTruthy();
     expect(body.status).toBe('degraded');
     expect(body.upstreams.some((u) => !u.healthy)).toBe(true);
   });

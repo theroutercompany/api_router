@@ -23,11 +23,11 @@ paths:
         '200':
           description: Successful response from the upstream task service.
         '401':
-          description: Missing or invalid bearer token.
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: Caller lacks required task scopes.
+          $ref: '#/components/responses/ForbiddenError'
         '502':
-          description: Upstream task service is unavailable.
+          $ref: '#/components/responses/BadGatewayError'
     post:
       summary: Forward task mutating requests
       description: Forwards POST requests to the task orchestrator, preserving JSON bodies and headers.
@@ -46,16 +46,100 @@ paths:
         '202':
           description: Request accepted by the task pipeline.
         '400':
-          description: Upstream validation failed.
+          $ref: '#/components/responses/BadRequestError'
         '401':
-          description: Missing or invalid bearer token.
+          $ref: '#/components/responses/UnauthorizedError'
         '403':
-          description: Caller lacks required task scopes.
+          $ref: '#/components/responses/ForbiddenError'
         '502':
-          description: Upstream task service is unavailable.
+          $ref: '#/components/responses/BadGatewayError'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    ProblemJson:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+          example: Authentication Required
+        status:
+          type: integer
+          example: 401
+        detail:
+          type: string
+          example: Missing Authorization header
+        instance:
+          type: string
+          format: uri
+          nullable: true
+        traceId:
+          type: string
+          example: 4a95d1b0-bc6b-4645-95f9-0d8f5cbbf671
+  responses:
+    UnauthorizedError:
+      description: Missing or invalid bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemJson'
+          examples:
+            missingToken:
+              value:
+                type: about:blank
+                title: Authentication Required
+                status: 401
+                detail: Missing Authorization header
+                traceId: 4a95d1b0-bc6b-4645-95f9-0d8f5cbbf671
+    ForbiddenError:
+      description: Caller lacks required task scopes.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemJson'
+          examples:
+            scopeMismatch:
+              value:
+                type: about:blank
+                title: Insufficient Scope
+                status: 403
+                detail: task.write scope required
+                traceId: 6c7c1d80-7657-4a5a-9ea4-b5b2db577c96
+    BadGatewayError:
+      description: Upstream task service is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemJson'
+          examples:
+            upstreamDown:
+              value:
+                type: about:blank
+                title: Upstream Service Unavailable
+                status: 502
+                detail: Failed to reach task service
+                traceId: 694b69c0-e4a4-4d2f-8a74-71b5bdf0a4cb
+    BadRequestError:
+      description: Upstream validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ProblemJson'
+          examples:
+            validationError:
+              value:
+                type: about:blank
+                title: Bad Request
+                status: 400
+                detail: Missing required field `name`
+                traceId: 9b2a1d58-8c95-4f84-9c72-1dae3d1f4f2a
