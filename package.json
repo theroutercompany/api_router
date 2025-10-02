@@ -18,6 +18,7 @@
     "dev": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only --ignore-watch node_modules -- src/server.ts",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
     "lint:fix": "npm run lint -- --fix",
+    "lint:go": "docker run --rm -v \"${PWD}:/workspace\" -w /workspace golangci/golangci-lint:v1.60.3 golangci-lint run ./...",
     "shadowdiff:capture": "node scripts/shadowdiff-capture.mjs",
     "shadowdiff:ci": "./scripts/shadowdiff-run.sh",
     "prepare": "husky",
