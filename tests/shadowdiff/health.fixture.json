@@ -1,0 +1,11 @@
+[
+  {
+    "name": "health-ok",
+    "method": "GET",
+    "path": "/health",
+    "headers": {
+      "x-request-id": "shadow-123"
+    },
+    "expectStatus": 200
+  }
+]

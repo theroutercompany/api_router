@@ -1,0 +1,11 @@
+[
+  {
+    "name": "readiness-ok",
+    "method": "GET",
+    "path": "/readyz",
+    "headers": {
+      "x-request-id": "shadow-readiness"
+    },
+    "expectStatus": 200
+  }
+]

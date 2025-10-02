@@ -1,0 +1,12 @@
+[
+  {
+    "name": "task-sync",
+    "method": "GET",
+    "path": "/v1/task/sync",
+    "headers": {
+      "x-request-id": "shadow-task",
+      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzaGFkb3ctdXNlciIsImV4cCI6MTg5MzQ1NjAwMCwic2NvcGUiOiJ0YXNrLnJlYWQgdGFzay53cml0ZSJ9.8fVBIgx_Sukot889tm9CuuJlh7DO7Z158EJMGG6yw3c"
+    },
+    "expectStatus": 200
+  }
+]

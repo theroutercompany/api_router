@@ -18,6 +18,8 @@
     "dev": "cross-env NODE_ENV=development ts-node-dev --respawn --transpile-only --ignore-watch node_modules -- src/server.ts",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"tests/**/*.ts\"",
     "lint:fix": "npm run lint -- --fix",
+    "shadowdiff:capture": "node scripts/shadowdiff-capture.mjs",
+    "shadowdiff:ci": "./scripts/shadowdiff-run.sh",
     "prepare": "husky",
     "test": "cross-env NODE_ENV=test jest",
     "test:watch": "npm run test -- --watch",
