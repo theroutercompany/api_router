@@ -1,23 +1,29 @@
 # syntax=docker/dockerfile:1
 
-FROM node:20-alpine AS builder
+FROM golang:1.22-alpine AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY go.mod go.sum ./
+RUN go mod download
 
-COPY . .
-RUN npm run build
-RUN npm prune --omit=dev
+COPY cmd ./cmd
+COPY internal ./internal
+COPY pkg ./pkg
+COPY openapi-merge.config.json ./
+COPY specs ./specs
 
-FROM node:20-alpine AS runner
-ENV NODE_ENV=production
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/gateway ./cmd/gateway
+RUN mkdir -p /app/dist && chmod 0777 /app/dist
+
+FROM gcr.io/distroless/base-debian12
 WORKDIR /app
 
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/package-lock.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /out/gateway /usr/local/bin/gateway
+COPY --from=builder /app/openapi-merge.config.json ./openapi-merge.config.json
+COPY --from=builder /app/specs ./specs
 COPY --from=builder /app/dist ./dist
 
-EXPOSE 3000
-CMD ["node", "dist/server.js"]
+ENV PORT=8080
+EXPOSE 8080
+
+ENTRYPOINT ["/usr/local/bin/gateway"]

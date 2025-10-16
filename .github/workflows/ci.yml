@@ -7,42 +7,42 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v5
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          node-version: '20'
-          cache: 'npm'
+          go-version: '1.22'
+          cache-dependency-path: go.sum
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Ensure gofmt formatting
+        run: |
+          files=$(gofmt -l ./cmd ./internal ./pkg)
+          if [ -n "$files" ]; then
+            echo "Go files not formatted:" >&2
+            echo "$files" >&2
+            exit 1
+          fi
+
+      - name: Run tests
+        run: go test ./...
 
       - name: Lint
-        run: npm run lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60.3
+          args: ./...
 
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
-
-      - name: Build OpenAPI specification and docs
-        run: npm run openapi:docs
+      - name: Generate OpenAPI document
+        run: go run ./cmd/openapi --out dist/openapi.json
 
       - name: Upload OpenAPI artifact
         uses: actions/upload-artifact@v4
         with:
           name: openapi-spec
           path: dist/openapi.json
-
-      - name: Upload OpenAPI HTML docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: openapi-docs
-          path: docs/openapi.html

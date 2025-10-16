@@ -273,13 +273,17 @@ app.listen(port, () => console.log(`api-router listening on :${port}`));
 
 **Dockerfile**
 ```dockerfile
-FROM node:20-alpine
+FROM golang:1.22-alpine AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
+COPY go.mod go.sum ./
+RUN go mod download
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /gateway ./cmd/gateway
+
+FROM gcr.io/distroless/base-debian12
+COPY --from=build /gateway /usr/local/bin/gateway
 EXPOSE 8080
-CMD ["node", "dist/server.js"]
+ENTRYPOINT ["/usr/local/bin/gateway"]
 ```
 
 ### Option B — **Caddy** (simple reverse proxy + headers)

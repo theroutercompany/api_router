@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-NODE_BASE_URL="${NODE_BASE_URL:-http://127.0.0.1:3000}"
+NODE_BASE_URL="${NODE_BASE_URL:-}"
 GO_BASE_URL="${GO_BASE_URL:-http://127.0.0.1:8080}"
 TRADE_URL="${TRADE_API_URL:-http://127.0.0.1:4001}"
 TASK_URL="${TASK_API_URL:-http://127.0.0.1:4002}"
-NODE_PORT="${NODE_PORT:-3000}"
 GO_PORT="${GO_PORT:-8080}"
 JWT_SECRET="${JWT_SECRET:-shadowdiff-secret-key-0123456789abcdef}"
+CONFIG_PATH="${SHADOWDIFF_CONFIG:-shadowdiff.config.example.json}"
 
 cleanup() {
   echo "[shadowdiff] cleaning up"
-  for pid in "${GO_PID:-}" "${NODE_PID:-}" "${UPSTREAM_PID:-}"; do
-    if [[ -n "$pid" ]]; then
+  for pid in "${GO_PID:-}" "${UPSTREAM_PID:-}"; do
+    if [[ -n "${pid:-}" ]]; then
       kill "$pid" >/dev/null 2>&1 || true
     fi
   done
@@ -20,7 +20,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-function wait_for() {
+wait_for() {
   local url="$1"
   for _ in {1..30}; do
     if curl -skf "$url" >/dev/null 2>&1; then
@@ -33,26 +33,9 @@ function wait_for() {
 }
 
 echo "[shadowdiff] starting mock upstreams"
-node tests/shadowdiff/mock-upstreams.mjs &
+node shadowdiff/mock-upstreams.mjs &
 UPSTREAM_PID=$!
 sleep 1
-
-echo "[shadowdiff] building Node gateway"
-npm run build >/dev/null
-
-echo "[shadowdiff] starting Node gateway"
-PORT="$NODE_PORT" \
-NODE_ENV=test \
-TRADE_API_URL="$TRADE_URL" \
-TASK_API_URL="$TASK_URL" \
-TRADE_HEALTH_PATH=/health \
-TASK_HEALTH_PATH=/health \
-READINESS_TIMEOUT_MS=1000 \
-JWT_SECRET="$JWT_SECRET" \
-node dist/server.js >/tmp/shadowdiff-node.log 2>&1 &
-NODE_PID=$!
-
-wait_for "$NODE_BASE_URL/health"
 
 echo "[shadowdiff] starting Go gateway"
 PORT="$GO_PORT" \
@@ -67,5 +50,31 @@ GO_PID=$!
 
 wait_for "$GO_BASE_URL/health"
 
-echo "[shadowdiff] running shadow diff"
-go run ./cmd/shadowdiff --config shadowdiff.config.example.json
+if [[ -z "$NODE_BASE_URL" ]]; then
+  echo "[shadowdiff] NODE_BASE_URL not provided; skipping diff run"
+  exit 0
+fi
+
+echo "[shadowdiff] running shadow diff against ${NODE_BASE_URL}"
+tmp_config=$(mktemp)
+trap 'rm -f "$tmp_config"; cleanup' EXIT
+
+NODE_BASE_URL="$NODE_BASE_URL" \
+GO_BASE_URL="$GO_BASE_URL" \
+CONFIG_PATH="$CONFIG_PATH" \
+TMP_CONFIG="$tmp_config" \
+python - <<'PY'
+import json, os, sys
+config_path = os.environ["CONFIG_PATH"]
+node_base = os.environ["NODE_BASE_URL"]
+go_base = os.environ["GO_BASE_URL"]
+tmp_path = os.environ["TMP_CONFIG"]
+with open(config_path, "r", encoding="utf-8") as f:
+    cfg = json.load(f)
+cfg["nodeBaseUrl"] = node_base
+cfg["goBaseUrl"] = go_base
+with open(tmp_path, "w", encoding="utf-8") as f:
+    json.dump(cfg, f)
+PY
+
+go run ./cmd/shadowdiff --config "$tmp_config"

@@ -1,35 +1,35 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Primary runtime code lives in `src/`; Express wiring sits in `src/app.ts` and lifecycle controls in `src/server.ts`.
-- Keep domain code grouped: configs (`src/config/`), middlewares (`src/middlewares/`), routes (`src/routes/`), services (`src/services/`), shared utilities (`src/lib/`), and shared types (`src/types/`).
-- OpenAPI fragments reside in `specs/`; the merged schema is emitted to `dist/openapi.json` during builds. Treat everything in `dist/` as disposable output.
-- Tests mirror the source tree under `tests/` (e.g., `tests/routes/health.spec.ts`); reuse fixtures across suites instead of duplicating data.
+- Runtime code lives in `cmd/` and `internal/`. The HTTP server entrypoint is `cmd/gateway/main.go`; supporting packages are grouped by concern under `internal/` (configuration, auth, http, platform, openapi).
+- Shared libraries that might be reused live in `pkg/` (e.g., logging, metrics).
+- OpenAPI fragments sit under `specs/`; the merged document is emitted to `dist/openapi.json` via `cmd/openapi`.
+- Shadow diff fixtures and mock upstream helpers now reside in `shadowdiff/`.
 
 ## Build, Test, and Development Commands
-- `npm run dev` launches ts-node-dev with hot reload for local iteration.
-- `npm run build` cleans `dist/`, compiles TypeScript, and regenerates the merged OpenAPI document.
-- `npm run start` runs the compiled bundle for production-style verification.
-- `npm run lint` (or `npm run lint -- --fix`) enforces ESLint + Prettier; `npm run typecheck` executes `tsc --noEmit`.
-- `npm test` executes the Jest suite; filter with `npm test -- --grep "trade"` when focusing on trade flows.
+- `go run ./cmd/gateway` boots the gateway locally.
+- `go run ./cmd/openapi --out dist/openapi.json` regenerates the merged OpenAPI document.
+- `go test ./...` exercises unit and integration tests.
+- `golangci-lint run ./...` matches the CI lint/static-analysis checks.
+- `scripts/smoke/smoke.sh` performs smoke checks against a running instance (set `SMOKE_JWT` to cover proxy calls).
+- `scripts/shadowdiff-run.sh` spins up mock upstreams, runs the Go gateway, and—when `NODE_BASE_URL` is provided—compares responses against a reference Node deployment.
 
 ## Coding Style & Naming Conventions
-- TypeScript only with `noImplicitAny`; prefer explicit, narrow types for public surfaces.
-- Follow Prettier defaults: 2-space indentation, single quotes, trailing commas.
-- Order imports by external packages, then `src/` aliases, then relatives.
-- Use camelCase for variables/functions, PascalCase for classes/types, UPPER_SNAKE_CASE for shared constants and env keys.
+- Go modules target Go 1.22; keep code `gofmt`/`goimports` clean and pass `golangci-lint`.
+- Use package-oriented organization (nouns for packages, verbs for functions). Export only what downstream packages require.
+- Prefer explicit types over `interface{}`; stick to standard Go error handling with wrapped context where it aids debugging.
 
 ## Testing Guidelines
-- Jest with Supertest asserts HTTP behavior; avoid mocking the shared Pino logger or upstream integrations without cause.
-- Name specs after their route or feature (`describe('/v1/task/sync', ...)`) and place them alongside targets in `tests/`.
-- Run `npm test` before pushing; add focused cases whenever you change routes/services and keep fixtures realistic.
+- Add Go unit tests for new functionality and update existing cases when changing behaviour (`go test ./...`).
+- Maintain shadow diff fixtures under `shadowdiff/fixtures/` to guard behaviour regressions across trade/task flows.
+- Keep mock upstreams (`shadowdiff/mock-upstreams.mjs`) in sync with real upstream behaviour so local parity checks remain meaningful.
 
 ## Commit & Pull Request Guidelines
-- Use Conventional Commits (`feat(proxy): add task router`) to keep history scannable.
-- PRs should summarize the change, list validation commands (`npm run lint`, `npm run typecheck`, `npm test`), link related issues, and include payload samples for API updates.
-- Flag breaking changes early and scope diffs to a single feature.
+- Use Conventional Commit messages (e.g., `feat(gateway): add readiness metrics`).
+- Include test and lint commands in PR descriptions (`go test ./...`, `golangci-lint run ./...`, optional `scripts/shadowdiff-run.sh`).
+- Flag operational or API-affecting changes early and document manual validation steps.
 
 ## Security & Configuration Tips
-- Configure `TRADE_API_URL`, `TASK_API_URL`, `CORS_ALLOWED_ORIGINS`, and `JWT_SECRET` per environment.
-- Health checks must confirm upstream APIs return HTTP 200 before reporting ready.
-- Strip hop-by-hop headers and avoid logging secrets; rely on the shared Pino logger for structured output.
+- Configure `TRADE_API_URL`, `TASK_API_URL`, `CORS_ALLOWED_ORIGINS`, `JWT_SECRET`, and related auth settings per environment.
+- Readiness checks must confirm upstream 200 responses before reporting `ready`.
+- Avoid logging secrets; use the shared Zap-based logger for structured fields. Strip/avoid hop-by-hop headers when proxying.

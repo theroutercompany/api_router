@@ -1,20 +1,20 @@
 # Security Posture
 
 ## Dependencies
-- `npm audit --omit=dev` (Sep 26, 2025) reports **0 vulnerabilities**.
-- Dependabot tracks npm and GitHub Actions updates weekly/monthly; review generated PRs promptly and patch `express`, `helmet`, and `http-proxy-middleware` as priority.
+- `go list -m -u all` and `go mod tidy` should be reviewed regularly; Dependabot tracks Go module updates via PRs.
+- `golangci-lint` runs in CI to catch obvious issues (unchecked errors, vet findings, etc.). Consider enabling additional analyzers for auth/crypto-sensitive changes.
 
 ## HTTP Hardening
-- `helmet()` applies baseline headers (CSP, HSTS, X-Frame-Options, etc.).
-- Rate limiting defaults to 120 requests/minute; tune `RATE_LIMIT_MAX` per environment.
-- `cors` safelists origins via `CORS_ALLOWED_ORIGINS`; `*` opens access intentionally only in dev.
-- `requestContext` assigns `x-request-id`/`x-trace-id` and echoes existing values, enabling trace propagation without leaking sensitive data.
+- The gateway injects `X-Request-Id`/`X-Trace-Id` and enforces per-client rate limits; tune `RATE_LIMIT_MAX` and `RATE_LIMIT_WINDOW_MS` per environment.
+- `CORS_ALLOWED_ORIGINS` controls origin access (`*` should be avoided outside local development).
+- Add header hardening (HSTS, frame/response headers) in the Go middleware stack if upstream load balancers do not already enforce them.
 
 ## Auth & Proxying
-- JWT validation lives in `src/middlewares/authentication.ts`; scopes enforced separately for trade/task proxies.
-- Proxy failures return RFC 7807 problem+json with trace IDs; hop-by-hop headers are stripped by `http-proxy-middleware` defaults.
-- Sensitive headers (`authorization`, `cookie`) are not logged because Pino attaches only safe metadata by default.
+- JWT validation lives in `internal/auth`; scopes are enforced per proxy via `buildProtectedHandler`.
+- Proxy failures return RFC 7807 problem+json with trace IDs; ensure upstream error responses keep tokens and secrets out of logs.
+- Structured logging defaults to Zap. Avoid logging bearer tokens or opaque identifiers; use `Infow`/`Errorw` with redacted fields when necessary.
 
 ## Recommended Follow-ups
-1. Configure log shipping to redact `authorization` explicitly if downstream processors expand the payload.
-2. Add security scanning (Snyk or npm audit CI gate) to the GitHub workflow to block vulnerable deps.
+1. Configure centralized log shipping with field redaction for `authorization` and similar headers.
+2. Add HTTP security headers (CSP/HSTS) to the Go middleware to replace the coverage previously provided by Express Helmet.
+3. Extend integration tests to confirm hop-by-hop headers are stripped and sensitive headers never echoed back to clients.

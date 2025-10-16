@@ -1,23 +1,23 @@
 # Deployment Guide
 
-This project ships via Render using the blueprint in `render.yaml`. The service runs from the Dockerfile at the repo root and exposes a single web process that listens on port `3000`.
+This project ships via Render using the blueprint in `render.yaml`. The service builds the Go gateway with the root Dockerfile and exposes a single web process that listens on port `8080`.
 
 ## Prerequisites
 
-- Render account with access to the `routers.systems` environment group.
-- `TRADE_API_URL` and `TASK_API_URL` must be reachable from the gateway.
-- JWT issuer configured to mint tokens for the audience `routers-api`.
+- Render account (or equivalent infrastructure) with access to the `routers.systems` environment group.
+- `TRADE_API_URL` and `TASK_API_URL` must be reachable from the gateway container.
+- JWT issuer configured to mint tokens for the expected audiences (`routers-api`, etc.).
 
 ## Rendering the Blueprint
 
 1. Log in to Render and open the **Blueprints** section.
 2. Click **New Blueprint Instance** and select this repository.
 3. On the configuration screen:
-   - Confirm the service name `api-router-gateway` and plan (default `starter`).
+   - Confirm the service name (`api-router-gateway-go`) and plan (default `starter`).
    - Review the env var group `api-router-gateway`. Populate missing secrets:
-     - `JWT_SECRET` – paste a 32+ character signing key.
+     - `JWT_SECRET` – 32+ character signing key.
    - Adjust optional values (`TRADE_API_URL`, `TASK_API_URL`, `CORS_ALLOWED_ORIGINS`) if staging targets differ.
-4. Launch the blueprint. Render builds the Docker image, runs `npm run build`, and boots the server with `node dist/server.js`.
+4. Launch the blueprint. Render builds the Go binary and starts the container with `/usr/local/bin/gateway`.
 
 ## Custom Domains
 
@@ -39,14 +39,9 @@ After deploy:
 
 ## Rollback
 
-- In Render, detach the custom domain and reattach it to the previous trade API service.
-- Keep the gateway service running on its Render URL for debugging failed deployments.
+- In Render, detach the custom domain and reattach it to the previous deployment.
+- Keep the gateway service running on its Render URL for debugging failed rollouts.
 
 ## CI Artifacts
 
-The GitHub Actions workflow uploads two artifacts on every push/PR:
-
-- `openapi-spec` – the merged `dist/openapi.json` document.
-- `openapi-docs` – a ReDoc-rendered HTML snapshot (`docs/openapi.html`).
-
-Use these artifacts for release notes, SDK generation, or documentation previews.
+The GitHub Actions workflow uploads the merged `dist/openapi.json` document on every push/PR so downstream consumers can regenerate SDKs or docs without cloning the repo.

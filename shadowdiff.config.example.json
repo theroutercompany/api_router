@@ -1,13 +1,13 @@
 {
-  "nodeBaseUrl": "http://localhost:3000",
+  "nodeBaseUrl": "https://node-gateway.example.com",
   "goBaseUrl": "http://localhost:8080",
   "fixtures": [
-    "tests/shadowdiff/health.fixture.json",
-    "tests/shadowdiff/readiness.fixture.json",
-    "tests/shadowdiff/trade.fixture.json",
-    "tests/shadowdiff/trade-error.fixture.json",
-    "tests/shadowdiff/task.fixture.json",
-    "tests/shadowdiff/task-error.fixture.json"
+    "shadowdiff/fixtures/health.fixture.json",
+    "shadowdiff/fixtures/readiness.fixture.json",
+    "shadowdiff/fixtures/trade.fixture.json",
+    "shadowdiff/fixtures/trade-error.fixture.json",
+    "shadowdiff/fixtures/task.fixture.json",
+    "shadowdiff/fixtures/task-error.fixture.json"
   ],
   "concurrency": 4
 }

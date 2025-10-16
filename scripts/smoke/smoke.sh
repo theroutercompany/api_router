@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL=${SMOKE_BASE_URL:-${BASE_URL:-http://localhost:3000}}
+BASE_URL=${SMOKE_BASE_URL:-${BASE_URL:-http://localhost:8080}}
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 

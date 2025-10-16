@@ -27,19 +27,7 @@ services:
     plan: starter
     healthCheckPath: /readyz
     autoDeploy: true
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 3000
-      - fromGroup: api-router-gateway
-  - type: web
-    name: api-router-gateway-go
-    env: docker
-    plan: starter
-    healthCheckPath: /readyz
-    autoDeploy: false
-    dockerfilePath: Dockerfile.go-gateway
+    dockerfilePath: Dockerfile
     dockerContext: .
     envVars:
       - key: PORT
