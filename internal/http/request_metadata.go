@@ -32,3 +32,23 @@ func ensureRequestIDs(r *http.Request) (*http.Request, string, string) {
 
 	return r.WithContext(ctx), requestID, traceID
 }
+
+func requestIDFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if value, ok := ctx.Value(requestIDKey).(string); ok {
+		return value
+	}
+	return ""
+}
+
+func traceIDFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if value, ok := ctx.Value(traceIDKey).(string); ok {
+		return value
+	}
+	return ""
+}

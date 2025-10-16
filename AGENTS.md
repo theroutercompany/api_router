@@ -1,25 +1,35 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Runtime logic lives under `src/`, with Express wiring in `src/app.ts`, lifecycle control in `src/server.ts`, and feature modules grouped by `config/`, `middlewares/`, `routes/`, `services/`, and `lib/`. Shared types sit in `src/types/`. OpenAPI fragments stay in `specs/` and merge into `dist/openapi.json`. Tests mirror `src/` inside `tests/` (for example, `tests/routes/health.spec.ts`). Docs and runbooks are collected in `docs/`.
+- Primary runtime code lives in `src/`; Express wiring sits in `src/app.ts` and lifecycle controls in `src/server.ts`.
+- Keep domain code grouped: configs (`src/config/`), middlewares (`src/middlewares/`), routes (`src/routes/`), services (`src/services/`), shared utilities (`src/lib/`), and shared types (`src/types/`).
+- OpenAPI fragments reside in `specs/`; the merged schema is emitted to `dist/openapi.json` during builds. Treat everything in `dist/` as disposable output.
+- Tests mirror the source tree under `tests/` (e.g., `tests/routes/health.spec.ts`); reuse fixtures across suites instead of duplicating data.
 
 ## Build, Test, and Development Commands
-- `npm run dev` — starts the gateway with `ts-node-dev` and hot reload.
-- `npm run build` — cleans `dist/`, compiles TypeScript, and regenerates the merged OpenAPI spec.
-- `npm run start` — serves the compiled bundle from `dist/`.
-- `npm run lint` / `npm run lint -- --fix` — enforce ESLint + Prettier formatting.
-- `npm run typecheck` — runs `tsc --noEmit` for static type verification.
-- `npm test` — executes Jest; narrow focus with `npm test -- --grep "trade"`.
-- `npm run openapi:build` and `npm run openapi:docs` — rebuild the spec and docs without recompiling code.
+- `npm run dev` launches ts-node-dev with hot reload for local iteration.
+- `npm run build` cleans `dist/`, compiles TypeScript, and regenerates the merged OpenAPI document.
+- `npm run start` runs the compiled bundle for production-style verification.
+- `npm run lint` (or `npm run lint -- --fix`) enforces ESLint + Prettier; `npm run typecheck` executes `tsc --noEmit`.
+- `npm test` executes the Jest suite; filter with `npm test -- --grep "trade"` when focusing on trade flows.
 
 ## Coding Style & Naming Conventions
-TypeScript only, with `noImplicitAny` enabled. Follow Prettier defaults (2-space indent, single quotes, trailing commas). Order imports by externals, then `src/...`, then relatives. Use camelCase for variables and functions, PascalCase for classes/interfaces, and UPPER_SNAKE for environment keys.
+- TypeScript only with `noImplicitAny`; prefer explicit, narrow types for public surfaces.
+- Follow Prettier defaults: 2-space indentation, single quotes, trailing commas.
+- Order imports by external packages, then `src/` aliases, then relatives.
+- Use camelCase for variables/functions, PascalCase for classes/types, UPPER_SNAKE_CASE for shared constants and env keys.
 
 ## Testing Guidelines
-Jest with Supertest covers HTTP flows; keep specs beside their feature folders and name them `*.spec.ts`. Describe suites with explicit route paths (for example, `describe('/v1/task/sync', ...)`). Before review, run `npm run lint`, `npm run typecheck`, and `npm test` to mirror CI.
+- Jest with Supertest asserts HTTP behavior; avoid mocking the shared Pino logger or upstream integrations without cause.
+- Name specs after their route or feature (`describe('/v1/task/sync', ...)`) and place them alongside targets in `tests/`.
+- Run `npm test` before pushing; add focused cases whenever you change routes/services and keep fixtures realistic.
 
 ## Commit & Pull Request Guidelines
-Use Conventional Commits (e.g., `feat(proxy): add task router`). PRs should explain intent, list validation commands, reference tickets, and attach curl traces for API-affecting changes. Document interface or environment updates in the description.
+- Use Conventional Commits (`feat(proxy): add task router`) to keep history scannable.
+- PRs should summarize the change, list validation commands (`npm run lint`, `npm run typecheck`, `npm test`), link related issues, and include payload samples for API updates.
+- Flag breaking changes early and scope diffs to a single feature.
 
 ## Security & Configuration Tips
-Drive upstream URLs, auth scopes, CORS safelists, and rate limits via env vars such as `TRADE_API_URL`, `TASK_API_URL`, and `CORS_ALLOWED_ORIGINS`. Health probes must receive HTTP 200 from each upstream before reporting ready. Strip hop-by-hop headers, avoid logging secrets, and rely on the shared Pino logger. Provide `JWT_SECRET` and environment-specific targets when deploying with `render.yaml`.
+- Configure `TRADE_API_URL`, `TASK_API_URL`, `CORS_ALLOWED_ORIGINS`, and `JWT_SECRET` per environment.
+- Health checks must confirm upstream APIs return HTTP 200 before reporting ready.
+- Strip hop-by-hop headers and avoid logging secrets; rely on the shared Pino logger for structured output.

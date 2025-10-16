@@ -3,8 +3,10 @@ package gatewayhttp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,6 +23,18 @@ func (s stubReporter) Readiness(ctx context.Context) health.Report {
 	return s.report
 }
 
+type stubOpenAPIProvider struct {
+	data []byte
+	err  error
+}
+
+func (s stubOpenAPIProvider) Document(_ context.Context) ([]byte, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.data, nil
+}
+
 func TestHandleHealthReturnsOkPayload(t *testing.T) {
 	cfg := config.Default()
 	cfg.Version = "abc123"
@@ -29,7 +43,7 @@ func TestHandleHealthReturnsOkPayload(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rr := httptest.NewRecorder()
 
-	srv.handleHealth(rr, req)
+	srv.httpServer.Handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Fatalf("expected %d, got %d", http.StatusOK, status)
@@ -75,7 +89,7 @@ func TestHandleReadinessReportsReady(t *testing.T) {
 	req.Header.Set("X-Trace-Id", "trace-456")
 	rr := httptest.NewRecorder()
 
-	srv.handleReadiness(rr, req)
+	srv.httpServer.Handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Fatalf("expected %d, got %d", http.StatusOK, status)
@@ -122,7 +136,7 @@ func TestHandleReadinessReportsDegraded(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	rr := httptest.NewRecorder()
 
-	srv.handleReadiness(rr, req)
+	srv.httpServer.Handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusServiceUnavailable {
 		t.Fatalf("expected %d, got %d", http.StatusServiceUnavailable, status)
@@ -151,12 +165,126 @@ func TestMetricsEndpointAvailableWhenRegistryProvided(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	rr := httptest.NewRecorder()
 
-	srv.router.ServeHTTP(rr, req)
+	srv.httpServer.Handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected metrics handler to return 200, got %d", rr.Code)
 	}
 	if rr.Body.Len() == 0 {
 		t.Fatalf("expected metrics body")
+	}
+}
+
+func TestCORSAllowsConfiguredOrigin(t *testing.T) {
+	cfg := config.Default()
+	cfg.CorsAllowedOrigins = []string{"https://allowed.example"}
+	srv := NewServer(cfg, stubReporter{}, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Header.Set("Origin", "https://allowed.example")
+	rr := httptest.NewRecorder()
+
+	srv.httpServer.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rr.Code)
+	}
+	if allowOrigin := rr.Header().Get("Access-Control-Allow-Origin"); allowOrigin != "https://allowed.example" {
+		t.Fatalf("expected allow origin header, got %q", allowOrigin)
+	}
+	if vary := rr.Header().Get("Vary"); !strings.Contains(vary, "Origin") {
+		t.Fatalf("expected Vary header to include Origin, got %q", vary)
+	}
+}
+
+func TestCORSBlocksUnknownOrigin(t *testing.T) {
+	cfg := config.Default()
+	cfg.CorsAllowedOrigins = []string{"https://allowed.example"}
+	srv := NewServer(cfg, stubReporter{}, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req.Header.Set("Origin", "https://blocked.example")
+	rr := httptest.NewRecorder()
+
+	srv.httpServer.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("expected status 403 for blocked origin, got %d", rr.Code)
+	}
+}
+
+func TestCORSPreflightUsesNoContent(t *testing.T) {
+	cfg := config.Default()
+	cfg.CorsAllowedOrigins = []string{"https://allowed.example"}
+	srv := NewServer(cfg, stubReporter{}, nil)
+
+	req := httptest.NewRequest(http.MethodOptions, "/health", nil)
+	req.Header.Set("Origin", "https://allowed.example")
+	req.Header.Set("Access-Control-Request-Method", http.MethodGet)
+	rr := httptest.NewRecorder()
+
+	srv.httpServer.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected preflight status 204, got %d", rr.Code)
+	}
+}
+
+func TestRateLimiterEnforcesLimitPerClient(t *testing.T) {
+	cfg := config.Default()
+	cfg.RateLimit.Window = time.Second
+	cfg.RateLimit.Max = 1
+	srv := NewServer(cfg, stubReporter{}, nil)
+
+	req1 := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req1.RemoteAddr = "192.0.2.10:1234"
+	rr1 := httptest.NewRecorder()
+	srv.httpServer.Handler.ServeHTTP(rr1, req1)
+	if rr1.Code != http.StatusOK {
+		t.Fatalf("expected first request allowed, got %d", rr1.Code)
+	}
+
+	req2 := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req2.RemoteAddr = "192.0.2.10:1234"
+	rr2 := httptest.NewRecorder()
+	srv.httpServer.Handler.ServeHTTP(rr2, req2)
+	if rr2.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected second request to be rate limited, got %d", rr2.Code)
+	}
+}
+
+func TestOpenAPIHandlerReturnsDocument(t *testing.T) {
+	provider := stubOpenAPIProvider{data: []byte(`{"openapi":"3.1.0"}`)}
+	cfg := config.Default()
+	srv := NewServer(cfg, stubReporter{}, nil, WithOpenAPIProvider(provider))
+
+	req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
+	rr := httptest.NewRecorder()
+
+	srv.httpServer.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
+	}
+	if ct := rr.Header().Get("Content-Type"); ct != "application/json" {
+		t.Fatalf("expected application/json content type, got %q", ct)
+	}
+	if body := strings.TrimSpace(rr.Body.String()); body != "{\"openapi\":\"3.1.0\"}" {
+		t.Fatalf("unexpected body: %s", body)
+	}
+}
+
+func TestOpenAPIHandlerReturnsServiceUnavailableOnError(t *testing.T) {
+	provider := stubOpenAPIProvider{err: errors.New("build failed")}
+	cfg := config.Default()
+	srv := NewServer(cfg, stubReporter{}, nil, WithOpenAPIProvider(provider))
+
+	req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
+	rr := httptest.NewRecorder()
+
+	srv.httpServer.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", rr.Code)
 	}
 }

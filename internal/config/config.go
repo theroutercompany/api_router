@@ -26,6 +26,8 @@ type Config struct {
 	Version            string
 	Upstreams          []UpstreamConfig
 	Auth               AuthConfig
+	CorsAllowedOrigins []string
+	RateLimit          RateLimitConfig
 }
 
 // AuthConfig captures JWT validation settings.
@@ -33,6 +35,12 @@ type AuthConfig struct {
 	Secret    string
 	Audiences []string
 	Issuer    string
+}
+
+// RateLimitConfig captures throttling settings applied at the gateway edge.
+type RateLimitConfig struct {
+	Window time.Duration
+	Max    int
 }
 
 var (
@@ -46,6 +54,8 @@ const (
 	defaultReadinessTimeout   = 2 * time.Second
 	defaultReadinessUserAgent = "api-router-gateway/readyz"
 	defaultHealthPath         = "/health"
+	defaultRateLimitWindow    = 60 * time.Second
+	defaultRateLimitMax       = 120
 )
 
 // Default returns baseline configuration values used during early scaffolding.
@@ -68,7 +78,12 @@ func Default() Config {
 				HealthPath: defaultHealthPath,
 			},
 		},
-		Auth: AuthConfig{},
+		Auth:               AuthConfig{},
+		CorsAllowedOrigins: nil,
+		RateLimit: RateLimitConfig{
+			Window: defaultRateLimitWindow,
+			Max:    defaultRateLimitMax,
+		},
 	}
 }
 
@@ -118,6 +133,26 @@ func Load() (Config, error) {
 
 	if issuer := strings.TrimSpace(os.Getenv("JWT_ISSUER")); issuer != "" {
 		cfg.Auth.Issuer = issuer
+	}
+
+	if origins := strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS")); origins != "" {
+		cfg.CorsAllowedOrigins = splitAndTrim(origins)
+	}
+
+	if windowMs := os.Getenv("RATE_LIMIT_WINDOW_MS"); windowMs != "" {
+		window, err := parsePositiveDuration(windowMs)
+		if err != nil {
+			return cfg, fmt.Errorf("invalid RATE_LIMIT_WINDOW_MS: %w", err)
+		}
+		cfg.RateLimit.Window = window
+	}
+
+	if maxStr := strings.TrimSpace(os.Getenv("RATE_LIMIT_MAX")); maxStr != "" {
+		max, err := strconv.Atoi(maxStr)
+		if err != nil || max <= 0 {
+			return cfg, fmt.Errorf("invalid RATE_LIMIT_MAX: %s", maxStr)
+		}
+		cfg.RateLimit.Max = max
 	}
 
 	trade, err := loadUpstreamConfig("trade", "TRADE_API_URL", "TRADE_HEALTH_PATH")
