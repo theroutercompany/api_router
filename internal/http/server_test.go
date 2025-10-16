@@ -1,6 +1,7 @@
 package gatewayhttp
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -47,6 +48,10 @@ func TestHandleHealthReturnsOkPayload(t *testing.T) {
 
 	if status := rr.Code; status != http.StatusOK {
 		t.Fatalf("expected %d, got %d", http.StatusOK, status)
+	}
+
+	if rr.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Fatalf("expected security headers applied")
 	}
 
 	var payload struct {
@@ -250,6 +255,21 @@ func TestRateLimiterEnforcesLimitPerClient(t *testing.T) {
 	srv.httpServer.Handler.ServeHTTP(rr2, req2)
 	if rr2.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected second request to be rate limited, got %d", rr2.Code)
+	}
+}
+
+func TestBodyLimitRejectsOversizedPayload(t *testing.T) {
+	cfg := config.Default()
+	srv := NewServer(cfg, stubReporter{}, nil)
+
+	body := bytes.Repeat([]byte("A"), 1<<20+1)
+	req := httptest.NewRequest(http.MethodPost, "/health", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+
+	srv.httpServer.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected 413, got %d", rr.Code)
 	}
 }
 

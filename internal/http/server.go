@@ -23,6 +23,8 @@ import (
 	"github.com/theroutercompany/api_router/pkg/metrics"
 )
 
+const maxRequestBodyBytes int64 = 1 << 20 // 1 MiB
+
 type readinessReporter interface {
 	Readiness(ctx context.Context) health.Report
 }
@@ -94,9 +96,11 @@ func NewServer(cfg config.Config, checker readinessReporter, registry *metrics.R
 
 	s.mountRoutes()
 	handler := http.Handler(mux)
+	handler = s.withBodyLimit(handler)
 	handler = s.withRateLimiting(handler)
 	handler = s.withCORS(handler)
 	handler = s.withLogging(handler)
+	handler = s.withSecurityHeaders(handler)
 	handler = s.withRequestMetadata(handler)
 
 	s.handler = handler
@@ -282,6 +286,22 @@ func (s *Server) withLogging(next http.Handler) http.Handler {
 	})
 }
 
+func (s *Server) withSecurityHeaders(next http.Handler) http.Handler {
+	if next == nil {
+		return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		headers := w.Header()
+		headers.Set("X-Content-Type-Options", "nosniff")
+		headers.Set("X-Frame-Options", "DENY")
+		headers.Set("Referrer-Policy", "no-referrer")
+		headers.Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) withCORS(next http.Handler) http.Handler {
 	if s.cors == nil || next == nil {
 		return next
@@ -318,6 +338,26 @@ func (s *Server) withRateLimiting(next http.Handler) http.Handler {
 
 		traceID := traceIDFromContext(r.Context())
 		problem.Write(w, http.StatusTooManyRequests, "Too Many Requests", "Rate limit exceeded", traceID, r.URL.Path)
+	})
+}
+
+func (s *Server) withBodyLimit(next http.Handler) http.Handler {
+	if next == nil {
+		return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ContentLength > maxRequestBodyBytes {
+			traceID := traceIDFromContext(r.Context())
+			problem.Write(w, http.StatusRequestEntityTooLarge, "Payload Too Large", fmt.Sprintf("Request body exceeds %d bytes", maxRequestBodyBytes), traceID, r.URL.Path)
+			return
+		}
+
+		if r.Body != nil {
+			r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+		}
+
+		next.ServeHTTP(w, r)
 	})
 }
 

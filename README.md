@@ -1,6 +1,6 @@
 # API Router Gateway
 
-A lightweight Go gateway that forwards trade and task traffic, validates JWT tokens, performs readiness checks against upstream services, and serves the merged OpenAPI contract for the platform.
+A lightweight Go gateway that forwards trade and task traffic, validates JWT tokens, enforces basic security headers and rate limits, performs readiness checks against upstream services, and serves the merged OpenAPI contract for the platform.
 
 ## Getting Started
 
@@ -16,8 +16,9 @@ A lightweight Go gateway that forwards trade and task traffic, validates JWT tok
 - `golangci-lint run ./...` – enforce formatting and static analysis (matches CI checks).
 - `go run ./cmd/gateway` – boot the HTTP gateway locally.
 - `go run ./cmd/openapi --out dist/openapi.json` – regenerate the merged OpenAPI document.
+- `scripts/shadowdiff-run.sh` – start mock upstreams, run the Go gateway, and optionally diff against a reference Node deployment by setting `NODE_BASE_URL`.
 - `scripts/smoke/smoke.sh` – run smoke checks against a running instance (set `SMOKE_JWT` to exercise proxy routes).
-- `scripts/shadowdiff-run.sh` – spin up mock upstreams, start the Go gateway, and optionally compare responses against an existing Node deployment by setting `NODE_BASE_URL`.
+
 
 ## Repository Structure
 
