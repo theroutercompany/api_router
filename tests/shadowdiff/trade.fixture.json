@@ -1,0 +1,12 @@
+[
+  {
+    "name": "trade-orders",
+    "method": "GET",
+    "path": "/v1/trade/orders?id=42",
+    "headers": {
+      "x-request-id": "shadow-trade",
+      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzaGFkb3ctdXNlciIsImV4cCI6MTg5MzQ1NjAwMCwic2NvcGUiOiJ0cmFkZS5yZWFkIHRyYWRlLndyaXRlIn0.jgElcsdT2uiHBuEuJUCHa1M4tUJHarbLsqPh13sDeso"
+    },
+    "expectStatus": 200
+  }
+]

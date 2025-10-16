@@ -1,0 +1,18 @@
+run:
+  timeout: 5m
+  tests: false
+  go: "1.22"
+  modules-download-mode: mod
+linters:
+  enable:
+    - errcheck
+    - gofumpt
+    - govet
+    - gosimple
+    - revive
+    - staticcheck
+  disable:
+    - typecheck
+linters-settings:
+  gofumpt:
+    extra-rules: true

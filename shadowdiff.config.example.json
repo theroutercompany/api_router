@@ -1,0 +1,13 @@
+{
+  "nodeBaseUrl": "http://localhost:3000",
+  "goBaseUrl": "http://localhost:8080",
+  "fixtures": [
+    "tests/shadowdiff/health.fixture.json",
+    "tests/shadowdiff/readiness.fixture.json",
+    "tests/shadowdiff/trade.fixture.json",
+    "tests/shadowdiff/trade-error.fixture.json",
+    "tests/shadowdiff/task.fixture.json",
+    "tests/shadowdiff/task-error.fixture.json"
+  ],
+  "concurrency": 4
+}

@@ -33,3 +33,15 @@ services:
       - key: PORT
         value: 3000
       - fromGroup: api-router-gateway
+  - type: web
+    name: api-router-gateway-go
+    env: docker
+    plan: starter
+    healthCheckPath: /readyz
+    autoDeploy: false
+    dockerfilePath: Dockerfile.go-gateway
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: 8080
+      - fromGroup: api-router-gateway
