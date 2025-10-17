@@ -15,6 +15,7 @@ type UpstreamConfig struct {
 	Name       string
 	BaseURL    string
 	HealthPath string
+	TLS        UpstreamTLSConfig
 }
 
 // Config captures runtime configuration for the gateway.
@@ -41,6 +42,15 @@ type AuthConfig struct {
 type RateLimitConfig struct {
 	Window time.Duration
 	Max    int
+}
+
+// UpstreamTLSConfig captures TLS settings applied to upstream connections.
+type UpstreamTLSConfig struct {
+	Enabled            bool
+	InsecureSkipVerify bool
+	CAFile             string
+	ClientCertFile     string
+	ClientKeyFile      string
 }
 
 var (
@@ -71,11 +81,13 @@ func Default() Config {
 				Name:       "trade",
 				BaseURL:    "http://localhost:4001",
 				HealthPath: defaultHealthPath,
+				TLS:        UpstreamTLSConfig{},
 			},
 			{
 				Name:       "task",
 				BaseURL:    "http://localhost:4002",
 				HealthPath: defaultHealthPath,
+				TLS:        UpstreamTLSConfig{},
 			},
 		},
 		Auth:               AuthConfig{},
@@ -197,6 +209,12 @@ func loadUpstreamConfig(name, urlKey, pathKey string) (UpstreamConfig, error) {
 		upstream.HealthPath = path
 	}
 
+	tlsCfg, err := loadUpstreamTLSConfig(strings.ToUpper(name))
+	if err != nil {
+		return upstream, fmt.Errorf("load %s TLS config: %w", name, err)
+	}
+	upstream.TLS = tlsCfg
+
 	return upstream, nil
 }
 
@@ -222,4 +240,53 @@ func splitAndTrim(value string) []string {
 		}
 	}
 	return result
+}
+
+func loadUpstreamTLSConfig(prefix string) (UpstreamTLSConfig, error) {
+	cfg := UpstreamTLSConfig{}
+
+	if enabled, ok, err := parseOptionalBool(os.Getenv(prefix + "_TLS_ENABLED")); err != nil {
+		return cfg, fmt.Errorf("invalid %s_TLS_ENABLED: %w", prefix, err)
+	} else if ok {
+		cfg.Enabled = enabled
+	}
+
+	if skipVerify, ok, err := parseOptionalBool(os.Getenv(prefix + "_TLS_INSECURE_SKIP_VERIFY")); err != nil {
+		return cfg, fmt.Errorf("invalid %s_TLS_INSECURE_SKIP_VERIFY: %w", prefix, err)
+	} else if ok {
+		cfg.InsecureSkipVerify = skipVerify
+		if skipVerify {
+			cfg.Enabled = true
+		}
+	}
+
+	if ca := strings.TrimSpace(os.Getenv(prefix + "_TLS_CA_FILE")); ca != "" {
+		cfg.CAFile = ca
+		cfg.Enabled = true
+	}
+
+	cert := strings.TrimSpace(os.Getenv(prefix + "_TLS_CERT_FILE"))
+	key := strings.TrimSpace(os.Getenv(prefix + "_TLS_KEY_FILE"))
+
+	if cert != "" || key != "" {
+		if cert == "" || key == "" {
+			return cfg, errors.New("both TLS cert and key must be provided when enabling mTLS")
+		}
+		cfg.ClientCertFile = cert
+		cfg.ClientKeyFile = key
+		cfg.Enabled = true
+	}
+
+	return cfg, nil
+}
+
+func parseOptionalBool(value string) (bool, bool, error) {
+	if strings.TrimSpace(value) == "" {
+		return false, false, nil
+	}
+	val, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, true, err
+	}
+	return val, true, nil
 }

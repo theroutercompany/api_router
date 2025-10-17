@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/cors"
@@ -21,6 +22,9 @@ import (
 	"github.com/theroutercompany/api_router/internal/platform/health"
 	pkglog "github.com/theroutercompany/api_router/pkg/log"
 	"github.com/theroutercompany/api_router/pkg/metrics"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 const maxRequestBodyBytes int64 = 1 << 20 // 1 MiB
@@ -54,6 +58,7 @@ type Server struct {
 	rateLimiter     *rateLimiter
 	cors            *cors.Cors
 	openapiProvider openapi.DocumentProvider
+	protocolMetrics *protocolMetrics
 }
 
 // NewServer constructs a server with baseline dependencies configured.
@@ -79,6 +84,7 @@ func NewServer(cfg config.Config, checker readinessReporter, registry *metrics.R
 	if registry != nil {
 		s.metricsHandler = registry.Handler()
 	}
+	s.protocolMetrics = newProtocolMetrics(registry)
 
 	if cfg.Auth.Secret != "" {
 		if authenticator, err := auth.New(cfg.Auth); err != nil {
@@ -102,11 +108,16 @@ func NewServer(cfg config.Config, checker readinessReporter, registry *metrics.R
 	handler = s.withLogging(handler)
 	handler = s.withSecurityHeaders(handler)
 	handler = s.withRequestMetadata(handler)
+	http2Server := &http2.Server{}
+	handler = h2c.NewHandler(handler, http2Server)
 
 	s.handler = handler
 	s.httpServer = &http.Server{
 		Addr:    fmt.Sprintf(":%d", cfg.HTTPPort),
 		Handler: handler,
+	}
+	if err := http2.ConfigureServer(s.httpServer, http2Server); err != nil {
+		pkglog.Logger().Errorw("failed to configure http2 server", "error", err)
 	}
 
 	return s
@@ -166,7 +177,17 @@ func (s *Server) mountRoutes() {
 
 func (s *Server) initProxies() {
 	for _, upstream := range s.cfg.Upstreams {
-		handler, err := proxy.New(proxy.Options{Target: upstream.BaseURL, Product: upstream.Name})
+		handler, err := proxy.New(proxy.Options{
+			Target:  upstream.BaseURL,
+			Product: upstream.Name,
+			TLS: proxy.TLSConfig{
+				Enabled:            upstream.TLS.Enabled,
+				InsecureSkipVerify: upstream.TLS.InsecureSkipVerify,
+				CAFile:             upstream.TLS.CAFile,
+				ClientCertFile:     upstream.TLS.ClientCertFile,
+				ClientKeyFile:      upstream.TLS.ClientKeyFile,
+			},
+		})
 		if err != nil {
 			pkglog.Logger().Errorw("failed to build proxy", "error", err, "upstream", upstream.Name)
 			continue
@@ -247,7 +268,14 @@ func (s *Server) withLogging(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		writer := newLoggingResponseWriter(w)
+		track := func(int, time.Duration) {}
+		var hijackTracker func() func()
+		if s.protocolMetrics != nil {
+			track = s.protocolMetrics.track(r)
+			hijackTracker = func() func() { return s.protocolMetrics.hijacked(r) }
+		}
+
+		writer := newLoggingResponseWriter(w, hijackTracker)
 		next.ServeHTTP(writer, r)
 
 		duration := time.Since(start)
@@ -255,6 +283,8 @@ func (s *Server) withLogging(next http.Handler) http.Handler {
 		if status == 0 {
 			status = http.StatusOK
 		}
+
+		track(status, duration)
 
 		fields := []any{
 			"method", r.Method,
@@ -363,14 +393,17 @@ func (s *Server) withBodyLimit(next http.Handler) http.Handler {
 
 type loggingResponseWriter struct {
 	http.ResponseWriter
-	status int
-	bytes  int
+	status        int
+	bytes         int
+	hijackTracker func() func()
+	hijackOnce    sync.Once
 }
 
-func newLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
+func newLoggingResponseWriter(w http.ResponseWriter, tracker func() func()) *loggingResponseWriter {
 	return &loggingResponseWriter{
 		ResponseWriter: w,
 		status:         http.StatusOK,
+		hijackTracker:  tracker,
 	}
 }
 
@@ -399,7 +432,22 @@ func (w *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if !ok {
 		return nil, nil, errors.New("hijacker not supported")
 	}
-	return hijacker.Hijack()
+	conn, rw, err := hijacker.Hijack()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if w.hijackTracker != nil {
+		var closer func()
+		w.hijackOnce.Do(func() {
+			closer = w.hijackTracker()
+		})
+		if closer != nil {
+			conn = &trackingConn{Conn: conn, onClose: closer}
+		}
+	}
+
+	return conn, rw, nil
 }
 
 func (w *loggingResponseWriter) Push(target string, opts *http.PushOptions) error {
@@ -407,6 +455,22 @@ func (w *loggingResponseWriter) Push(target string, opts *http.PushOptions) erro
 		return pusher.Push(target, opts)
 	}
 	return http.ErrNotSupported
+}
+
+type trackingConn struct {
+	net.Conn
+	onClose func()
+	once    sync.Once
+}
+
+func (c *trackingConn) Close() error {
+	err := c.Conn.Close()
+	c.once.Do(func() {
+		if c.onClose != nil {
+			c.onClose()
+		}
+	})
+	return err
 }
 
 func clientKey(r *http.Request) string {

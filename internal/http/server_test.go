@@ -3,10 +3,15 @@ package gatewayhttp
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +19,8 @@ import (
 	"github.com/theroutercompany/api_router/internal/config"
 	"github.com/theroutercompany/api_router/internal/platform/health"
 	"github.com/theroutercompany/api_router/pkg/metrics"
+
+	"golang.org/x/net/http2"
 )
 
 type stubReporter struct {
@@ -306,5 +313,73 @@ func TestOpenAPIHandlerReturnsServiceUnavailableOnError(t *testing.T) {
 
 	if rr.Code != http.StatusServiceUnavailable {
 		t.Fatalf("expected 503, got %d", rr.Code)
+	}
+}
+
+func TestServerSupportsH2C(t *testing.T) {
+	cfg := config.Config{
+		HTTPPort:           0,
+		ShutdownTimeout:    time.Second,
+		ReadinessTimeout:   time.Second,
+		ReadinessUserAgent: "test-agent",
+		RateLimit: config.RateLimitConfig{
+			Window: time.Second,
+			Max:    100,
+		},
+	}
+
+	srv := NewServer(cfg, stubReporter{report: health.Report{Status: "ready"}}, nil)
+
+	listener, err := net.Listen("tcp", srv.httpServer.Addr)
+	if err != nil {
+		t.Fatalf("failed to listen on addr %q: %v", srv.httpServer.Addr, err)
+	}
+
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- srv.httpServer.Serve(listener)
+	}()
+
+	t.Cleanup(func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = srv.httpServer.Shutdown(shutdownCtx)
+		if err := <-serverErr; err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.Errorf("http server exited with error: %v", err)
+		}
+	})
+
+	time.Sleep(25 * time.Millisecond)
+
+	tcpAddr := listener.Addr().(*net.TCPAddr)
+	host := tcpAddr.IP.String()
+	if tcpAddr.IP == nil || tcpAddr.IP.IsUnspecified() {
+		host = "127.0.0.1"
+	}
+	target := fmt.Sprintf("http://%s/health", net.JoinHostPort(host, strconv.Itoa(tcpAddr.Port)))
+
+	client := &http.Client{
+		Transport: &http2.Transport{
+			AllowHTTP: true,
+			DialTLS: func(network, addr string, _ *tls.Config) (net.Conn, error) {
+				var d net.Dialer
+				return d.Dial(network, addr)
+			},
+		},
+		Timeout: 2 * time.Second,
+	}
+
+	resp, err := client.Get(target)
+	if err != nil {
+		t.Fatalf("http2 client request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.ReadAll(resp.Body)
+
+	if resp.ProtoMajor != 2 {
+		t.Fatalf("expected HTTP/2 response, got %s", resp.Proto)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", resp.StatusCode)
 	}
 }
