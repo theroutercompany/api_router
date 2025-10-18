@@ -151,3 +151,48 @@ func TestDaemonHelperProcess(t *testing.T) {
 	}
 	os.Exit(0)
 }
+
+func TestStopCleansStalePID(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("signals not supported on Windows in tests")
+	}
+
+	pidPath := filepath.Join(t.TempDir(), "pid")
+	if err := os.WriteFile(pidPath, []byte("999999\n"), 0o644); err != nil {
+		t.Fatalf("write pid: %v", err)
+	}
+
+	Stop(pidPath, syscall.SIGTERM)
+	if _, err := os.Stat(pidPath); !os.IsNotExist(err) {
+		t.Fatalf("expected stale pid file removed")
+	}
+}
+
+func TestStopEscalatesToKill(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("signals not supported on Windows in tests")
+	}
+
+	cmd := exec.Command(os.Args[0], "-test.run=TestDaemonHelperProcess", "--", "daemon-helper")
+	cmd.Env = append(os.Environ(), "APIGW_DAEMON_TEST_HELPER=1")
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start helper: %v", err)
+	}
+	defer cmd.Process.Kill()
+
+	pidPath := filepath.Join(t.TempDir(), "pid")
+	if err := os.WriteFile(pidPath, []byte(fmt.Sprintf("%d\n", cmd.Process.Pid)), 0o644); err != nil {
+		t.Fatalf("write pid: %v", err)
+	}
+
+	start := time.Now()
+	if _, err := Stop(pidPath, syscall.SIGTERM); err != nil {
+		t.Fatalf("stop: %v", err)
+	}
+	if _, err := os.Stat(pidPath); !os.IsNotExist(err) {
+		t.Fatalf("expected pid file removed")
+	}
+	if elapsed := time.Since(start); elapsed < 5*time.Second {
+		t.Fatalf("expected escalation, got %v", elapsed)
+	}
+}
