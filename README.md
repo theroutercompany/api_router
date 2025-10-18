@@ -18,6 +18,7 @@ A lightweight Go gateway that forwards trade and task traffic, validates JWT tok
 - `go run ./cmd/apigw run --config gateway.yaml` – boot the HTTP gateway with the YAML/env loader.
 - `go run ./cmd/apigw run --config gateway.yaml --watch` – hot-reload the gateway when the config file changes.
 - `go run ./cmd/apigw daemon start --config gateway.yaml --pid apigw.pid --log apigw.log --background` – launch and detach the managed daemon.
+- `go run ./cmd/apigw admin status --url http://127.0.0.1:9090 --token <token>` – query the control-plane status endpoint (`config` and `reload` subcommands also available).
 - `go run ./cmd/apigw daemon stop --pid apigw.pid` – send SIGTERM and wait for shutdown.
 - `go run ./cmd/apigw daemon status --pid apigw.pid` – inspect the current daemon process.
 - `go run ./cmd/gateway` – legacy entrypoint (delegates to the runtime under the hood).

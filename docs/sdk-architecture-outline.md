@@ -30,6 +30,7 @@
   - `validate`: lint YAML + environment overlays.
   - `init`: scaffold config with commented defaults.
   - `daemon`: manage the gateway lifecycle (`start`, `stop`, `status`) with PID/log management and optional background mode.
+  - `admin`: convenience wrapper for calling `/__admin/status`, `/__admin/config`, and `/__admin/reload` with optional token support.
 - `cmd/gateway`
   - Remains as thin wrapper delegating to runtime for backward compatibility.
 - `cmd/openapi`, `cmd/shadowdiff`

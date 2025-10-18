@@ -13,6 +13,7 @@
 - `go run ./cmd/apigw daemon --config gateway.yaml --pid apigw.pid --log apigw.log --background` runs the managed daemon.
 - `go run ./cmd/apigw daemon stop --pid apigw.pid` stops the managed daemon and cleans up the PID file.
 - `go run ./cmd/apigw daemon status --pid apigw.pid` reports the daemon's current PID and state.
+- `go run ./cmd/apigw admin status --url http://127.0.0.1:9090` calls the control-plane status endpoint (use `reload` or `config` subcommands as needed).
 - `go run ./cmd/gateway` uses the same runtime for backwards compatibility.
 - `go run ./cmd/openapi --out dist/openapi.json` regenerates the merged OpenAPI document.
 - `go test ./...` runs unit and integration suites; use before submitting changes.

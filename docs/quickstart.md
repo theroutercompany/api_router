@@ -9,6 +9,7 @@
 7. Run tests and linting: `go test ./...` and `golangci-lint run ./...`.
 8. Use the provided Dockerfile to build a container image: `docker build -t api-router .`.
 9. Deploy using the Render blueprint in `render.yaml` or adapt it for your infrastructure.
+10. Inspect or reload the running gateway via `go run ./cmd/apigw admin status --url http://127.0.0.1:9090` (add `--token` if `admin.token` is configured).
 
 ## Environment variables
 

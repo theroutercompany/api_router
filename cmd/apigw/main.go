@@ -5,7 +5,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -38,6 +40,8 @@ func main() {
 		err = initCommand(os.Args[2:])
 	case "daemon":
 		err = daemonCommand(os.Args[2:])
+	case "admin":
+		err = adminCommand(os.Args[2:])
 	default:
 		usage()
 		os.Exit(1)
@@ -208,6 +212,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  validate  Validate configuration without starting the gateway\n")
 	fmt.Fprintf(os.Stderr, "  init      Generate a config skeleton\n")
 	fmt.Fprintf(os.Stderr, "  daemon    Manage the gateway as a background process\n")
+	fmt.Fprintf(os.Stderr, "  admin     Invoke admin control-plane endpoints (status/reload)\n")
 }
 
 const daemonChildEnv = "APIGW_DAEMON_CHILD"
@@ -371,6 +376,90 @@ func parseSignal(value string) (syscall.Signal, error) {
 	default:
 		return 0, fmt.Errorf("unsupported signal %q", value)
 	}
+}
+
+func adminCommand(args []string) error {
+	subcommand := "status"
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		subcommand = args[0]
+		args = args[1:]
+	}
+
+	fs := flag.NewFlagSet("admin "+subcommand, flag.ExitOnError)
+	baseURL := fs.String("url", "http://127.0.0.1:9090", "Base URL for the admin server")
+	token := fs.String("token", "", "Bearer token for admin requests")
+	timeout := fs.Duration("timeout", 5*time.Second, "HTTP request timeout")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	client := &http.Client{Timeout: *timeout}
+	base := strings.TrimRight(*baseURL, "/")
+
+	switch subcommand {
+	case "status":
+		return adminGET(client, base+"/__admin/status", *token)
+	case "config":
+		return adminGET(client, base+"/__admin/config", *token)
+	case "reload":
+		return adminPOST(client, base+"/__admin/reload", *token)
+	default:
+		return fmt.Errorf("unknown admin subcommand %q", subcommand)
+	}
+}
+
+func adminGET(client *http.Client, url, token string) error {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("admin request failed: %s", strings.TrimSpace(string(body)))
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(body))
+	return nil
+}
+
+func adminPOST(client *http.Client, url, token string) error {
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	if err != nil {
+		return err
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusAccepted {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("admin reload failed: %s", strings.TrimSpace(string(body)))
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if len(strings.TrimSpace(string(body))) > 0 {
+		fmt.Println(string(body))
+	} else {
+		fmt.Println("reload requested")
+	}
+	return nil
 }
 
 func watchConfig(parent context.Context, path string, opts []gatewayconfig.Option) (<-chan gatewayconfig.Config, <-chan error, context.CancelFunc, error) {
