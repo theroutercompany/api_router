@@ -9,7 +9,7 @@ A lightweight Go gateway that forwards trade and task traffic, validates JWT tok
 3. Optionally export environment overrides (see `AGENTS.md` for accepted variables).
 4. Start the gateway: `go run ./cmd/apigw run --config gateway.yaml` (edit upstream URLs, JWT, and CORS as needed; see `config/examples/gateway.sample.yaml`).
 5. Verify the service at `http://localhost:8080/health` and `http://localhost:8080/readyz`.
-6. Optional: run the gateway as a background service via `go run ./cmd/apigw daemon --config gateway.yaml --pid apigw.pid --log apigw.log --background`.
+6. Optional: run the gateway as a background service via `go run ./cmd/apigw daemon start --config gateway.yaml --pid apigw.pid --log apigw.log --background`. Pair with `ADMIN_TOKEN` or the `admin.token` YAML setting to secure the control-plane endpoints.
 
 ## Development Commands
 

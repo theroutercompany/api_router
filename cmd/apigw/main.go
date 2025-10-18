@@ -66,7 +66,25 @@ func runCommand(args []string) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	rt, err := gatewayruntime.New(cfg)
+	reloadRequests := make(chan gatewayconfig.Config, 1)
+	enqueueReload := func(cfg gatewayconfig.Config) {
+		select {
+		case reloadRequests <- cfg:
+		default:
+			go func() { reloadRequests <- cfg }()
+		}
+	}
+
+	reloadFunc := func() (gatewayconfig.Config, error) {
+		cfg, err := gatewayconfig.Load(opts...)
+		if err != nil {
+			return gatewayconfig.Config{}, err
+		}
+		enqueueReload(cfg)
+		return cfg, nil
+	}
+
+	rt, err := gatewayruntime.New(cfg, gatewayruntime.WithReloadFunc(reloadFunc))
 	if err != nil {
 		return fmt.Errorf("build runtime: %w", err)
 	}
@@ -74,45 +92,46 @@ func runCommand(args []string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	var (
+		watchErrCh  <-chan error
+		watchCancel context.CancelFunc
+	)
+	if *watch {
+		if *configPath == "" {
+			return errors.New("--config is required when --watch is enabled")
+		}
+		watchReloadCh, errCh, cancelWatch, err := watchConfig(ctx, *configPath, opts)
+		if err != nil {
+			return fmt.Errorf("watch config: %w", err)
+		}
+		watchErrCh = errCh
+		watchCancel = cancelWatch
+		go func() {
+			for cfg := range watchReloadCh {
+				enqueueReload(cfg)
+			}
+		}()
+	}
+	defer func() {
+		if watchCancel != nil {
+			watchCancel()
+		}
+	}()
+
 	runCtx, runCancel := context.WithCancel(ctx)
 	runDone := make(chan error, 1)
 	go func() {
 		runDone <- rt.Run(runCtx)
 	}()
 
-	var (
-		reloadCh   <-chan gatewayconfig.Config
-		watchErrCh <-chan error
-	)
-
-	var watchCancel context.CancelFunc
-	if *watch {
-		if *configPath == "" {
-			return errors.New("--config is required when --watch is enabled")
-		}
-		var err error
-		reloadCh, watchErrCh, watchCancel, err = watchConfig(ctx, *configPath, opts)
-		if err != nil {
-			return fmt.Errorf("watch config: %w", err)
-		}
-		defer watchCancel()
-	}
-
 	for {
 		select {
 		case err := <-runDone:
-			if watchCancel != nil {
-				watchCancel()
-			}
 			if err != nil && !errors.Is(err, context.Canceled) {
 				return err
 			}
 			return nil
-		case cfg, ok := <-reloadCh:
-			if !ok {
-				reloadCh = nil
-				continue
-			}
+		case cfg := <-reloadRequests:
 			runCancel()
 			if err := <-runDone; err != nil && !errors.Is(err, context.Canceled) {
 				return err
@@ -125,7 +144,7 @@ func runCommand(args []string) error {
 			go func() {
 				runDone <- rt.Run(runCtx)
 			}()
-			log.Printf("configuration reloaded from %s", *configPath)
+			log.Printf("configuration reloaded")
 		case err, ok := <-watchErrCh:
 			if !ok {
 				watchErrCh = nil

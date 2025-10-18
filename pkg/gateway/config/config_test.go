@@ -28,6 +28,10 @@ func TestLoadFromEnvSuccess(t *testing.T) {
 	t.Setenv("RATE_LIMIT_WINDOW_MS", "90000")
 	t.Setenv("RATE_LIMIT_MAX", "300")
 	t.Setenv("METRICS_ENABLED", "false")
+	t.Setenv("ADMIN_ENABLED", "true")
+	t.Setenv("ADMIN_LISTEN", "127.0.0.1:9091")
+	t.Setenv("ADMIN_TOKEN", "secret-token")
+	t.Setenv("ADMIN_ALLOW", "127.0.0.1,10.0.0.0/24")
 
 	cfg, err := Load()
 	if err != nil {
@@ -90,6 +94,18 @@ func TestLoadFromEnvSuccess(t *testing.T) {
 	}
 	if taskTLS := task.TLS; !taskTLS.Enabled || !taskTLS.InsecureSkipVerify {
 		t.Fatalf("expected task TLS with insecure skip verify")
+	}
+	if !cfg.Admin.Enabled {
+		t.Fatalf("expected admin enabled via env")
+	}
+	if cfg.Admin.Listen != "127.0.0.1:9091" {
+		t.Fatalf("unexpected admin listen: %s", cfg.Admin.Listen)
+	}
+	if cfg.Admin.Token != "secret-token" {
+		t.Fatalf("unexpected admin token: %s", cfg.Admin.Token)
+	}
+	if len(cfg.Admin.Allow) != 2 || cfg.Admin.Allow[0] != "127.0.0.1" || cfg.Admin.Allow[1] != "10.0.0.0/24" {
+		t.Fatalf("unexpected admin allow list: %#v", cfg.Admin.Allow)
 	}
 }
 
@@ -211,6 +227,10 @@ func TestValidateAggregatesErrors(t *testing.T) {
 		RateLimit: RateLimitConfig{
 			Window: DurationFrom(0),
 			Max:    0,
+		},
+		Admin: AdminConfig{
+			Enabled: true,
+			Listen:  "",
 		},
 	}
 

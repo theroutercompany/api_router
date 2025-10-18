@@ -12,6 +12,7 @@
 ## Auth & Proxying
 - JWT validation lives in `pkg/gateway/auth`; scopes are enforced per proxy via `buildProtectedHandler`.
 - Proxy failures return RFC 7807 problem+json with trace IDs; ensure upstream error responses keep tokens and secrets out of logs.
+- The admin control-plane server is disabled by default; when enabling, set `admin.token` (or `ADMIN_TOKEN`) and restrict `admin.allow` to trusted networks.
 - Structured logging defaults to Zap. Avoid logging bearer tokens or opaque identifiers; use `Infow`/`Errorw` with redacted fields when necessary.
 
 ## Recommended Follow-ups

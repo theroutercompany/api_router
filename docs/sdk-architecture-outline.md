@@ -71,6 +71,12 @@ rateLimit:
 
 metrics:
   enabled: true
+
+admin:
+  enabled: false
+  listen: 127.0.0.1:9090
+  token: ""
+  allow: []
 ```
 
 Environment variables continue to override YAML values so existing deployments remain compatible.
@@ -129,4 +135,10 @@ problem.Write(w, http.StatusForbidden, "Forbidden", "Insufficient scope", reques
 
 ```bash
 go run ./cmd/apigw daemon --config gateway.yaml --pid /var/run/apigw.pid --log /var/log/apigw.log --background
+```
+
+### Query Admin Status
+
+```bash
+curl -H "Authorization: Bearer <admin-token>" http://127.0.0.1:9090/__admin/status
 ```

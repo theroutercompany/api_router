@@ -27,6 +27,10 @@
 | `RATE_LIMIT_MAX` | No | Requests allowed per window (default `120`). |
 | `CORS_ALLOWED_ORIGINS` | No | Comma-separated origin safelist (`*` allows all; unset = no restriction). |
 | `APIGW_CONFIG` | No | Default YAML config path (used by `go run ./cmd/gateway`). |
+| `ADMIN_ENABLED` | No | Enable the admin control-plane server (`false` by default). |
+| `ADMIN_LISTEN` | No | Address for the admin server (default `127.0.0.1:9090`). |
+| `ADMIN_TOKEN` | No | Optional bearer token required for admin requests (recommended in non-local environments). |
+| `ADMIN_ALLOW` | No | Comma-separated IP/CIDR list allowed to access admin endpoints when no token is set (defaults to loopback-only). |
 
 ## Next steps
 

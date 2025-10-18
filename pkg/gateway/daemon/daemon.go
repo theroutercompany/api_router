@@ -1,15 +1,15 @@
 package daemon
 
 import (
-    "context"
-    "errors"
-    "fmt"
-    "os"
-    "os/signal"
-    "path/filepath"
-    "strconv"
-    "strings"
-    "syscall"
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"syscall"
 
 	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
 	gatewayruntime "github.com/theroutercompany/api_router/pkg/gateway/runtime"
@@ -98,7 +98,7 @@ func Stop(pidPath string, sig syscall.Signal) (ProcessStatus, error) {
 	}
 	if status.PID == 0 {
 		return status, os.ErrNotExist
-}
+	}
 	if !status.Running {
 		return status, nil
 	}

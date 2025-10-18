@@ -7,6 +7,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"net/url"
 	"os"
 	"strconv"
@@ -25,6 +26,7 @@ const (
 	defaultRateLimitWindow    = 60 * time.Second
 	defaultRateLimitMax       = 120
 	defaultMetricsEnabled     = true
+	defaultAdminListen        = "127.0.0.1:9090"
 	defaultConfigEnvVar       = "APIGW_CONFIG"
 	envTradePrefix            = "TRADE"
 	envTaskPrefix             = "TASK"
@@ -40,6 +42,10 @@ const (
 	envRateLimitWindow        = "RATE_LIMIT_WINDOW_MS"
 	envRateLimitMax           = "RATE_LIMIT_MAX"
 	envMetricsEnabled         = "METRICS_ENABLED"
+	envAdminEnabled           = "ADMIN_ENABLED"
+	envAdminListen            = "ADMIN_LISTEN"
+	envAdminToken             = "ADMIN_TOKEN"
+	envAdminAllow             = "ADMIN_ALLOW"
 	envTLSInsecureSkipVerify  = "_TLS_INSECURE_SKIP_VERIFY"
 	envTLSEnabled             = "_TLS_ENABLED"
 	envTLSCAFile              = "_TLS_CA_FILE"
@@ -58,6 +64,7 @@ type Config struct {
 	CORS      CORSConfig      `yaml:"cors"`
 	RateLimit RateLimitConfig `yaml:"rateLimit"`
 	Metrics   MetricsConfig   `yaml:"metrics"`
+	Admin     AdminConfig     `yaml:"admin"`
 }
 
 // HTTPConfig configures listener behaviour.
@@ -111,6 +118,14 @@ type RateLimitConfig struct {
 // MetricsConfig toggles metrics exposure.
 type MetricsConfig struct {
 	Enabled bool `yaml:"enabled"`
+}
+
+// AdminConfig toggles the control-plane server that exposes status and reload endpoints.
+type AdminConfig struct {
+	Enabled bool     `yaml:"enabled"`
+	Listen  string   `yaml:"listen"`
+	Token   string   `yaml:"token"`
+	Allow   []string `yaml:"allow"`
 }
 
 // Duration is a YAML-friendly wrapper over time.Duration supporting numeric millisecond inputs.
@@ -201,6 +216,12 @@ func Default() Config {
 		},
 		Metrics: MetricsConfig{
 			Enabled: defaultMetricsEnabled,
+		},
+		Admin: AdminConfig{
+			Enabled: false,
+			Listen:  defaultAdminListen,
+			Token:   "",
+			Allow:   nil,
 		},
 	}
 }
@@ -360,6 +381,26 @@ func applyEnvOverrides(cfg *Config, lookup func(string) (string, bool)) error {
 		return fmt.Errorf("task upstream config: %w", err)
 	}
 
+	if val, ok := lookup(envAdminEnabled); ok && strings.TrimSpace(val) != "" {
+		enabled, err := strconv.ParseBool(strings.TrimSpace(val))
+		if err != nil {
+			return fmt.Errorf("invalid %s: %w", envAdminEnabled, err)
+		}
+		cfg.Admin.Enabled = enabled
+	}
+
+	if val, ok := lookup(envAdminListen); ok && strings.TrimSpace(val) != "" {
+		cfg.Admin.Listen = strings.TrimSpace(val)
+	}
+
+	if val, ok := lookup(envAdminToken); ok {
+		cfg.Admin.Token = strings.TrimSpace(val)
+	}
+
+	if val, ok := lookup(envAdminAllow); ok && strings.TrimSpace(val) != "" {
+		cfg.Admin.Allow = splitAndTrim(val)
+	}
+
 	return nil
 }
 
@@ -427,6 +468,10 @@ func (cfg *Config) normalize() error {
 	}
 	if cfg.RateLimit.Max <= 0 {
 		cfg.RateLimit.Max = defaultRateLimitMax
+	}
+
+	if strings.TrimSpace(cfg.Admin.Listen) == "" {
+		cfg.Admin.Listen = defaultAdminListen
 	}
 
 	cfg.ensureUpstream(envTradePrefix)
@@ -503,6 +548,25 @@ func (cfg Config) Validate() error {
 	}
 	if cfg.RateLimit.Window.AsDuration() <= 0 {
 		errs = append(errs, fmt.Errorf("rateLimit.window must be positive"))
+	}
+
+	if cfg.Admin.Enabled {
+		if strings.TrimSpace(cfg.Admin.Listen) == "" {
+			errs = append(errs, fmt.Errorf("admin.listen must be provided when admin.enabled is true"))
+		}
+		for _, entry := range cfg.Admin.Allow {
+			e := strings.TrimSpace(entry)
+			if e == "" {
+				continue
+			}
+			if strings.Contains(e, "/") {
+				if _, err := netip.ParsePrefix(e); err != nil {
+					errs = append(errs, fmt.Errorf("invalid admin allow value %q: %w", e, err))
+				}
+			} else if _, err := netip.ParseAddr(e); err != nil {
+				errs = append(errs, fmt.Errorf("invalid admin allow value %q: %w", e, err))
+			}
+		}
 	}
 
 	if len(errs) == 0 {
