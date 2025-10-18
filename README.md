@@ -26,6 +26,15 @@ A lightweight Go gateway that forwards trade and task traffic, validates JWT tok
 - `scripts/shadowdiff-run.sh` – start mock upstreams, run the Go gateway, and optionally diff against a reference Node deployment by setting `NODE_BASE_URL`.
 - `scripts/smoke/smoke.sh` – run smoke checks against a running instance (set `SMOKE_JWT` to exercise proxy routes).
 
+## Managing the Gateway
+
+- `apigw daemon start` writes a pid file and (optionally) a log file before booting the runtime. Add `--background` to detach; the parent prints the daemon pid so you can stash it in supervisors or scripts.
+- `apigw daemon stop --pid apigw.pid` tears down the managed process. Use `--signal` (for example, `SIGINT`, `SIGTERM`, or `SIGKILL`) and `--wait` to tune shutdown behaviour; stale pid files are automatically cleaned up.
+- `apigw daemon status --pid apigw.pid` reports whether the pid file points at a live process (`daemon running`) or has already exited (`daemon not running`).
+- `apigw admin <status|config|reload>` targets the HTTP control-plane. Pair the `--url` flag with `--token` when `ADMIN_TOKEN` or `admin.token` is set, and lock down access with `ADMIN_ALLOW`/`admin.allow`.
+- Store daemon log output via `--log` or by exporting `APIGW_LOG_PATH`. The path is propagated to the runtime so the same Zap logger flows through admin and proxy requests.
+
+
 
 ## Repository Structure
 

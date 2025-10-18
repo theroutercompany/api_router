@@ -11,6 +11,14 @@
 9. Deploy using the Render blueprint in `render.yaml` or adapt it for your infrastructure.
 10. Inspect or reload the running gateway via `go run ./cmd/apigw admin status --url http://127.0.0.1:9090` (add `--token` if `admin.token` is configured).
 
+## Managing the Gateway
+
+- `go run ./cmd/apigw daemon start --config gateway.yaml --pid apigw.pid --log apigw.log --background` writes PID/log files and detaches the process; the parent prints the pid so you can hand it to monitors.
+- `go run ./cmd/apigw daemon stop --pid apigw.pid --signal SIGTERM --wait 5s` gracefully shuts down the managed process (swap in `SIGINT` or `SIGKILL` as needed; stale pid files are auto-removed).
+- `go run ./cmd/apigw daemon status --pid apigw.pid` reports whether the daemon is currently running or the pid file is stale.
+- `go run ./cmd/apigw admin <status|config|reload> --url http://127.0.0.1:9090 --token <token>` interacts with the HTTP control-plane; protect access with `ADMIN_TOKEN`/`admin.token` and narrow addresses via `ADMIN_ALLOW`/`admin.allow`.
+- Capture daemon logs by passing `--log` or by exporting `APIGW_LOG_PATH`; the runtime reuses the same Zap logger for admin endpoints and proxy traffic.
+
 ## Environment variables
 
 | Variable | Required | Description |
