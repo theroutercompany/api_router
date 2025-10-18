@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
 	gatewayruntime "github.com/theroutercompany/api_router/pkg/gateway/runtime"
@@ -100,6 +101,7 @@ func Stop(pidPath string, sig syscall.Signal) (ProcessStatus, error) {
 		return status, os.ErrNotExist
 	}
 	if !status.Running {
+		_ = os.Remove(pidPath)
 		return status, nil
 	}
 
@@ -110,6 +112,27 @@ func Stop(pidPath string, sig syscall.Signal) (ProcessStatus, error) {
 	if err := proc.Signal(sig); err != nil {
 		return status, fmt.Errorf("signal process: %w", err)
 	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(200 * time.Millisecond)
+		st, err := Status(pidPath)
+		if errors.Is(err, os.ErrNotExist) || (err == nil && !st.Running) {
+			_ = os.Remove(pidPath)
+			return st, nil
+		}
+		if err != nil {
+			return status, err
+		}
+	}
+
+	if sig != syscall.SIGKILL {
+		if err := proc.Signal(syscall.SIGKILL); err != nil {
+			return status, fmt.Errorf("force kill process: %w", err)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	_ = os.Remove(pidPath)
 	return status, nil
 }
 
