@@ -1,3 +1,8 @@
+// Package auth exposes reusable authentication primitives for gateway runtimes.
+//
+// It currently exports a JWT-based authenticator that enforces audience/issuer
+// checks and scope validation, mirroring the legacy gateway behaviour while
+// remaining embeddable from downstream services.
 package auth
 
 import (
@@ -7,7 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/theroutercompany/api_router/internal/config"
+	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
 )
 
 // Principal represents the authenticated caller.
@@ -45,7 +50,7 @@ type Authenticator struct {
 }
 
 // New constructs an authenticator from configuration.
-func New(cfg config.AuthConfig) (*Authenticator, error) {
+func New(cfg gatewayconfig.AuthConfig) (*Authenticator, error) {
 	if cfg.Secret == "" {
 		return nil, errors.New("jwt secret not configured")
 	}

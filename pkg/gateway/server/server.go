@@ -1,7 +1,10 @@
-package gatewayhttp
+// Package server exposes the HTTP server wiring for the gateway runtime,
+// combining middleware, proxy handlers, and lifecycle helpers. Downstream
+// callers typically use it via the runtime package but can embed individual
+// components if they need fine-grained control.
+package server
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,19 +12,19 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/rs/cors"
 
-	"github.com/theroutercompany/api_router/internal/auth"
-	"github.com/theroutercompany/api_router/internal/config"
-	"github.com/theroutercompany/api_router/internal/http/problem"
-	"github.com/theroutercompany/api_router/internal/http/proxy"
 	"github.com/theroutercompany/api_router/internal/openapi"
 	"github.com/theroutercompany/api_router/internal/platform/health"
+	gatewayauth "github.com/theroutercompany/api_router/pkg/gateway/auth"
+	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
+	gatewaymetrics "github.com/theroutercompany/api_router/pkg/gateway/metrics"
+	gatewayproblem "github.com/theroutercompany/api_router/pkg/gateway/problem"
+	gatewayproxy "github.com/theroutercompany/api_router/pkg/gateway/proxy"
+	gatewaymiddleware "github.com/theroutercompany/api_router/pkg/gateway/server/middleware"
 	pkglog "github.com/theroutercompany/api_router/pkg/log"
-	"github.com/theroutercompany/api_router/pkg/metrics"
 
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -45,14 +48,14 @@ func WithOpenAPIProvider(provider openapi.DocumentProvider) ServerOption {
 
 // Server coordinates HTTP routes and lifecycle hooks.
 type Server struct {
-	cfg             config.Config
+	cfg             gatewayconfig.Config
 	router          *http.ServeMux
 	httpServer      *http.Server
 	handler         http.Handler
 	healthChecker   readinessReporter
 	bootTime        time.Time
 	metricsHandler  http.Handler
-	authenticator   *auth.Authenticator
+	authenticator   *gatewayauth.Authenticator
 	tradeHandler    http.Handler
 	taskHandler     http.Handler
 	rateLimiter     *rateLimiter
@@ -61,8 +64,8 @@ type Server struct {
 	protocolMetrics *protocolMetrics
 }
 
-// NewServer constructs a server with baseline dependencies configured.
-func NewServer(cfg config.Config, checker readinessReporter, registry *metrics.Registry, opts ...ServerOption) *Server {
+// New constructs a server with baseline dependencies configured.
+func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaymetrics.Registry, opts ...ServerOption) *Server {
 	mux := http.NewServeMux()
 
 	s := &Server{
@@ -71,8 +74,8 @@ func NewServer(cfg config.Config, checker readinessReporter, registry *metrics.R
 		healthChecker:  checker,
 		bootTime:       time.Now().UTC(),
 		metricsHandler: nil,
-		rateLimiter:    newRateLimiter(cfg.RateLimit.Window, cfg.RateLimit.Max),
-		cors:           buildCORS(cfg.CorsAllowedOrigins),
+		rateLimiter:    newRateLimiter(cfg.RateLimit.Window.AsDuration(), cfg.RateLimit.Max),
+		cors:           buildCORS(cfg.CORS.AllowedOrigins),
 	}
 
 	for _, opt := range opts {
@@ -81,13 +84,17 @@ func NewServer(cfg config.Config, checker readinessReporter, registry *metrics.R
 		}
 	}
 
-	if registry != nil {
+	if registry != nil && cfg.Metrics.Enabled {
 		s.metricsHandler = registry.Handler()
 	}
-	s.protocolMetrics = newProtocolMetrics(registry)
+	if cfg.Metrics.Enabled {
+		s.protocolMetrics = newProtocolMetrics(registry)
+	} else {
+		s.protocolMetrics = newProtocolMetrics(nil)
+	}
 
 	if cfg.Auth.Secret != "" {
-		if authenticator, err := auth.New(cfg.Auth); err != nil {
+		if authenticator, err := gatewayauth.New(cfg.Auth); err != nil {
 			pkglog.Logger().Errorw("failed to initialize authenticator", "error", err)
 		} else {
 			s.authenticator = authenticator
@@ -102,18 +109,34 @@ func NewServer(cfg config.Config, checker readinessReporter, registry *metrics.R
 
 	s.mountRoutes()
 	handler := http.Handler(mux)
-	handler = s.withBodyLimit(handler)
-	handler = s.withRateLimiting(handler)
-	handler = s.withCORS(handler)
-	handler = s.withLogging(handler)
-	handler = s.withSecurityHeaders(handler)
-	handler = s.withRequestMetadata(handler)
+	handler = gatewaymiddleware.BodyLimit(maxRequestBodyBytes, traceIDFromContext, gatewayproblem.Write)(handler)
+	if s.rateLimiter != nil {
+		handler = gatewaymiddleware.RateLimit(
+			func(key string, now time.Time) bool { return s.rateLimiter.allow(key, now) },
+			clientKey,
+			time.Now,
+			traceIDFromContext,
+			gatewayproblem.Write,
+		)(handler)
+	}
+	if s.cors != nil {
+		handler = gatewaymiddleware.CORS(s.cors, traceIDFromContext, gatewayproblem.Write)(handler)
+	}
+	var tracker gatewaymiddleware.TrackFunc
+	var hijacker gatewaymiddleware.HijackedFunc
+	if s.protocolMetrics != nil {
+		tracker = s.protocolMetrics.track
+		hijacker = s.protocolMetrics.hijacked
+	}
+	handler = gatewaymiddleware.Logging(pkglog.Logger(), tracker, hijacker, requestIDFromContext, traceIDFromContext, clientAddress)(handler)
+	handler = gatewaymiddleware.SecurityHeaders()(handler)
+	handler = gatewaymiddleware.RequestMetadata(ensureRequestIDs)(handler)
 	http2Server := &http2.Server{}
 	handler = h2c.NewHandler(handler, http2Server)
 
 	s.handler = handler
 	s.httpServer = &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.HTTPPort),
+		Addr:    fmt.Sprintf(":%d", cfg.HTTP.Port),
 		Handler: handler,
 	}
 	if err := http2.ConfigureServer(s.httpServer, http2Server); err != nil {
@@ -140,7 +163,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.cfg.ShutdownTimeout)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.cfg.HTTP.ShutdownTimeout.AsDuration())
 		defer cancel()
 		if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
 			pkglog.Logger().Errorw("http server shutdown failed", "error", err)
@@ -153,6 +176,14 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 		return err
 	}
+}
+
+// Shutdown gracefully stops the HTTP server using the provided context.
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.httpServer == nil {
+		return nil
+	}
+	return s.httpServer.Shutdown(ctx)
 }
 
 func (s *Server) mountRoutes() {
@@ -176,11 +207,11 @@ func (s *Server) mountRoutes() {
 }
 
 func (s *Server) initProxies() {
-	for _, upstream := range s.cfg.Upstreams {
-		handler, err := proxy.New(proxy.Options{
+	for _, upstream := range s.cfg.Readiness.Upstreams {
+		handler, err := gatewayproxy.New(gatewayproxy.Options{
 			Target:  upstream.BaseURL,
 			Product: upstream.Name,
-			TLS: proxy.TLSConfig{
+			TLS: gatewayproxy.TLSConfig{
 				Enabled:            upstream.TLS.Enabled,
 				InsecureSkipVerify: upstream.TLS.InsecureSkipVerify,
 				CAFile:             upstream.TLS.CAFile,
@@ -209,7 +240,7 @@ func (s *Server) buildProtectedHandler(product string, requiredScopes []string, 
 		w.Header().Set("X-Trace-Id", traceID)
 
 		if s.authenticator == nil {
-			problem.Write(w, http.StatusServiceUnavailable, "Service Unavailable", "Gateway authentication is not configured", traceID, req.URL.Path)
+			gatewayproblem.Write(w, http.StatusServiceUnavailable, "Service Unavailable", "Gateway authentication is not configured", traceID, req.URL.Path)
 			return
 		}
 
@@ -220,7 +251,7 @@ func (s *Server) buildProtectedHandler(product string, requiredScopes []string, 
 		}
 
 		if !principal.HasAnyScope(requiredScopes) {
-			problem.Write(w, http.StatusForbidden, "Insufficient Scope", fmt.Sprintf("Requires one of scopes: %s", strings.Join(requiredScopes, ", ")), traceID, req.URL.Path)
+			gatewayproblem.Write(w, http.StatusForbidden, "Insufficient Scope", fmt.Sprintf("Requires one of scopes: %s", strings.Join(requiredScopes, ", ")), traceID, req.URL.Path)
 			return
 		}
 
@@ -234,243 +265,15 @@ func (s *Server) buildProtectedHandler(product string, requiredScopes []string, 
 
 func (s *Server) writeAuthProblem(w http.ResponseWriter, r *http.Request, err error, traceID string) {
 	switch e := err.(type) {
-	case auth.Error:
+	case gatewayauth.Error:
 		if e.Status == http.StatusUnauthorized {
 			w.Header().Set("WWW-Authenticate", "Bearer")
 		}
-		problem.Write(w, e.Status, e.Title, e.Detail, traceID, r.URL.Path)
+		gatewayproblem.Write(w, e.Status, e.Title, e.Detail, traceID, r.URL.Path)
 	default:
 		w.Header().Set("WWW-Authenticate", "Bearer")
-		problem.Write(w, http.StatusUnauthorized, "Authentication Required", err.Error(), traceID, r.URL.Path)
+		gatewayproblem.Write(w, http.StatusUnauthorized, "Authentication Required", err.Error(), traceID, r.URL.Path)
 	}
-}
-
-func (s *Server) withRequestMetadata(next http.Handler) http.Handler {
-	if next == nil {
-		return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, requestID, traceID := ensureRequestIDs(r)
-		w.Header().Set("X-Request-Id", requestID)
-		if traceID != "" {
-			w.Header().Set("X-Trace-Id", traceID)
-		}
-
-		next.ServeHTTP(w, req)
-	})
-}
-
-func (s *Server) withLogging(next http.Handler) http.Handler {
-	if next == nil {
-		return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		track := func(int, time.Duration) {}
-		var hijackTracker func() func()
-		if s.protocolMetrics != nil {
-			track = s.protocolMetrics.track(r)
-			hijackTracker = func() func() { return s.protocolMetrics.hijacked(r) }
-		}
-
-		writer := newLoggingResponseWriter(w, hijackTracker)
-		next.ServeHTTP(writer, r)
-
-		duration := time.Since(start)
-		status := writer.status
-		if status == 0 {
-			status = http.StatusOK
-		}
-
-		track(status, duration)
-
-		fields := []any{
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", status,
-			"durationMs", float64(duration.Microseconds()) / 1000.0,
-			"bytesWritten", writer.bytes,
-		}
-
-		if requestID := requestIDFromContext(r.Context()); requestID != "" {
-			fields = append(fields, "requestId", requestID)
-		}
-		if traceID := traceIDFromContext(r.Context()); traceID != "" {
-			fields = append(fields, "traceId", traceID)
-		}
-		if remote := clientAddress(r); remote != "" {
-			fields = append(fields, "remoteAddr", remote)
-		}
-
-		logger := pkglog.Logger()
-		switch {
-		case status >= 500:
-			logger.Errorw("http request completed", fields...)
-		case status >= 400:
-			logger.Warnw("http request completed", fields...)
-		default:
-			logger.Infow("http request completed", fields...)
-		}
-	})
-}
-
-func (s *Server) withSecurityHeaders(next http.Handler) http.Handler {
-	if next == nil {
-		return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		headers := w.Header()
-		headers.Set("X-Content-Type-Options", "nosniff")
-		headers.Set("X-Frame-Options", "DENY")
-		headers.Set("Referrer-Policy", "no-referrer")
-		headers.Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func (s *Server) withCORS(next http.Handler) http.Handler {
-	if s.cors == nil || next == nil {
-		return next
-	}
-	corsHandler := s.cors.Handler(next)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := strings.TrimSpace(r.Header.Get("Origin"))
-		if origin != "" && !s.cors.OriginAllowed(r) {
-			traceID := traceIDFromContext(r.Context())
-			detail := fmt.Sprintf("Origin %s is not allowed", origin)
-			problem.Write(w, http.StatusForbidden, "Not allowed by CORS", detail, traceID, r.URL.Path)
-			return
-		}
-		corsHandler.ServeHTTP(w, r)
-	})
-}
-
-func (s *Server) withRateLimiting(next http.Handler) http.Handler {
-	if s.rateLimiter == nil || next == nil {
-		return next
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodOptions {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		key := clientKey(r)
-		if s.rateLimiter.allow(key, time.Now()) {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		traceID := traceIDFromContext(r.Context())
-		problem.Write(w, http.StatusTooManyRequests, "Too Many Requests", "Rate limit exceeded", traceID, r.URL.Path)
-	})
-}
-
-func (s *Server) withBodyLimit(next http.Handler) http.Handler {
-	if next == nil {
-		return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.ContentLength > maxRequestBodyBytes {
-			traceID := traceIDFromContext(r.Context())
-			problem.Write(w, http.StatusRequestEntityTooLarge, "Payload Too Large", fmt.Sprintf("Request body exceeds %d bytes", maxRequestBodyBytes), traceID, r.URL.Path)
-			return
-		}
-
-		if r.Body != nil {
-			r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-type loggingResponseWriter struct {
-	http.ResponseWriter
-	status        int
-	bytes         int
-	hijackTracker func() func()
-	hijackOnce    sync.Once
-}
-
-func newLoggingResponseWriter(w http.ResponseWriter, tracker func() func()) *loggingResponseWriter {
-	return &loggingResponseWriter{
-		ResponseWriter: w,
-		status:         http.StatusOK,
-		hijackTracker:  tracker,
-	}
-}
-
-func (w *loggingResponseWriter) WriteHeader(status int) {
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
-}
-
-func (w *loggingResponseWriter) Write(b []byte) (int, error) {
-	if w.status == 0 {
-		w.status = http.StatusOK
-	}
-	n, err := w.ResponseWriter.Write(b)
-	w.bytes += n
-	return n, err
-}
-
-func (w *loggingResponseWriter) Flush() {
-	if flusher, ok := w.ResponseWriter.(http.Flusher); ok {
-		flusher.Flush()
-	}
-}
-
-func (w *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
-	hijacker, ok := w.ResponseWriter.(http.Hijacker)
-	if !ok {
-		return nil, nil, errors.New("hijacker not supported")
-	}
-	conn, rw, err := hijacker.Hijack()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if w.hijackTracker != nil {
-		var closer func()
-		w.hijackOnce.Do(func() {
-			closer = w.hijackTracker()
-		})
-		if closer != nil {
-			conn = &trackingConn{Conn: conn, onClose: closer}
-		}
-	}
-
-	return conn, rw, nil
-}
-
-func (w *loggingResponseWriter) Push(target string, opts *http.PushOptions) error {
-	if pusher, ok := w.ResponseWriter.(http.Pusher); ok {
-		return pusher.Push(target, opts)
-	}
-	return http.ErrNotSupported
-}
-
-type trackingConn struct {
-	net.Conn
-	onClose func()
-	once    sync.Once
-}
-
-func (c *trackingConn) Close() error {
-	err := c.Conn.Close()
-	c.once.Do(func() {
-		if c.onClose != nil {
-			c.onClose()
-		}
-	})
-	return err
 }
 
 func clientKey(r *http.Request) string {
@@ -594,14 +397,14 @@ func (s *Server) handleReadiness(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	if s.openapiProvider == nil {
-		problem.Write(w, http.StatusServiceUnavailable, "OpenAPI Unavailable", "OpenAPI provider not configured", traceIDFromContext(r.Context()), r.URL.Path)
+		gatewayproblem.Write(w, http.StatusServiceUnavailable, "OpenAPI Unavailable", "OpenAPI provider not configured", traceIDFromContext(r.Context()), r.URL.Path)
 		return
 	}
 
 	data, err := s.openapiProvider.Document(r.Context())
 	if err != nil {
 		traceID := traceIDFromContext(r.Context())
-		problem.Write(w, http.StatusServiceUnavailable, "OpenAPI Unavailable", err.Error(), traceID, r.URL.Path)
+		gatewayproblem.Write(w, http.StatusServiceUnavailable, "OpenAPI Unavailable", err.Error(), traceID, r.URL.Path)
 		return
 	}
 

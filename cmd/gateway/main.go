@@ -2,15 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"net/http"
 
-	"github.com/theroutercompany/api_router/internal/config"
-	gatewayhttp "github.com/theroutercompany/api_router/internal/http"
-	"github.com/theroutercompany/api_router/internal/platform/health"
+	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
+	gatewayruntime "github.com/theroutercompany/api_router/pkg/gateway/runtime"
 	pkglog "github.com/theroutercompany/api_router/pkg/log"
-	"github.com/theroutercompany/api_router/pkg/metrics"
 )
 
 func main() {
@@ -20,24 +18,15 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	cfg, err := config.Load()
+	cfg, err := gatewayconfig.Load()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	upstreams := make([]health.Upstream, len(cfg.Upstreams))
-	for i, upstreamCfg := range cfg.Upstreams {
-		upstreams[i] = health.Upstream{
-			Name:       upstreamCfg.Name,
-			BaseURL:    upstreamCfg.BaseURL,
-			HealthPath: upstreamCfg.HealthPath,
-		}
+	rt, err := gatewayruntime.New(cfg)
+	if err != nil {
+		return fmt.Errorf("build runtime: %w", err)
 	}
-
-	httpClient := &http.Client{Timeout: cfg.ReadinessTimeout}
-	checker := health.NewChecker(httpClient, upstreams, cfg.ReadinessTimeout, cfg.ReadinessUserAgent)
-	registry := metrics.NewRegistry()
-	srv := gatewayhttp.NewServer(cfg, checker, registry)
 
 	defer func() {
 		if syncErr := pkglog.Sync(); syncErr != nil {
@@ -45,7 +34,10 @@ func run(ctx context.Context) error {
 		}
 	}()
 
-	if err := srv.Start(ctx); err != nil && err != context.Canceled {
+	if err := rt.Run(ctx); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
 		return err
 	}
 	return nil

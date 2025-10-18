@@ -1,6 +1,7 @@
 package log
 
 import (
+	"os"
 	"strings"
 	"sync"
 
@@ -18,6 +19,10 @@ var (
 func Logger() *zap.SugaredLogger {
 	once.Do(func() {
 		cfg := zap.NewProductionConfig()
+		if path := strings.TrimSpace(os.Getenv("APIGW_LOG_PATH")); path != "" {
+			cfg.OutputPaths = []string{path}
+			cfg.ErrorOutputPaths = []string{path}
+		}
 		cfg.EncoderConfig.TimeKey = "time"
 		cfg.EncoderConfig.MessageKey = "msg"
 		cfg.EncoderConfig.LevelKey = "level"

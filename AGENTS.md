@@ -1,39 +1,42 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `cmd/`: runtime entrypoints (`gateway` boots the HTTP service, `openapi` emits specs).
-- `internal/`: domain logic grouped by concern (auth, config, http handlers, platform, openapi helpers).
-- `pkg/`: shared libraries (logging, metrics) safe for reuse.
-- `specs/`: OpenAPI fragments merged to `dist/openapi.json` via the generator.
-- `shadowdiff/`: fixtures, mock upstreams, and scripts for response diffs.
-- Tests live alongside their packages; smoke/shadow scripts sit under `scripts/`.
+- `cmd/` holds entrypoints: `apigw` manages runtime operations, `gateway` is a thin wrapper, `openapi` regenerates specs.
+- `internal/` contains supporting domain logic (OpenAPI merge service, platform helpers, shadow diff tooling).
+- `pkg/gateway/` exposes the SDK surface (auth, config, problem responses, proxy, runtime, server).
+- `pkg/` exposes shared tooling such as logging and metrics.
+- `specs/` stores OpenAPI fragments merged into `dist/openapi.json`.
+- `shadowdiff/` offers fixtures, mock upstreams, and diff scripts; tests live beside their packages.
 
 ## Build, Test, and Development Commands
-- `go run ./cmd/gateway`: start the local gateway with current config.
-- `go run ./cmd/openapi --out dist/openapi.json`: regenerate the merged OpenAPI document.
-- `go test ./...`: run unit and integration tests across all modules.
-- `golangci-lint run ./...`: match CI lint/static analysis expectations.
-- `scripts/smoke/smoke.sh`: perform smoke validation against a running instance (set `SMOKE_JWT` for proxy flows).
-- `scripts/shadowdiff-run.sh`: spin up mock upstreams; when `NODE_BASE_URL` is set it compares responses to the reference Node deployment.
+- `go run ./cmd/apigw run --config gateway.yaml` starts the local gateway with YAML + env overrides.
+- `go run ./cmd/apigw daemon --config gateway.yaml --pid apigw.pid --log apigw.log --background` runs the managed daemon.
+- `go run ./cmd/apigw daemon stop --pid apigw.pid` stops the managed daemon and cleans up the PID file.
+- `go run ./cmd/apigw daemon status --pid apigw.pid` reports the daemon's current PID and state.
+- `go run ./cmd/gateway` uses the same runtime for backwards compatibility.
+- `go run ./cmd/openapi --out dist/openapi.json` regenerates the merged OpenAPI document.
+- `go test ./...` runs unit and integration suites; use before submitting changes.
+- `golangci-lint run ./...` mirrors CI static checks.
+- `scripts/smoke/smoke.sh` performs smoke validation (set `SMOKE_JWT` for proxy flows).
+- `scripts/shadowdiff-run.sh` spins up mock upstreams and compares responses when `NODE_BASE_URL` is set.
 
 ## Coding Style & Naming Conventions
-- Target Go 1.22; keep code `gofmt`/`goimports` clean and lint-passing.
-- Use package-oriented names (nouns for packages, verb-based function names) and export only what downstream code needs.
-- Prefer explicit types over `interface{}`; wrap errors with context when it aids debugging.
-- Keep comments sparse and purpose-driven; avoid logging secrets—use the Zap-based shared logger with structured fields.
+- Target Go 1.22; keep code `gofmt`/`goimports` clean and lint passing.
+- Package names stay noun-based; exported identifiers exist only when downstream code needs them.
+- Prefer explicit types, wrap errors with context, and avoid logging secrets—use the shared Zap logger with structured fields.
+- Comments should explain non-obvious intent; keep them sparse and purposeful.
 
 ## Testing Guidelines
-- Co-locate `_test.go` files with the code under test; mirror package names.
-- Update or extend shadow diff fixtures in `shadowdiff/fixtures/` when changing proxy behaviour.
-- Keep mock upstream logic in `shadowdiff/mock-upstreams.mjs` aligned with real upstream APIs.
-- Run `go test ./...` before sending changes; add new cases for behavioural changes.
+- Co-locate `_test.go` files with their packages and mirror package names.
+- Extend `shadowdiff/fixtures/` when proxy behavior changes, and align `shadowdiff/mock-upstreams.mjs` with real upstream APIs.
+- Run `go test ./...` plus targeted smoke or shadow diff scripts when behavior shifts.
 
 ## Commit & Pull Request Guidelines
-- Follow Conventional Commits, e.g. `feat(gateway): add readiness metrics`.
-- PR descriptions should list validation steps (`go test ./...`, `golangci-lint run ./...`, optional `scripts/shadowdiff-run.sh`) and call out API or operational impacts.
-- Link relevant issues or tickets; include manual verification notes when altering integrations.
+- Follow Conventional Commits (e.g., `feat(gateway): add readiness metrics`).
+- PR descriptions list validation steps (`go test ./...`, `golangci-lint run ./...`, optionally shadow diff scripts) and note operational or API impacts.
+- Link relevant tickets, document manual verification for integrations, and attach screenshots or logs when they clarify behavior.
 
 ## Security & Configuration Tips
-- Configure `TRADE_API_URL`, `TASK_API_URL`, `CORS_ALLOWED_ORIGINS`, `JWT_SECRET`, and related auth settings per environment.
-- Readiness checks must confirm upstream 200 responses before reporting `ready`.
-- Strip hop-by-hop headers while proxying and avoid logging sensitive payloads.
+- Configure `TRADE_API_URL`, `TASK_API_URL`, `CORS_ALLOWED_ORIGINS`, `JWT_SECRET`, and related auth env vars per environment.
+- Ensure readiness checks require 200 responses from upstreams before reporting healthy.
+- Strip hop-by-hop headers while proxying and exclude sensitive payloads from logs.

@@ -1,4 +1,4 @@
-package gatewayhttp
+package server
 
 import (
 	"encoding/json"
@@ -9,8 +9,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/theroutercompany/api_router/internal/auth"
-	"github.com/theroutercompany/api_router/internal/config"
+	gatewayauth "github.com/theroutercompany/api_router/pkg/gateway/auth"
+	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
 )
 
 func TestProtectedHandlerRequiresAuth(t *testing.T) {
@@ -111,20 +111,20 @@ func TestTaskHandlerUsesTaskProduct(t *testing.T) {
 	}
 }
 
-func newTestAuthenticator(t *testing.T, audiences []string) *auth.Authenticator {
+func newTestAuthenticator(t *testing.T, audiences []string) *gatewayauth.Authenticator {
 	t.Helper()
-	authenticator, err := auth.New(config.AuthConfig{
+	authenticator, err := gatewayauth.New(gatewayconfig.AuthConfig{
 		Secret:    "secret",
 		Audiences: audiences,
 		Issuer:    "gateway",
 	})
 	if err != nil {
-		t.Fatalf("auth.New: %v", err)
+		t.Fatalf("gatewayauth.New: %v", err)
 	}
 	return authenticator
 }
 
-func newBearerToken(t *testing.T, authenticator *auth.Authenticator, subject string, audiences, scopes []string) string {
+func newBearerToken(t *testing.T, authenticator *gatewayauth.Authenticator, subject string, audiences, scopes []string) string {
 	t.Helper()
 
 	claims := jwt.RegisteredClaims{

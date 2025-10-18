@@ -10,7 +10,7 @@
 - Add header hardening (HSTS, frame/response headers) in the Go middleware stack if upstream load balancers do not already enforce them.
 
 ## Auth & Proxying
-- JWT validation lives in `internal/auth`; scopes are enforced per proxy via `buildProtectedHandler`.
+- JWT validation lives in `pkg/gateway/auth`; scopes are enforced per proxy via `buildProtectedHandler`.
 - Proxy failures return RFC 7807 problem+json with trace IDs; ensure upstream error responses keep tokens and secrets out of logs.
 - Structured logging defaults to Zap. Avoid logging bearer tokens or opaque identifiers; use `Infow`/`Errorw` with redacted fields when necessary.
 

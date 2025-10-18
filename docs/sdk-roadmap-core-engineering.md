@@ -3,7 +3,7 @@
 ## Phase 1 – Core Extraction & Modularization
 
 ### 1.1 Proxy & HTTP Stack Isolation
-- Move `internal/http/proxy/reverse_proxy.go` to `pkg/gateway/proxy/singlehost.go`, exporting:
+- Move `internal/http/proxy/reverse_proxy.go` to `pkg/gateway/proxy/reverse_proxy.go`, exporting:
   ```go
   type Options struct {
       Target  url.URL

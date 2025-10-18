@@ -26,7 +26,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/theroutercompany/api_router/internal/http/proxy"
+	"github.com/theroutercompany/api_router/pkg/gateway/proxy"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -36,7 +36,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	"github.com/theroutercompany/api_router/internal/http/proxy/testdata"
+	"github.com/theroutercompany/api_router/pkg/gateway/proxy/testdata"
 )
 
 func TestReverseProxyWebSocketUpgrade(t *testing.T) {

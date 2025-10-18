@@ -1,3 +1,6 @@
+// Package proxy constructs reverse proxies with gateway-specific defaults such
+// as TLS configuration, product headers, problem+json error handling, and
+// HTTP/2-ready transports.
 package proxy
 
 import (
@@ -11,7 +14,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/theroutercompany/api_router/internal/http/problem"
+	"github.com/theroutercompany/api_router/pkg/gateway/problem"
 	pkglog "github.com/theroutercompany/api_router/pkg/log"
 )
 

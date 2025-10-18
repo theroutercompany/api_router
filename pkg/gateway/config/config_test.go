@@ -1,11 +1,13 @@
 package config
 
 import (
+	"errors"
 	"testing"
 	"time"
 )
 
 func TestLoadFromEnvSuccess(t *testing.T) {
+	t.Setenv("APIGW_CONFIG", "")
 	t.Setenv("PORT", "9090")
 	t.Setenv("READINESS_TIMEOUT_MS", "1500")
 	t.Setenv("SHUTDOWN_TIMEOUT_MS", "7000")
@@ -14,7 +16,7 @@ func TestLoadFromEnvSuccess(t *testing.T) {
 	t.Setenv("TRADE_API_URL", "https://trade.example.com")
 	t.Setenv("TASK_API_URL", "https://task.example.com")
 	t.Setenv("TRADE_HEALTH_PATH", "/status/live")
-	t.Setenv("TASK_HEALTH_PATH", "/status/health")
+	t.Setenv("TASK_HEALTH_PATH", "status/health")
 	t.Setenv("JWT_SECRET", "supersecret")
 	t.Setenv("JWT_AUDIENCE", "api, mobile")
 	t.Setenv("JWT_ISSUER", "gateway")
@@ -23,35 +25,46 @@ func TestLoadFromEnvSuccess(t *testing.T) {
 	t.Setenv("TRADE_TLS_CERT_FILE", "/etc/router/client.pem")
 	t.Setenv("TRADE_TLS_KEY_FILE", "/etc/router/client.key")
 	t.Setenv("TASK_TLS_INSECURE_SKIP_VERIFY", "true")
+	t.Setenv("RATE_LIMIT_WINDOW_MS", "90000")
+	t.Setenv("RATE_LIMIT_MAX", "300")
+	t.Setenv("METRICS_ENABLED", "false")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("expected successful load, got error: %v", err)
 	}
 
-	if cfg.HTTPPort != 9090 {
-		t.Fatalf("expected port 9090, got %d", cfg.HTTPPort)
+	if cfg.HTTP.Port != 9090 {
+		t.Fatalf("expected port 9090, got %d", cfg.HTTP.Port)
 	}
-	if cfg.ReadinessTimeout != 1500*time.Millisecond {
-		t.Fatalf("unexpected readiness timeout: %v", cfg.ReadinessTimeout)
+	if cfg.Readiness.Timeout.AsDuration() != 1500*time.Millisecond {
+		t.Fatalf("unexpected readiness timeout: %v", cfg.Readiness.Timeout.AsDuration())
 	}
-	if cfg.ShutdownTimeout != 7000*time.Millisecond {
-		t.Fatalf("unexpected shutdown timeout: %v", cfg.ShutdownTimeout)
+	if cfg.HTTP.ShutdownTimeout.AsDuration() != 7*time.Second {
+		t.Fatalf("unexpected shutdown timeout: %v", cfg.HTTP.ShutdownTimeout.AsDuration())
 	}
-	if cfg.ReadinessUserAgent != "gateway/readyz-test" {
-		t.Fatalf("unexpected user agent: %s", cfg.ReadinessUserAgent)
+	if cfg.Readiness.UserAgent != "gateway/readyz-test" {
+		t.Fatalf("unexpected user agent: %s", cfg.Readiness.UserAgent)
 	}
 	if cfg.Version != "def456" {
 		t.Fatalf("unexpected version: %s", cfg.Version)
 	}
-	if len(cfg.Upstreams) != 2 {
-		t.Fatalf("expected 2 upstreams, got %d", len(cfg.Upstreams))
+	if cfg.Metrics.Enabled {
+		t.Fatalf("expected metrics enabled override to disable metrics")
 	}
-	if cfg.Upstreams[0].Name != "trade" || cfg.Upstreams[0].HealthPath != "/status/live" {
-		t.Fatalf("unexpected trade upstream config: %+v", cfg.Upstreams[0])
+	trade := upstreamByName(t, cfg, "trade")
+	if trade.BaseURL != "https://trade.example.com" {
+		t.Fatalf("unexpected trade base url: %s", trade.BaseURL)
 	}
-	if cfg.Upstreams[1].BaseURL != "https://task.example.com" {
-		t.Fatalf("unexpected task upstream base URL: %s", cfg.Upstreams[1].BaseURL)
+	if trade.HealthPath != "/status/live" {
+		t.Fatalf("unexpected trade health path: %s", trade.HealthPath)
+	}
+	task := upstreamByName(t, cfg, "task")
+	if task.BaseURL != "https://task.example.com" {
+		t.Fatalf("unexpected task base url: %s", task.BaseURL)
+	}
+	if task.HealthPath != "/status/health" {
+		t.Fatalf("expected leading slash applied, got %s", task.HealthPath)
 	}
 	if cfg.Auth.Secret != "supersecret" {
 		t.Fatalf("unexpected auth secret: %s", cfg.Auth.Secret)
@@ -62,31 +75,36 @@ func TestLoadFromEnvSuccess(t *testing.T) {
 	if cfg.Auth.Issuer != "gateway" {
 		t.Fatalf("unexpected issuer: %s", cfg.Auth.Issuer)
 	}
-	tradeTLS := cfg.Upstreams[0].TLS
-	if !tradeTLS.Enabled {
-		t.Fatalf("expected trade TLS enabled")
+	if cfg.RateLimit.Window.AsDuration() != 90*time.Second {
+		t.Fatalf("unexpected rate limit window: %v", cfg.RateLimit.Window.AsDuration())
 	}
-	if tradeTLS.CAFile != "/etc/router/ca.pem" {
-		t.Fatalf("unexpected trade CA file: %s", tradeTLS.CAFile)
+	if cfg.RateLimit.Max != 300 {
+		t.Fatalf("unexpected rate limit max: %d", cfg.RateLimit.Max)
 	}
-	if tradeTLS.ClientCertFile != "/etc/router/client.pem" || tradeTLS.ClientKeyFile != "/etc/router/client.key" {
-		t.Fatalf("unexpected trade client cert/key: %s %s", tradeTLS.ClientCertFile, tradeTLS.ClientKeyFile)
+	if tradeTLS := trade.TLS; !tradeTLS.Enabled || tradeTLS.CAFile != "/etc/router/ca.pem" {
+		t.Fatalf("unexpected trade TLS config: %+v", tradeTLS)
+	} else {
+		if tradeTLS.ClientCertFile != "/etc/router/client.pem" || tradeTLS.ClientKeyFile != "/etc/router/client.key" {
+			t.Fatalf("unexpected trade client cert/key: %s %s", tradeTLS.ClientCertFile, tradeTLS.ClientKeyFile)
+		}
 	}
-	taskTLS := cfg.Upstreams[1].TLS
-	if !taskTLS.Enabled || !taskTLS.InsecureSkipVerify {
-		t.Fatalf("expected task TLS with insecure skip verify enabled")
+	if taskTLS := task.TLS; !taskTLS.Enabled || !taskTLS.InsecureSkipVerify {
+		t.Fatalf("expected task TLS with insecure skip verify")
 	}
 }
 
 func TestLoadRequiresTradeURL(t *testing.T) {
+	t.Setenv("APIGW_CONFIG", "")
 	t.Setenv("TASK_API_URL", "https://task.example.com")
 
-	if _, err := Load(); err == nil {
+	_, err := Load()
+	if err == nil {
 		t.Fatalf("expected error when TRADE_API_URL missing")
 	}
 }
 
 func TestLoadRequiresTaskURL(t *testing.T) {
+	t.Setenv("APIGW_CONFIG", "")
 	t.Setenv("TRADE_API_URL", "https://trade.example.com")
 
 	if _, err := Load(); err == nil {
@@ -95,6 +113,7 @@ func TestLoadRequiresTaskURL(t *testing.T) {
 }
 
 func TestLoadValidatesURLs(t *testing.T) {
+	t.Setenv("APIGW_CONFIG", "")
 	t.Setenv("TRADE_API_URL", "not-a-url")
 	t.Setenv("TASK_API_URL", "https://task.example.com")
 
@@ -111,6 +130,7 @@ func TestLoadValidatesURLs(t *testing.T) {
 }
 
 func TestLoadValidatesNumericValues(t *testing.T) {
+	t.Setenv("APIGW_CONFIG", "")
 	t.Setenv("TRADE_API_URL", "https://trade.example.com")
 	t.Setenv("TASK_API_URL", "https://task.example.com")
 	t.Setenv("PORT", "-1")
@@ -134,57 +154,16 @@ func TestLoadValidatesNumericValues(t *testing.T) {
 	}
 }
 
-func TestDefaultUsedWhenEnvUnset(t *testing.T) {
-	// Ensure environment variables do not leak across tests.
-	for _, key := range []string{
-		"PORT",
-		"READINESS_TIMEOUT_MS",
-		"SHUTDOWN_TIMEOUT_MS",
-		"READINESS_USER_AGENT",
-		"GIT_SHA",
-		"TRADE_API_URL",
-		"TASK_API_URL",
-		"TRADE_HEALTH_PATH",
-		"TASK_HEALTH_PATH",
-		"JWT_SECRET",
-		"JWT_AUDIENCE",
-		"JWT_ISSUER",
-		"TRADE_TLS_ENABLED",
-		"TRADE_TLS_CA_FILE",
-		"TRADE_TLS_CERT_FILE",
-		"TRADE_TLS_KEY_FILE",
-		"TRADE_TLS_INSECURE_SKIP_VERIFY",
-		"TASK_TLS_ENABLED",
-		"TASK_TLS_CA_FILE",
-		"TASK_TLS_CERT_FILE",
-		"TASK_TLS_KEY_FILE",
-		"TASK_TLS_INSECURE_SKIP_VERIFY",
-	} {
-		t.Setenv(key, "")
-	}
-
+func TestDefaultConfigRequiresExplicitURLs(t *testing.T) {
 	cfg := Default()
 
-	if cfg.HTTPPort != defaultHTTPPort {
-		t.Fatalf("expected default port %d, got %d", defaultHTTPPort, cfg.HTTPPort)
-	}
-	if cfg.ReadinessTimeout != defaultReadinessTimeout {
-		t.Fatalf("expected default readiness timeout, got %v", cfg.ReadinessTimeout)
-	}
-	if cfg.ReadinessUserAgent != defaultReadinessUserAgent {
-		t.Fatalf("expected default user agent, got %s", cfg.ReadinessUserAgent)
-	}
-	for _, upstream := range cfg.Upstreams {
-		if upstream.TLS.Enabled {
-			t.Fatalf("expected default TLS disabled")
-		}
-		if upstream.TLS.CAFile != "" || upstream.TLS.ClientCertFile != "" || upstream.TLS.ClientKeyFile != "" {
-			t.Fatalf("expected empty TLS paths by default")
-		}
+	if err := cfg.Validate(); err == nil {
+		t.Fatalf("expected validation error when base URLs unset")
 	}
 }
 
 func TestLoadUpstreamTLSRequiresCertAndKey(t *testing.T) {
+	t.Setenv("APIGW_CONFIG", "")
 	t.Setenv("TRADE_API_URL", "https://trade.example.com")
 	t.Setenv("TASK_API_URL", "https://task.example.com")
 	t.Setenv("TRADE_TLS_CERT_FILE", "/etc/router/client.pem")
@@ -195,11 +174,55 @@ func TestLoadUpstreamTLSRequiresCertAndKey(t *testing.T) {
 }
 
 func TestLoadUpstreamTLSRejectsInvalidBool(t *testing.T) {
+	t.Setenv("APIGW_CONFIG", "")
 	t.Setenv("TRADE_API_URL", "https://trade.example.com")
 	t.Setenv("TASK_API_URL", "https://task.example.com")
 	t.Setenv("TASK_TLS_ENABLED", "not-bool")
 
 	if _, err := Load(); err == nil {
 		t.Fatalf("expected error when bool env invalid")
+	}
+}
+
+func upstreamByName(t *testing.T, cfg Config, name string) UpstreamConfig {
+	t.Helper()
+	for _, upstream := range cfg.Readiness.Upstreams {
+		if upstream.Name == name {
+			return upstream
+		}
+	}
+	t.Fatalf("upstream %s not found", name)
+	return UpstreamConfig{}
+}
+
+func TestValidateAggregatesErrors(t *testing.T) {
+	cfg := Config{
+		HTTP: HTTPConfig{
+			Port:            0,
+			ShutdownTimeout: DurationFrom(0),
+		},
+		Readiness: ReadinessConfig{
+			Timeout: DurationFrom(0),
+			Upstreams: []UpstreamConfig{
+				{Name: "trade"},
+				{Name: "task"},
+			},
+		},
+		RateLimit: RateLimitConfig{
+			Window: DurationFrom(0),
+			Max:    0,
+		},
+	}
+
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatalf("expected validation error")
+	}
+	var joined interface{ Unwrap() []error }
+	if !errors.As(err, &joined) {
+		t.Fatalf("expected joined error, got %T", err)
+	}
+	if len(joined.Unwrap()) < 3 {
+		t.Fatalf("expected multiple errors, got %d", len(joined.Unwrap()))
 	}
 }

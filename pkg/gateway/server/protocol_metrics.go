@@ -1,4 +1,4 @@
-package gatewayhttp
+package server
 
 import (
 	"net/http"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/theroutercompany/api_router/pkg/metrics"
+	gatewaymetrics "github.com/theroutercompany/api_router/pkg/gateway/metrics"
 )
 
 type protocolMetrics struct {
@@ -17,7 +17,7 @@ type protocolMetrics struct {
 	connections *prometheus.GaugeVec
 }
 
-func newProtocolMetrics(reg *metrics.Registry) *protocolMetrics {
+func newProtocolMetrics(reg *gatewaymetrics.Registry) *protocolMetrics {
 	if reg == nil {
 		return nil
 	}

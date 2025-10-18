@@ -1,4 +1,4 @@
-package gatewayhttp
+package server
 
 import (
 	"bytes"
@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/theroutercompany/api_router/internal/config"
 	"github.com/theroutercompany/api_router/internal/platform/health"
-	"github.com/theroutercompany/api_router/pkg/metrics"
+	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
+	gatewaymetrics "github.com/theroutercompany/api_router/pkg/gateway/metrics"
 
 	"golang.org/x/net/http2"
 )
@@ -43,10 +43,23 @@ func (s stubOpenAPIProvider) Document(_ context.Context) ([]byte, error) {
 	return s.data, nil
 }
 
+func newTestConfig() gatewayconfig.Config {
+	cfg := gatewayconfig.Default()
+	for i := range cfg.Readiness.Upstreams {
+		switch cfg.Readiness.Upstreams[i].Name {
+		case "trade":
+			cfg.Readiness.Upstreams[i].BaseURL = "https://trade.example.com"
+		case "task":
+			cfg.Readiness.Upstreams[i].BaseURL = "https://task.example.com"
+		}
+	}
+	return cfg
+}
+
 func TestHandleHealthReturnsOkPayload(t *testing.T) {
-	cfg := config.Default()
+	cfg := newTestConfig()
 	cfg.Version = "abc123"
-	srv := NewServer(cfg, stubReporter{}, nil)
+	srv := New(cfg, stubReporter{}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	rr := httptest.NewRecorder()
@@ -86,7 +99,7 @@ func TestHandleHealthReturnsOkPayload(t *testing.T) {
 }
 
 func TestHandleReadinessReportsReady(t *testing.T) {
-	cfg := config.Default()
+	cfg := newTestConfig()
 	readyReport := health.Report{
 		Status:    "ready",
 		CheckedAt: time.Now().UTC(),
@@ -94,7 +107,7 @@ func TestHandleReadinessReportsReady(t *testing.T) {
 			{Name: "trade", Healthy: true, CheckedAt: time.Now().UTC()},
 		},
 	}
-	srv := NewServer(cfg, stubReporter{report: readyReport}, nil)
+	srv := New(cfg, stubReporter{report: readyReport}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	req.Header.Set("X-Request-Id", "req-123")
@@ -129,7 +142,7 @@ func TestHandleReadinessReportsReady(t *testing.T) {
 }
 
 func TestHandleReadinessReportsDegraded(t *testing.T) {
-	cfg := config.Default()
+	cfg := newTestConfig()
 	degradedReport := health.Report{
 		Status:    "degraded",
 		CheckedAt: time.Now().UTC(),
@@ -143,7 +156,7 @@ func TestHandleReadinessReportsDegraded(t *testing.T) {
 			},
 		},
 	}
-	srv := NewServer(cfg, stubReporter{report: degradedReport}, nil)
+	srv := New(cfg, stubReporter{report: degradedReport}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	rr := httptest.NewRecorder()
@@ -170,9 +183,9 @@ func TestHandleReadinessReportsDegraded(t *testing.T) {
 }
 
 func TestMetricsEndpointAvailableWhenRegistryProvided(t *testing.T) {
-	cfg := config.Default()
-	registry := metrics.NewRegistry()
-	srv := NewServer(cfg, stubReporter{}, registry)
+	cfg := newTestConfig()
+	registry := gatewaymetrics.NewRegistry()
+	srv := New(cfg, stubReporter{}, registry)
 
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	rr := httptest.NewRecorder()
@@ -188,9 +201,9 @@ func TestMetricsEndpointAvailableWhenRegistryProvided(t *testing.T) {
 }
 
 func TestCORSAllowsConfiguredOrigin(t *testing.T) {
-	cfg := config.Default()
-	cfg.CorsAllowedOrigins = []string{"https://allowed.example"}
-	srv := NewServer(cfg, stubReporter{}, nil)
+	cfg := newTestConfig()
+	cfg.CORS.AllowedOrigins = []string{"https://allowed.example"}
+	srv := New(cfg, stubReporter{}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	req.Header.Set("Origin", "https://allowed.example")
@@ -210,9 +223,9 @@ func TestCORSAllowsConfiguredOrigin(t *testing.T) {
 }
 
 func TestCORSBlocksUnknownOrigin(t *testing.T) {
-	cfg := config.Default()
-	cfg.CorsAllowedOrigins = []string{"https://allowed.example"}
-	srv := NewServer(cfg, stubReporter{}, nil)
+	cfg := newTestConfig()
+	cfg.CORS.AllowedOrigins = []string{"https://allowed.example"}
+	srv := New(cfg, stubReporter{}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	req.Header.Set("Origin", "https://blocked.example")
@@ -226,9 +239,9 @@ func TestCORSBlocksUnknownOrigin(t *testing.T) {
 }
 
 func TestCORSPreflightUsesNoContent(t *testing.T) {
-	cfg := config.Default()
-	cfg.CorsAllowedOrigins = []string{"https://allowed.example"}
-	srv := NewServer(cfg, stubReporter{}, nil)
+	cfg := newTestConfig()
+	cfg.CORS.AllowedOrigins = []string{"https://allowed.example"}
+	srv := New(cfg, stubReporter{}, nil)
 
 	req := httptest.NewRequest(http.MethodOptions, "/health", nil)
 	req.Header.Set("Origin", "https://allowed.example")
@@ -243,10 +256,10 @@ func TestCORSPreflightUsesNoContent(t *testing.T) {
 }
 
 func TestRateLimiterEnforcesLimitPerClient(t *testing.T) {
-	cfg := config.Default()
-	cfg.RateLimit.Window = time.Second
+	cfg := newTestConfig()
+	cfg.RateLimit.Window = gatewayconfig.DurationFrom(time.Second)
 	cfg.RateLimit.Max = 1
-	srv := NewServer(cfg, stubReporter{}, nil)
+	srv := New(cfg, stubReporter{}, nil)
 
 	req1 := httptest.NewRequest(http.MethodGet, "/health", nil)
 	req1.RemoteAddr = "192.0.2.10:1234"
@@ -266,8 +279,8 @@ func TestRateLimiterEnforcesLimitPerClient(t *testing.T) {
 }
 
 func TestBodyLimitRejectsOversizedPayload(t *testing.T) {
-	cfg := config.Default()
-	srv := NewServer(cfg, stubReporter{}, nil)
+	cfg := newTestConfig()
+	srv := New(cfg, stubReporter{}, nil)
 
 	body := bytes.Repeat([]byte("A"), 1<<20+1)
 	req := httptest.NewRequest(http.MethodPost, "/health", bytes.NewReader(body))
@@ -282,8 +295,8 @@ func TestBodyLimitRejectsOversizedPayload(t *testing.T) {
 
 func TestOpenAPIHandlerReturnsDocument(t *testing.T) {
 	provider := stubOpenAPIProvider{data: []byte(`{"openapi":"3.1.0"}`)}
-	cfg := config.Default()
-	srv := NewServer(cfg, stubReporter{}, nil, WithOpenAPIProvider(provider))
+	cfg := newTestConfig()
+	srv := New(cfg, stubReporter{}, nil, WithOpenAPIProvider(provider))
 
 	req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
 	rr := httptest.NewRecorder()
@@ -303,8 +316,8 @@ func TestOpenAPIHandlerReturnsDocument(t *testing.T) {
 
 func TestOpenAPIHandlerReturnsServiceUnavailableOnError(t *testing.T) {
 	provider := stubOpenAPIProvider{err: errors.New("build failed")}
-	cfg := config.Default()
-	srv := NewServer(cfg, stubReporter{}, nil, WithOpenAPIProvider(provider))
+	cfg := newTestConfig()
+	srv := New(cfg, stubReporter{}, nil, WithOpenAPIProvider(provider))
 
 	req := httptest.NewRequest(http.MethodGet, "/openapi.json", nil)
 	rr := httptest.NewRecorder()
@@ -317,18 +330,15 @@ func TestOpenAPIHandlerReturnsServiceUnavailableOnError(t *testing.T) {
 }
 
 func TestServerSupportsH2C(t *testing.T) {
-	cfg := config.Config{
-		HTTPPort:           0,
-		ShutdownTimeout:    time.Second,
-		ReadinessTimeout:   time.Second,
-		ReadinessUserAgent: "test-agent",
-		RateLimit: config.RateLimitConfig{
-			Window: time.Second,
-			Max:    100,
-		},
-	}
+	cfg := newTestConfig()
+	cfg.HTTP.Port = 0
+	cfg.HTTP.ShutdownTimeout = gatewayconfig.DurationFrom(time.Second)
+	cfg.Readiness.Timeout = gatewayconfig.DurationFrom(time.Second)
+	cfg.Readiness.UserAgent = "test-agent"
+	cfg.RateLimit.Window = gatewayconfig.DurationFrom(time.Second)
+	cfg.RateLimit.Max = 100
 
-	srv := NewServer(cfg, stubReporter{report: health.Report{Status: "ready"}}, nil)
+	srv := New(cfg, stubReporter{report: health.Report{Status: "ready"}}, nil)
 
 	listener, err := net.Listen("tcp", srv.httpServer.Addr)
 	if err != nil {

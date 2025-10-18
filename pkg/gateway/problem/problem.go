@@ -1,3 +1,6 @@
+// Package problem provides helpers for emitting RFC 7807 responses that
+// include trace identifiers and consistent field casing across the gateway
+// runtime and SDK embedding scenarios.
 package problem
 
 import (

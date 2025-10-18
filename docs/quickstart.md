@@ -1,12 +1,14 @@
 # Quickstart
 
 1. Install Go 1.22 or newer.
-2. Copy the sample environment variables: `cp .env.example .env` and adjust the upstream URLs and secrets to match your environment.
-3. Launch the gateway locally: `go run ./cmd/gateway`.
-4. Generate the merged OpenAPI document: `go run ./cmd/openapi --out dist/openapi.json` (optional but recommended for publishing docs/artifacts).
-5. Run tests and linting: `go test ./...` and `golangci-lint run ./...`.
-6. Use the provided Dockerfile to build a container image: `docker build -t api-router .`.
-7. Deploy using the Render blueprint in `render.yaml` or adapt it for your infrastructure.
+2. Scaffold a YAML config: `go run ./cmd/apigw init --path gateway.yaml` and update upstream URLs, JWT auth, and CORS entries (see `config/examples/gateway.sample.yaml` for a commented reference).
+3. Launch the gateway locally: `go run ./cmd/apigw run --config gateway.yaml` (environment variables still override values at runtime). Append `--watch` to automatically reload after saving the config file.
+4. Optionally run as a background service: `go run ./cmd/apigw daemon start --config gateway.yaml --pid apigw.pid --log apigw.log --background`.
+5. Stop or inspect the daemon when needed: `go run ./cmd/apigw daemon stop --pid apigw.pid` and `go run ./cmd/apigw daemon status --pid apigw.pid`.
+6. Generate the merged OpenAPI document: `go run ./cmd/openapi --out dist/openapi.json` (optional but recommended for publishing docs/artifacts).
+7. Run tests and linting: `go test ./...` and `golangci-lint run ./...`.
+8. Use the provided Dockerfile to build a container image: `docker build -t api-router .`.
+9. Deploy using the Render blueprint in `render.yaml` or adapt it for your infrastructure.
 
 ## Environment variables
 
@@ -24,6 +26,7 @@
 | `RATE_LIMIT_WINDOW_MS` | No | Rate-limit window in ms (default `60000`). |
 | `RATE_LIMIT_MAX` | No | Requests allowed per window (default `120`). |
 | `CORS_ALLOWED_ORIGINS` | No | Comma-separated origin safelist (`*` allows all; unset = no restriction). |
+| `APIGW_CONFIG` | No | Default YAML config path (used by `go run ./cmd/gateway`). |
 
 ## Next steps
 

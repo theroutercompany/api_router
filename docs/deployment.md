@@ -45,7 +45,7 @@ After deploy:
 ### Protocol Health
 
 - WebSockets: establish a `/v1/trade/ws` connection and verify headers (`X-Request-Id`, `X-Trace-Id`) roundtrip; monitor `gateway_protocol_active_connections{protocol="websocket"}` for leaks.
-- gRPC: run the gRPC health probe (`grpcurl -import-path internal/http/proxy/testdata -proto health.proto ...`) and confirm unary + streaming calls succeed.
+- gRPC: run the gRPC health probe (`grpcurl -import-path pkg/gateway/proxy/testdata -proto health.proto ...`) and confirm unary + streaming calls succeed.
 - Streaming (SSE/GraphQL): curl `Accept: text/event-stream` and `application/json` endpoints to confirm chunked responses and cancellation semantics.
 
 ## Rollback

@@ -1,0 +1,46 @@
+# Gateway configuration for the API router.
+version: "" # optional version metadata.
+
+http:
+  port: 8080
+  shutdownTimeout: 15s
+
+readiness:
+  timeout: 2s
+  userAgent: api-router-gateway/readyz
+  upstreams:
+    - name: trade
+      baseURL: https://trade.example.com
+      healthPath: /health
+      tls:
+        enabled: false
+        insecureSkipVerify: false
+        caFile: ""
+        clientCertFile: ""
+        clientKeyFile: ""
+    - name: task
+      baseURL: https://task.example.com
+      healthPath: /health
+      tls:
+        enabled: false
+        insecureSkipVerify: false
+        caFile: ""
+        clientCertFile: ""
+        clientKeyFile: ""
+
+auth:
+  secret: replace-me # symmetric JWT secret (required).
+  issuer: router
+  audiences:
+    - api
+
+cors:
+  allowedOrigins:
+    - https://app.example.com
+
+rateLimit:
+  window: 60s
+  max: 120
+
+metrics:
+  enabled: true

@@ -8,11 +8,11 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/theroutercompany/api_router/internal/config"
+	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
 )
 
 func TestAuthenticateSuccess(t *testing.T) {
-	cfg := config.AuthConfig{Secret: "secret", Audiences: []string{"api"}, Issuer: "gateway"}
+	cfg := gatewayconfig.AuthConfig{Secret: "secret", Audiences: []string{"api"}, Issuer: "gateway"}
 	authenticator, err := New(cfg)
 	if err != nil {
 		t.Fatalf("expected authenticator, got error: %v", err)
@@ -43,7 +43,7 @@ func TestAuthenticateSuccess(t *testing.T) {
 }
 
 func TestAuthenticateMissingHeader(t *testing.T) {
-	authenticator, _ := New(config.AuthConfig{Secret: "secret"})
+	authenticator, _ := New(gatewayconfig.AuthConfig{Secret: "secret"})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 
 	if _, err := authenticator.Authenticate(req); err == nil {

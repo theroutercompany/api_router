@@ -1,4 +1,4 @@
-package gatewayhttp
+package server
 
 import (
 	"sync"

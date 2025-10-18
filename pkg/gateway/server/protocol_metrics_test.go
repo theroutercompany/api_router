@@ -1,4 +1,4 @@
-package gatewayhttp
+package server
 
 import (
 	"net/http"
@@ -8,11 +8,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/testutil"
 
-	"github.com/theroutercompany/api_router/pkg/metrics"
+	gatewaymetrics "github.com/theroutercompany/api_router/pkg/gateway/metrics"
 )
 
 func TestProtocolMetricsTrack(t *testing.T) {
-	reg := metrics.NewRegistry()
+	reg := gatewaymetrics.NewRegistry()
 	pm := newProtocolMetrics(reg)
 	if pm == nil {
 		t.Fatalf("expected protocol metrics to be initialised")
@@ -56,7 +56,7 @@ func TestProtocolMetricsTrack(t *testing.T) {
 }
 
 func TestProtocolMetricsHijacked(t *testing.T) {
-	reg := metrics.NewRegistry()
+	reg := gatewaymetrics.NewRegistry()
 	pm := newProtocolMetrics(reg)
 
 	req := httptest.NewRequest(http.MethodGet, "/socket", nil)
