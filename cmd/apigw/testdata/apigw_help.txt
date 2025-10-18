@@ -1,0 +1,7 @@
+Usage: apigw <command> [options]
+Commands:
+  run       Start the gateway using the provided config
+  validate  Validate configuration without starting the gateway
+  init      Generate a config skeleton
+  daemon    Manage the gateway as a background process
+  admin     Invoke admin control-plane endpoints (status/reload)

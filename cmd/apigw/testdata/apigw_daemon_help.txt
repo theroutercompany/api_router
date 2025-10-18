@@ -1,0 +1,9 @@
+Usage of daemon start:
+  -background
+    	Run the daemon in the background
+  -config string
+    	Path to gateway configuration file
+  -log string
+    	Path to write daemon logs
+  -pid string
+    	Path to write the PID file (default "apigw.pid")
