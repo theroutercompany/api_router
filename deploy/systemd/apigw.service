@@ -1,0 +1,21 @@
+[Unit]
+Description=API Router Gateway
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=apigw
+Group=apigw
+EnvironmentFile=-/etc/default/apigw
+WorkingDirectory=/etc/apigw
+ExecStart=/usr/local/bin/apigw daemon start --config /etc/apigw/gateway.yaml --pid /run/apigw.pid --log /var/log/apigw/apigw.log --background
+ExecStartPost=/bin/sleep 1
+ExecStop=/usr/local/bin/apigw daemon stop --pid /run/apigw.pid
+Restart=on-failure
+RestartSec=5s
+SyslogIdentifier=apigw
+PIDFile=/run/apigw.pid
+
+[Install]
+WantedBy=multi-user.target

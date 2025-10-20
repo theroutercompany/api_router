@@ -49,7 +49,12 @@ A lightweight Go gateway that forwards trade and task traffic, validates JWT tok
 
 ## Deployment
 
-A multi-stage Dockerfile is provided at `Dockerfile`; it produces a static binary image based on distroless. `render.yaml` contains an example Render service definition pointing to the Go gateway container.
+A multi-stage Dockerfile is provided. `render.yaml` contains an example Render service definition pointing to the Go gateway container.
+
+Additional deployment assets live in `deploy/`:
+
+- `deploy/docker/Dockerfile` – reference container build with usage notes in `deploy/docker/README.md`.
+- `deploy/systemd/apigw.service` – systemd unit template explained in `deploy/systemd/README.md`.
 
 ## Contributing
 

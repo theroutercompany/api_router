@@ -1,6 +1,16 @@
 # Deployment Guide
 
-This project ships via Render using the blueprint in `render.yaml`. The service builds the Go gateway with the root Dockerfile and exposes a single web process that listens on port `8080`.
+This project ships via Render using the blueprint in `render.yaml`. The service
+builds the Go gateway with the Dockerfile and exposes a single web process that
+listens on port `8080`.
+
+In addition to Render, the repository includes packaging assets under
+`deploy/`:
+
+- `deploy/docker/Dockerfile` – reference container build that emits a static
+  binary and distroless runtime image (see `deploy/docker/README.md`).
+- `deploy/systemd/apigw.service` – systemd unit for running the daemon locally
+  or on VMs (see `deploy/systemd/README.md`).
 
 ## Prerequisites
 
@@ -21,7 +31,7 @@ This project ships via Render using the blueprint in `render.yaml`. The service 
    - Confirm the service name (`api-router-gateway-go`) and plan (default `starter`).
    - Review the env var group `api-router-gateway`. Populate missing secrets:
      - `JWT_SECRET` – 32+ character signing key.
-   - Adjust optional values (`TRADE_API_URL`, `TASK_API_URL`, `CORS_ALLOWED_ORIGINS`) if staging targets differ.
+  - Adjust optional values (`TRADE_API_URL`, `TASK_API_URL`, `CORS_ALLOWED_ORIGINS`) if staging targets differ.
 4. Launch the blueprint. Render builds the Go binary and starts the container with `/usr/local/bin/gateway`.
 
 ## Custom Domains
