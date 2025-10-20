@@ -1,0 +1,35 @@
+version: tls-mtls-example
+http:
+  port: 8092
+readiness:
+  timeout: 3s
+  userAgent: api-router-gateway/readyz
+  upstreams:
+    - name: trade
+      baseURL: https://127.0.0.1:9443
+      healthPath: /health
+      tls:
+        enabled: true
+        insecureSkipVerify: false
+        caFile: ./examples/tls-mtls/certs/ca.pem
+        clientCertFile: ./examples/tls-mtls/certs/client.pem
+        clientKeyFile: ./examples/tls-mtls/certs/client-key.pem
+    - name: task
+      baseURL: https://127.0.0.1:9553
+      healthPath: /health
+      tls:
+        enabled: true
+        insecureSkipVerify: true
+        caFile: ""
+        clientCertFile: ""
+        clientKeyFile: ""
+auth:
+  secret: tls-example-secret
+rateLimit:
+  window: 60s
+  max: 120
+metrics:
+  enabled: true
+admin:
+  enabled: true
+  listen: 127.0.0.1:9092

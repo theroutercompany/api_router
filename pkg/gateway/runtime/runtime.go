@@ -42,6 +42,7 @@ type Runtime struct {
 	reloadFn   func() (gatewayconfig.Config, error)
 	adminAllow []*net.IPNet
 	bootTime   time.Time
+	logger     pkglog.Logger
 
 	baseCtx    context.Context
 	cancel     context.CancelFunc
@@ -61,20 +62,22 @@ func WithReloadFunc(fn func() (gatewayconfig.Config, error)) Option {
 	}
 }
 
+// WithLogger overrides the logger used by the runtime and underlying server.
+func WithLogger(logger pkglog.Logger) Option {
+	return func(r *Runtime) {
+		if logger != nil {
+			r.logger = logger
+		}
+	}
+}
+
 // New constructs a runtime from the provided configuration.
 func New(cfg gatewayconfig.Config, opts ...Option) (*Runtime, error) {
-	comps, err := buildComponents(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	rt := &Runtime{
 		cfg:        cfg,
-		server:     comps.server,
-		checker:    comps.checker,
-		registry:   comps.registry,
 		adminAllow: parseAllowList(cfg.Admin.Allow),
 		bootTime:   time.Now(),
+		logger:     pkglog.Shared(),
 	}
 
 	for _, opt := range opts {
@@ -82,6 +85,19 @@ func New(cfg gatewayconfig.Config, opts ...Option) (*Runtime, error) {
 			opt(rt)
 		}
 	}
+
+	if rt.logger == nil {
+		rt.logger = pkglog.Shared()
+	}
+
+	comps, err := buildComponents(cfg, rt.logger)
+	if err != nil {
+		return nil, err
+	}
+
+	rt.server = comps.server
+	rt.checker = comps.checker
+	rt.registry = comps.registry
 
 	return rt, nil
 }
@@ -112,7 +128,7 @@ func (r *Runtime) Start(ctx context.Context) error {
 
 	if r.cfg.Admin.Enabled {
 		if err := r.startAdminServer(runCtx); err != nil {
-			pkglog.Logger().Errorw("admin server failed to start", "error", err, "listen", r.cfg.Admin.Listen)
+			r.logger.Errorw("admin server failed to start", "error", err, "listen", r.cfg.Admin.Listen)
 		}
 	} else {
 		r.adminAddr = ""
@@ -137,7 +153,7 @@ func (r *Runtime) Wait() error {
 	case err = <-errCh:
 	case adminErr := <-adminErrCh:
 		if adminErr != nil && !errors.Is(adminErr, http.ErrServerClosed) {
-			pkglog.Logger().Errorw("admin server stopped with error", "error", adminErr)
+			r.logger.Errorw("admin server stopped with error", "error", adminErr)
 		}
 		err = <-errCh
 	}
@@ -204,7 +220,7 @@ func (r *Runtime) Reload(cfg gatewayconfig.Config) error {
 		return ErrReloadWhileRunning
 	}
 
-	comps, err := buildComponents(cfg)
+	comps, err := buildComponents(cfg, r.logger)
 	if err != nil {
 		return err
 	}
@@ -225,7 +241,7 @@ func (r *Runtime) Config() gatewayconfig.Config {
 	return r.cfg
 }
 
-func buildComponents(cfg gatewayconfig.Config) (struct {
+func buildComponents(cfg gatewayconfig.Config, logger pkglog.Logger) (struct {
 	server   *gatewayserver.Server
 	checker  *health.Checker
 	registry *gatewaymetrics.Registry
@@ -249,7 +265,11 @@ func buildComponents(cfg gatewayconfig.Config) (struct {
 		registry = gatewaymetrics.NewRegistry()
 	}
 
-	srv := gatewayserver.New(cfg, checker, registry)
+	if logger == nil {
+		logger = pkglog.Shared()
+	}
+
+	srv := gatewayserver.New(cfg, checker, registry, gatewayserver.WithLogger(logger))
 	return struct {
 		server   *gatewayserver.Server
 		checker  *health.Checker

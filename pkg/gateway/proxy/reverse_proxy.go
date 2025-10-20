@@ -73,7 +73,7 @@ func New(opts Options) (http.Handler, error) {
 	}
 
 	proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		pkglog.Logger().Errorw("proxy upstream failure", "error", err, "url", r.URL.String())
+		pkglog.Shared().Errorw("proxy upstream failure", "error", err, "url", r.URL.String())
 		detail := fmt.Sprintf("Failed to reach %s service", opts.Product)
 		problem.Write(w, http.StatusBadGateway, "Upstream Service Unavailable", detail, r.Header.Get("X-Trace-Id"), r.URL.Path)
 	}

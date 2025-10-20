@@ -46,6 +46,15 @@ func WithOpenAPIProvider(provider openapi.DocumentProvider) ServerOption {
 	}
 }
 
+// WithLogger overrides the logger used by the server. Defaults to the global logger.
+func WithLogger(logger pkglog.Logger) ServerOption {
+	return func(s *Server) {
+		if logger != nil {
+			s.logger = logger
+		}
+	}
+}
+
 // Server coordinates HTTP routes and lifecycle hooks.
 type Server struct {
 	cfg             gatewayconfig.Config
@@ -62,6 +71,7 @@ type Server struct {
 	cors            *cors.Cors
 	openapiProvider openapi.DocumentProvider
 	protocolMetrics *protocolMetrics
+	logger          pkglog.Logger
 }
 
 // New constructs a server with baseline dependencies configured.
@@ -76,12 +86,17 @@ func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaym
 		metricsHandler: nil,
 		rateLimiter:    newRateLimiter(cfg.RateLimit.Window.AsDuration(), cfg.RateLimit.Max),
 		cors:           buildCORS(cfg.CORS.AllowedOrigins),
+		logger:         pkglog.Shared(),
 	}
 
 	for _, opt := range opts {
 		if opt != nil {
 			opt(s)
 		}
+	}
+
+	if s.logger == nil {
+		s.logger = pkglog.Shared()
 	}
 
 	if registry != nil && cfg.Metrics.Enabled {
@@ -95,7 +110,7 @@ func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaym
 
 	if cfg.Auth.Secret != "" {
 		if authenticator, err := gatewayauth.New(cfg.Auth); err != nil {
-			pkglog.Logger().Errorw("failed to initialize authenticator", "error", err)
+			s.logger.Errorw("failed to initialize authenticator", "error", err)
 		} else {
 			s.authenticator = authenticator
 		}
@@ -128,7 +143,7 @@ func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaym
 		tracker = s.protocolMetrics.track
 		hijacker = s.protocolMetrics.hijacked
 	}
-	handler = gatewaymiddleware.Logging(pkglog.Logger(), tracker, hijacker, requestIDFromContext, traceIDFromContext, clientAddress)(handler)
+	handler = gatewaymiddleware.Logging(s.logger, tracker, hijacker, requestIDFromContext, traceIDFromContext, clientAddress)(handler)
 	handler = gatewaymiddleware.SecurityHeaders()(handler)
 	handler = gatewaymiddleware.RequestMetadata(ensureRequestIDs)(handler)
 	http2Server := &http2.Server{}
@@ -140,7 +155,7 @@ func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaym
 		Handler: handler,
 	}
 	if err := http2.ConfigureServer(s.httpServer, http2Server); err != nil {
-		pkglog.Logger().Errorw("failed to configure http2 server", "error", err)
+		s.logger.Errorw("failed to configure http2 server", "error", err)
 	}
 
 	return s
@@ -154,7 +169,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		pkglog.Logger().Infow("http server listening", "addr", s.httpServer.Addr)
+		s.logger.Infow("http server listening", "addr", s.httpServer.Addr)
 		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- err
 		}
@@ -166,13 +181,13 @@ func (s *Server) Start(ctx context.Context) error {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), s.cfg.HTTP.ShutdownTimeout.AsDuration())
 		defer cancel()
 		if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
-			pkglog.Logger().Errorw("http server shutdown failed", "error", err)
+			s.logger.Errorw("http server shutdown failed", "error", err)
 			return err
 		}
 		return ctx.Err()
 	case err := <-errCh:
 		if err != nil {
-			pkglog.Logger().Errorw("http server stopped with error", "error", err)
+			s.logger.Errorw("http server stopped with error", "error", err)
 		}
 		return err
 	}
@@ -220,7 +235,7 @@ func (s *Server) initProxies() {
 			},
 		})
 		if err != nil {
-			pkglog.Logger().Errorw("failed to build proxy", "error", err, "upstream", upstream.Name)
+			s.logger.Errorw("failed to build proxy", "error", err, "upstream", upstream.Name)
 			continue
 		}
 
@@ -411,6 +426,6 @@ func (s *Server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(data); err != nil {
-		pkglog.Logger().Warnw("failed to write openapi response", "error", err)
+		s.logger.Warnw("failed to write openapi response", "error", err)
 	}
 }

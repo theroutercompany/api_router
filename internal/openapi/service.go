@@ -101,7 +101,7 @@ func (s *Service) Document(ctx context.Context) ([]byte, error) {
 	}
 
 	if err := s.persist(raw); err != nil {
-		pkglog.Logger().Warnw("failed to persist merged openapi document", "error", err, "path", s.distPath)
+		pkglog.Shared().Warnw("failed to persist merged openapi document", "error", err, "path", s.distPath)
 		s.cache = &cacheEntry{raw: clone(raw), modTime: time.Time{}}
 		return clone(raw), nil
 	}

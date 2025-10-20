@@ -1,0 +1,26 @@
+version: multi-upstream-example
+http:
+  port: 8091
+readiness:
+  timeout: 2s
+  userAgent: api-router-gateway/readyz
+  upstreams:
+    - name: trade
+      baseURL: http://127.0.0.1:9001
+      healthPath: /health
+    - name: task
+      baseURL: http://127.0.0.1:9002
+      healthPath: /health
+    - name: reporting
+      baseURL: http://127.0.0.1:9003
+      healthPath: /health
+auth:
+  secret: multi-upstream-secret
+rateLimit:
+  window: 60s
+  max: 120
+metrics:
+  enabled: true
+admin:
+  enabled: true
+  listen: 127.0.0.1:9091
