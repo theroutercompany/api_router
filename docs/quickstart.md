@@ -47,6 +47,7 @@
 - Extend JWT scope mappings or introduce alternative auth providers if required.
 - Expand Go tests around new routes or middleware additions.
 - Update observability dashboards to track the Go gateway’s metrics and logs.
+- Review the runnable samples under `examples/` (see `docs/examples.md`) for embedding, CLI, and TLS usage patterns.
 
 ## Docker & Deployment
 

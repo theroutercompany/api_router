@@ -56,6 +56,14 @@ Additional deployment assets live in `deploy/`:
 - `deploy/docker/Dockerfile` – reference container build with usage notes in `deploy/docker/README.md`.
 - `deploy/systemd/apigw.service` – systemd unit template explained in `deploy/systemd/README.md`.
 
+## Examples
+
+See `docs/examples.md` for runnable samples:
+
+- Programmatic runtime embedding (`examples/basic`).
+- CLI-driven multi-upstream config (`examples/multi-upstream`).
+- TLS/mTLS configuration (`examples/tls-mtls`).
+
 ## Contributing
 
 Follow the guidelines in `AGENTS.md`, run tests and linting before opening a pull request, and use Conventional Commit messages (for example, `feat(gateway): add trade proxy metrics`). Please include validation commands and any relevant smoke test output in pull requests.
