@@ -102,7 +102,8 @@ func NewNoop() Logger {
 // Sync flushes any buffered log entries.
 func Sync() error {
 	if err := syncLogger(); err != nil {
-		if strings.Contains(err.Error(), "bad file descriptor") {
+		msg := err.Error()
+		if strings.Contains(msg, "bad file descriptor") || strings.Contains(msg, "invalid argument") {
 			return nil
 		}
 		return err
