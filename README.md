@@ -64,6 +64,11 @@ See `docs/examples.md` for runnable samples:
 - CLI-driven multi-upstream config (`examples/multi-upstream`).
 - TLS/mTLS configuration (`examples/tls-mtls`).
 
+## Releases
+
+- CI (`.github/workflows/ci.yml`) runs formatting, linting, tests, and publishes the merged OpenAPI artifact.
+- Tagged releases (`v*`) trigger GoReleaser (`.github/workflows/release.yml`) to build cross-platform binaries—see `docs/releases.md` for the full workflow.
+
 ## Contributing
 
 Follow the guidelines in `AGENTS.md`, run tests and linting before opening a pull request, and use Conventional Commit messages (for example, `feat(gateway): add trade proxy metrics`). Please include validation commands and any relevant smoke test output in pull requests.
