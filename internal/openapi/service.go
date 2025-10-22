@@ -340,7 +340,7 @@ func mergeComponentMap[M ~map[string]V, V any](dst *M, src M, label string) erro
 	return nil
 }
 
-func mergeTags(dst openapi3.Tags, src openapi3.Tags) openapi3.Tags {
+func mergeTags(dst, src openapi3.Tags) openapi3.Tags {
 	if len(src) == 0 {
 		return dst
 	}
