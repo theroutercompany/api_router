@@ -59,6 +59,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas: {}
   responses:
     UnauthorizedError:
       description: Missing or invalid bearer token.
