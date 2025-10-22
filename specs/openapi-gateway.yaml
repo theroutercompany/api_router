@@ -155,3 +155,29 @@ components:
         checkedAt:
           type: string
           format: date-time
+    ProblemJson:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+          example: Upstream Service Unavailable
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+          example: 502
+        detail:
+          type: string
+          nullable: true
+          example: Failed to reach upstream service
+        instance:
+          type: string
+          format: uri
+          nullable: true

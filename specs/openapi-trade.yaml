@@ -61,33 +61,6 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  schemas:
-    ProblemJson:
-      type: object
-      required:
-        - type
-        - title
-        - status
-      properties:
-        type:
-          type: string
-          example: about:blank
-        title:
-          type: string
-          example: Authentication Required
-        status:
-          type: integer
-          example: 401
-        detail:
-          type: string
-          example: Missing Authorization header
-        instance:
-          type: string
-          format: uri
-          nullable: true
-        traceId:
-          type: string
-          example: 2ad1d935-6a7a-4c44-8e7d-719040ea74f0
   responses:
     UnauthorizedError:
       description: Missing or invalid bearer token.
