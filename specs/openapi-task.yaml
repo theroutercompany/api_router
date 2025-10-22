@@ -54,11 +54,6 @@ paths:
         '502':
           $ref: '#/components/responses/TaskBadGatewayError'
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
   schemas:
     TaskProblemJson:
       type: object
@@ -86,6 +81,11 @@ components:
         traceId:
           type: string
           example: 4a95d1b0-bc6b-4645-95f9-0d8f5cbbf671
+  securitySchemes:
+    taskBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   responses:
     TaskUnauthorizedError:
       description: Missing or invalid bearer token.
