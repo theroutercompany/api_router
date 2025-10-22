@@ -59,14 +59,40 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  schemas: {}
+  schemas:
+    TaskProblemJson:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+          example: Authentication Required
+        status:
+          type: integer
+          example: 401
+        detail:
+          type: string
+          example: Missing Authorization header
+        instance:
+          type: string
+          format: uri
+          nullable: true
+        traceId:
+          type: string
+          example: 4a95d1b0-bc6b-4645-95f9-0d8f5cbbf671
   responses:
     UnauthorizedError:
       description: Missing or invalid bearer token.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ProblemJson'
+            $ref: '#/components/schemas/TaskProblemJson'
           examples:
             missingToken:
               value:
@@ -80,7 +106,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ProblemJson'
+            $ref: '#/components/schemas/TaskProblemJson'
           examples:
             scopeMismatch:
               value:
@@ -94,7 +120,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ProblemJson'
+            $ref: '#/components/schemas/TaskProblemJson'
           examples:
             upstreamDown:
               value:
@@ -108,7 +134,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ProblemJson'
+            $ref: '#/components/schemas/TaskProblemJson'
           examples:
             validationError:
               value:
