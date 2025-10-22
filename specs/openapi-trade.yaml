@@ -18,7 +18,7 @@ paths:
       tags:
         - Trade
       security:
-        - bearerAuth: []
+        - tradeBearerAuth: []
       responses:
         '200':
           description: Successful response from the upstream trade service.
@@ -34,7 +34,7 @@ paths:
       tags:
         - Trade
       security:
-        - bearerAuth: []
+        - tradeBearerAuth: []
       requestBody:
         description: JSON payload forwarded to the trade backend.
         required: false
@@ -83,7 +83,6 @@ components:
         traceId:
           type: string
           example: 2ad1d935-6a7a-4c44-8e7d-719040ea74f0
-  responses:
   securitySchemes:
     tradeBearerAuth:
       type: http

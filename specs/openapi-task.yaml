@@ -18,7 +18,7 @@ paths:
       tags:
         - Task
       security:
-        - bearerAuth: []
+        - taskBearerAuth: []
       responses:
         '200':
           description: Successful response from the upstream task service.
@@ -34,7 +34,7 @@ paths:
       tags:
         - Task
       security:
-        - bearerAuth: []
+        - taskBearerAuth: []
       requestBody:
         description: JSON payload forwarded to the task backend.
         required: false
