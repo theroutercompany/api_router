@@ -23,11 +23,11 @@ paths:
         '200':
           description: Successful response from the upstream task service.
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/TaskUnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/TaskForbiddenError'
         '502':
-          $ref: '#/components/responses/BadGatewayError'
+          $ref: '#/components/responses/TaskBadGatewayError'
     post:
       summary: Forward task mutating requests
       description: Forwards POST requests to the task orchestrator, preserving JSON bodies and headers.
@@ -46,13 +46,13 @@ paths:
         '202':
           description: Request accepted by the task pipeline.
         '400':
-          $ref: '#/components/responses/BadRequestError'
+          $ref: '#/components/responses/TaskBadRequestError'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/TaskUnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/TaskForbiddenError'
         '502':
-          $ref: '#/components/responses/BadGatewayError'
+          $ref: '#/components/responses/TaskBadGatewayError'
 components:
   securitySchemes:
     bearerAuth:
@@ -87,7 +87,7 @@ components:
           type: string
           example: 4a95d1b0-bc6b-4645-95f9-0d8f5cbbf671
   responses:
-    UnauthorizedError:
+    TaskUnauthorizedError:
       description: Missing or invalid bearer token.
       content:
         application/json:
@@ -101,7 +101,7 @@ components:
                 status: 401
                 detail: Missing Authorization header
                 traceId: 4a95d1b0-bc6b-4645-95f9-0d8f5cbbf671
-    ForbiddenError:
+    TaskForbiddenError:
       description: Caller lacks required task scopes.
       content:
         application/json:
@@ -115,7 +115,7 @@ components:
                 status: 403
                 detail: task.write scope required
                 traceId: 6c7c1d80-7657-4a5a-9ea4-b5b2db577c96
-    BadGatewayError:
+    TaskBadGatewayError:
       description: Upstream task service is unavailable.
       content:
         application/json:
@@ -129,7 +129,7 @@ components:
                 status: 502
                 detail: Failed to reach task service
                 traceId: 694b69c0-e4a4-4d2f-8a74-71b5bdf0a4cb
-    BadRequestError:
+    TaskBadRequestError:
       description: Upstream validation failed.
       content:
         application/json:

@@ -23,11 +23,11 @@ paths:
         '200':
           description: Successful response from the upstream trade service.
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/TradeUnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/TradeForbiddenError'
         '502':
-          $ref: '#/components/responses/BadGatewayError'
+          $ref: '#/components/responses/TradeBadGatewayError'
     post:
       summary: Forward trade mutating requests
       description: Forwards non-idempotent trade requests (e.g. POST) to the upstream service with idempotency handled by the caller.
@@ -48,13 +48,13 @@ paths:
         '202':
           description: Request accepted for asynchronous processing.
         '400':
-          $ref: '#/components/responses/BadRequestError'
+          $ref: '#/components/responses/TradeBadRequestError'
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
+          $ref: '#/components/responses/TradeUnauthorizedError'
         '403':
-          $ref: '#/components/responses/ForbiddenError'
+          $ref: '#/components/responses/TradeForbiddenError'
         '502':
-          $ref: '#/components/responses/BadGatewayError'
+          $ref: '#/components/responses/TradeBadGatewayError'
 components:
   securitySchemes:
     bearerAuth:
@@ -89,7 +89,7 @@ components:
           type: string
           example: 2ad1d935-6a7a-4c44-8e7d-719040ea74f0
   responses:
-    UnauthorizedError:
+    TradeUnauthorizedError:
       description: Missing or invalid bearer token.
       content:
         application/json:
@@ -103,7 +103,7 @@ components:
                 status: 401
                 detail: Missing Authorization header
                 traceId: 2ad1d935-6a7a-4c44-8e7d-719040ea74f0
-    ForbiddenError:
+    TradeForbiddenError:
       description: Caller lacks required trade scopes.
       content:
         application/json:
@@ -117,7 +117,7 @@ components:
                 status: 403
                 detail: trade.write scope required
                 traceId: 10b8f2bf-8f64-449b-a1eb-b0abf3b3c556
-    BadGatewayError:
+    TradeBadGatewayError:
       description: Upstream trade service is unavailable.
       content:
         application/json:
@@ -131,7 +131,7 @@ components:
                 status: 502
                 detail: Failed to reach trade service
                 traceId: 891d7efd-a5c1-4b4f-9649-93aefc3662b5
-    BadRequestError:
+    TradeBadRequestError:
       description: Upstream validation failed.
       content:
         application/json:
