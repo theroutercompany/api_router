@@ -25,7 +25,6 @@ import (
 )
 
 func main() {
-
 	if len(os.Args) < 2 {
 		usage()
 		os.Exit(1)
@@ -132,6 +131,7 @@ func runCommand(args []string) error {
 	for {
 		select {
 		case err := <-runDone:
+			runCancel()
 			if err != nil && !errors.Is(err, context.Canceled) {
 				return err
 			}

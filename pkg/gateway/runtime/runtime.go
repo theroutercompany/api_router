@@ -245,7 +245,8 @@ func buildComponents(cfg gatewayconfig.Config, logger pkglog.Logger) (struct {
 	server   *gatewayserver.Server
 	checker  *health.Checker
 	registry *gatewaymetrics.Registry
-}, error) {
+}, error,
+) {
 	readinessTimeout := cfg.Readiness.Timeout.AsDuration()
 	httpClient := &http.Client{Timeout: readinessTimeout}
 
@@ -324,6 +325,13 @@ func (r *Runtime) startAdminServer(ctx context.Context) error {
 		close(r.adminErrCh)
 	}()
 
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), r.cfg.HTTP.ShutdownTimeout.AsDuration())
+		defer cancel()
+		_ = srv.Shutdown(shutdownCtx)
+	}()
+
 	return nil
 }
 
@@ -369,7 +377,7 @@ func (r *Runtime) authorizeAdmin(w http.ResponseWriter, req *http.Request) bool 
 	return false
 }
 
-func (r *Runtime) handleAdminStatus(w http.ResponseWriter, req *http.Request) {
+func (r *Runtime) handleAdminStatus(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	r.mu.Lock()
 	response := map[string]any{
@@ -385,7 +393,7 @@ func (r *Runtime) handleAdminStatus(w http.ResponseWriter, req *http.Request) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 
-func (r *Runtime) handleAdminConfig(w http.ResponseWriter, req *http.Request) {
+func (r *Runtime) handleAdminConfig(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	cfg := r.Config()
 	cfg.Auth.Secret = ""

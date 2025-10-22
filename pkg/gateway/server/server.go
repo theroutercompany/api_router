@@ -36,18 +36,18 @@ type readinessReporter interface {
 	Readiness(ctx context.Context) health.Report
 }
 
-// ServerOption configures optional server dependencies.
-type ServerOption func(*Server)
+// Option configures optional server dependencies.
+type Option func(*Server)
 
 // WithOpenAPIProvider overrides the default OpenAPI document provider.
-func WithOpenAPIProvider(provider openapi.DocumentProvider) ServerOption {
+func WithOpenAPIProvider(provider openapi.DocumentProvider) Option {
 	return func(s *Server) {
 		s.openapiProvider = provider
 	}
 }
 
 // WithLogger overrides the logger used by the server. Defaults to the global logger.
-func WithLogger(logger pkglog.Logger) ServerOption {
+func WithLogger(logger pkglog.Logger) Option {
 	return func(s *Server) {
 		if logger != nil {
 			s.logger = logger
@@ -75,7 +75,7 @@ type Server struct {
 }
 
 // New constructs a server with baseline dependencies configured.
-func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaymetrics.Registry, opts ...ServerOption) *Server {
+func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaymetrics.Registry, opts ...Option) *Server {
 	mux := http.NewServeMux()
 
 	s := &Server{
@@ -340,7 +340,7 @@ func buildCORS(origins []string) *cors.Cors {
 		AllowedHeaders:       []string{"*"},
 		ExposedHeaders:       []string{"X-Request-Id", "X-Trace-Id"},
 		OptionsSuccessStatus: http.StatusNoContent,
-		AllowOriginRequestFunc: func(r *http.Request, origin string) bool {
+		AllowOriginRequestFunc: func(_ *http.Request, origin string) bool {
 			if origin == "" {
 				return true
 			}
@@ -355,6 +355,7 @@ func buildCORS(origins []string) *cors.Cors {
 		},
 	})
 }
+
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_, requestID, _ := ensureRequestIDs(r)
 	w.Header().Set("Content-Type", "application/json")
