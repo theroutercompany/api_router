@@ -1,6 +1,7 @@
 package acceptance
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -228,6 +229,75 @@ func TestGatewayDaemon_WebSocketProxy(t *testing.T) {
 			t.Errorf("expected websocket path, got %s", r.Path)
 		}
 	})
+}
+
+func TestGatewayDaemon_SSEProxy(t *testing.T) {
+	trade := newHTTPUpstream(t, "trade")
+	defer trade.Close()
+	task := newHTTPUpstream(t, "task")
+	defer task.Close()
+
+	instance := startGatewayInstance(t, trade, task)
+
+	token := issueToken(t, acceptanceSecret, acceptanceIssuer, acceptanceAudience, []string{"task.read"})
+
+	req, err := http.NewRequest(http.MethodGet, instance.baseURL+"/v1/task/sse", nil)
+	if err != nil {
+		t.Fatalf("build sse request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := instance.client.Do(req)
+	if err != nil {
+		t.Fatalf("sse request failed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200 from sse proxy, got %d (body=%s)", resp.StatusCode, string(body))
+	}
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
+		t.Fatalf("expected text/event-stream content-type, got %s", ct)
+	}
+
+	reader := bufio.NewReader(resp.Body)
+	events := make([]string, 0, 3)
+	for len(events) < 3 {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			t.Fatalf("read sse line: %v", err)
+		}
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "data:") {
+			events = append(events, strings.TrimSpace(strings.TrimPrefix(line, "data:")))
+		}
+	}
+
+	if events[0] != "tick-1" || events[1] != "tick-2" || events[2] != "tick-3" {
+		t.Fatalf("unexpected sse events: %v", events)
+	}
+
+	task.assertLastRequest(t, func(r requestRecord) {
+		if got := r.Headers.Get("X-Router-Product"); got != "task" {
+			t.Errorf("expected X-Router-Product task, got %s", got)
+		}
+		if got := r.Headers.Get("Authorization"); got == "" {
+			t.Errorf("expected Authorization header forwarded")
+		}
+		if !strings.HasPrefix(r.Path, "/v1/task/sse") {
+			t.Errorf("unexpected sse path: %s", r.Path)
+		}
+	})
+
+	// Closing the response should terminate the upstream stream without error.
+	if err := resp.Body.Close(); err != nil {
+		t.Fatalf("close sse body: %v", err)
+	}
 }
 
 func TestGatewayDaemon_GRPCProxy(t *testing.T) {
@@ -566,6 +636,22 @@ func (m *mockUpstream) handleTrade(w http.ResponseWriter, r *http.Request) {
 
 func (m *mockUpstream) handleTask(w http.ResponseWriter, r *http.Request) {
 	switch {
+	case strings.HasPrefix(r.URL.Path, "/v1/task/sse"):
+		w.Header().Set("content-type", "text/event-stream")
+		w.Header().Set("cache-control", "no-cache")
+		w.Header().Set("connection", "keep-alive")
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+		for i := 1; i <= 5; i++ {
+			fmt.Fprintf(w, "id: %d\n", i)
+			fmt.Fprintf(w, "data: tick-%d\n\n", i)
+			flusher.Flush()
+			time.Sleep(50 * time.Millisecond)
+		}
+		return
 	case strings.HasPrefix(r.URL.Path, "/v1/task"):
 		w.Header().Set("content-type", "application/json")
 		w.WriteHeader(http.StatusOK)
