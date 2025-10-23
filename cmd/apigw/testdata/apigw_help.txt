@@ -5,3 +5,4 @@ Commands:
   init      Generate a config skeleton
   daemon    Manage the gateway as a background process
   admin     Invoke admin control-plane endpoints (status/reload)
+  convert-env  Snapshot environment variables into a YAML config

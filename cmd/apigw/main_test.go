@@ -19,6 +19,7 @@ import (
 
 	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
 	gatewayruntime "github.com/theroutercompany/api_router/pkg/gateway/runtime"
+	"gopkg.in/yaml.v3"
 )
 
 func TestAdminCLIStatusAndReload(t *testing.T) {
@@ -525,6 +526,86 @@ func TestDaemonCLIMissingConfigFails(t *testing.T) {
 	}
 	if _, statErr := os.Stat(pidPath); !os.IsNotExist(statErr) {
 		t.Fatalf("expected no pid file, got err=%v", statErr)
+	}
+}
+
+func TestConvertEnvCommandWritesFile(t *testing.T) {
+	dir := t.TempDir()
+	output := filepath.Join(dir, "gateway.yaml")
+
+	t.Setenv("TRADE_API_URL", "https://env-trade.example.com")
+	t.Setenv("TASK_API_URL", "https://env-task.example.com")
+	t.Setenv("PORT", "9090")
+	t.Setenv("ADMIN_ENABLED", "true")
+	t.Setenv("ADMIN_LISTEN", "127.0.0.1:9091")
+
+	message, err := captureOutput(func() error {
+		return convertEnvCommand([]string{"--output", output})
+	})
+	if err != nil {
+		t.Fatalf("convert-env command: %v", err)
+	}
+	if !strings.Contains(message, "configuration written to") {
+		t.Fatalf("unexpected convert-env message: %q", message)
+	}
+
+	data, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatalf("read output: %v", err)
+	}
+
+	var cfg gatewayconfig.Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("decode yaml: %v", err)
+	}
+	if cfg.HTTP.Port != 9090 {
+		t.Fatalf("expected port 9090, got %d", cfg.HTTP.Port)
+	}
+
+	tradeFound := false
+	taskFound := false
+	for _, upstream := range cfg.Readiness.Upstreams {
+		switch strings.ToLower(upstream.Name) {
+		case "trade":
+			tradeFound = upstream.BaseURL == "https://env-trade.example.com"
+		case "task":
+			taskFound = upstream.BaseURL == "https://env-task.example.com"
+		}
+	}
+	if !tradeFound || !taskFound {
+		t.Fatalf("unexpected upstreams: %+v", cfg.Readiness.Upstreams)
+	}
+
+	if err := convertEnvCommand([]string{"--output", output}); err == nil {
+		t.Fatalf("expected error when output already exists without --force")
+	}
+
+	message, err = captureOutput(func() error {
+		return convertEnvCommand([]string{"--output", output, "--force"})
+	})
+	if err != nil {
+		t.Fatalf("convert-env with force: %v", err)
+	}
+	if !strings.Contains(message, "configuration written to") {
+		t.Fatalf("unexpected convert-env message after force: %q", message)
+	}
+}
+
+func TestConvertEnvCommandStdout(t *testing.T) {
+	t.Setenv("TRADE_API_URL", "https://stdout-trade.example.com")
+	t.Setenv("TASK_API_URL", "https://stdout-task.example.com")
+
+	output, err := captureOutput(func() error {
+		return convertEnvCommand([]string{})
+	})
+	if err != nil {
+		t.Fatalf("convert-env stdout: %v", err)
+	}
+	if !strings.Contains(output, "baseURL: https://stdout-trade.example.com") {
+		t.Fatalf("expected trade baseURL in output, got %q", output)
+	}
+	if !strings.Contains(output, "baseURL: https://stdout-task.example.com") {
+		t.Fatalf("expected task baseURL in output, got %q", output)
 	}
 }
 

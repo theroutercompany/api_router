@@ -1,13 +1,13 @@
 # Quickstart
 
-1. Install Go 1.22 or newer.
+1. Install Go 1.23 or newer.
 2. Scaffold a YAML config: `go run ./cmd/apigw init --path gateway.yaml` and update upstream URLs, JWT auth, and CORS entries (see `config/examples/gateway.sample.yaml` for a commented reference).
 3. Launch the gateway locally: `go run ./cmd/apigw run --config gateway.yaml` (environment variables still override values at runtime). Append `--watch` to automatically reload after saving the config file.
 4. Optionally run as a background service: `go run ./cmd/apigw daemon start --config gateway.yaml --pid apigw.pid --log apigw.log --background`.
 5. Stop or inspect the daemon when needed: `go run ./cmd/apigw daemon stop --pid apigw.pid` and `go run ./cmd/apigw daemon status --pid apigw.pid`.
 6. Generate the merged OpenAPI document: `go run ./cmd/openapi --out dist/openapi.json` (optional but recommended for publishing docs/artifacts).
 7. Run tests and linting: `go test ./...` and `golangci-lint run ./...`.
-8. Use the provided Dockerfile to build a container image: `docker build -t api-router .`.
+8. Use the provided Dockerfile to build a container image: `docker build -f deploy/docker/Dockerfile -t api-router .`.
 9. Deploy using the Render blueprint in `render.yaml` or adapt it for your infrastructure.
 10. Inspect or reload the running gateway via `go run ./cmd/apigw admin status --url http://127.0.0.1:9090` (add `--token` if `admin.token` is configured).
 
@@ -46,6 +46,7 @@
 - Wire the gateway into your service mesh or load balancer and confirm upstream routing.
 - Extend JWT scope mappings or introduce alternative auth providers if required.
 - Expand Go tests around new routes or middleware additions.
+- Migrate existing environment-based setups to YAML with `go run ./cmd/apigw convert-env --output gateway.yaml` (see `docs/config-migration.md`).
 - Update observability dashboards to track the Go gateway’s metrics and logs.
 - Review the runnable samples under `examples/` (see `docs/examples.md`) for embedding, CLI, and TLS usage patterns.
 

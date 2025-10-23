@@ -5,7 +5,7 @@
 - `GET /readyz` fans out to `TRADE_API_URL` and `TASK_API_URL`, including their configured health paths. The response contains `status`, per-upstream results, and the `requestId`/`traceId` echoed back from the gateway.
 
 ## Logging
-- Structured logs ship via Pino. Each request log includes `requestId`, `traceId`, `statusCode`, `remoteAddress`, and rate-limit headers. Join logs across services using the `x-request-id` header.
+- Structured logs ship via Zap. Each request log includes `requestId`, `traceId`, `statusCode`, `remoteAddress`, and rate-limit headers. Join logs across services using the `x-request-id` header.
 - In production, set `LOG_LEVEL=info` (or `warn` during incident response). Recognize that `debug` or `trace` levels increase log volume.
 
 ## Alerting Guidelines

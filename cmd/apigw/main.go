@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"gopkg.in/yaml.v3"
 
 	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
 	gatewaydaemon "github.com/theroutercompany/api_router/pkg/gateway/daemon"
@@ -42,6 +43,8 @@ func main() {
 		err = daemonCommand(os.Args[2:])
 	case "admin":
 		err = adminCommand(os.Args[2:])
+	case "convert-env":
+		err = convertEnvCommand(os.Args[2:])
 	default:
 		usage()
 		os.Exit(1)
@@ -214,6 +217,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "  init      Generate a config skeleton\n")
 	fmt.Fprintf(os.Stderr, "  daemon    Manage the gateway as a background process\n")
 	fmt.Fprintf(os.Stderr, "  admin     Invoke admin control-plane endpoints (status/reload)\n")
+	fmt.Fprintf(os.Stderr, "  convert-env  Snapshot environment variables into a YAML config\n")
 }
 
 const daemonChildEnv = "APIGW_DAEMON_CHILD"
@@ -526,6 +530,59 @@ func watchConfig(parent context.Context, path string, opts []gatewayconfig.Optio
 	}()
 
 	return reloadCh, errCh, cancel, nil
+}
+
+func convertEnvCommand(args []string) error {
+	fs := flag.NewFlagSet("convert-env", flag.ExitOnError)
+	configPath := fs.String("config", "", "Optional config file to merge before env overrides")
+	outputPath := fs.String("output", "", "Destination path for generated YAML (stdout when empty)")
+	force := fs.Bool("force", false, "Overwrite existing output file")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	opts := []gatewayconfig.Option{}
+	if strings.TrimSpace(*configPath) != "" {
+		opts = append(opts, gatewayconfig.WithPath(*configPath))
+	}
+
+	cfg, err := gatewayconfig.Load(opts...)
+	if err != nil {
+		return fmt.Errorf("load config from environment: %w", err)
+	}
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("encode config: %w", err)
+	}
+
+	path := strings.TrimSpace(*outputPath)
+	if path == "" {
+		fmt.Print(string(data))
+		return nil
+	}
+
+	if !*force {
+		if _, err := os.Stat(path); err == nil {
+			return fmt.Errorf("output file %s already exists (use --force to overwrite)", path)
+		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("stat output file: %w", err)
+		}
+	}
+
+	dir := filepath.Dir(path)
+	if dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("ensure output directory: %w", err)
+		}
+	}
+
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return fmt.Errorf("write output file: %w", err)
+	}
+
+	fmt.Printf("configuration written to %s\n", path)
+	return nil
 }
 
 func targetsFile(eventPath, target string) bool {

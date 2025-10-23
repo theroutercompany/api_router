@@ -5,6 +5,7 @@
 - `/health`, `/readyz`, and `/openapi.json` endpoints refreshed with trace IDs and auto-regeneration.
 - Zap structured logging with request/trace propagation and upstream error surfacing.
 - ReDoc-powered OpenAPI bundle (`docs/openapi.html`) plus RFC 7807 error schemas for standard failures.
+- `apigw convert-env` command for migrating environment-driven configurations into YAML.
 
 ## Deployment
 1. Merge to `main`; GitHub Actions runs gofmt checks, tests, golangci-lint, and builds the OpenAPI artifact.

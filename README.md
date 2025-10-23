@@ -21,6 +21,7 @@ A lightweight Go gateway that forwards trade and task traffic, validates JWT tok
 - `go run ./cmd/apigw admin status --url http://127.0.0.1:9090 --token <token>` – query the control-plane status endpoint (`config` and `reload` subcommands also available).
 - `go run ./cmd/apigw daemon stop --pid apigw.pid` – send SIGTERM and wait for shutdown.
 - `go run ./cmd/apigw daemon status --pid apigw.pid` – inspect the current daemon process.
+- `go run ./cmd/apigw convert-env --output gateway.yaml` – snapshot environment-driven configuration into a YAML file (use `--force` to overwrite existing files or `--config` to merge from an existing YAML).
 - `go run ./cmd/gateway` – legacy entrypoint (delegates to the runtime under the hood).
 - `go run ./cmd/openapi --out dist/openapi.json` – regenerate the merged OpenAPI document.
 - `scripts/shadowdiff-run.sh` – start mock upstreams, run the Go gateway, and optionally diff against a reference Node deployment by setting `NODE_BASE_URL`.
