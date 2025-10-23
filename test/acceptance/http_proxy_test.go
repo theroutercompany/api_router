@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,70 +16,50 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"gopkg.in/yaml.v3"
-
+	"github.com/gorilla/websocket"
 	gatewayconfig "github.com/theroutercompany/api_router/pkg/gateway/config"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	grpcHealth "google.golang.org/grpc/health"
+	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
+	"gopkg.in/yaml.v3"
+)
+
+const (
+	acceptanceSecret   = "acceptance-secret"
+	acceptanceIssuer   = "acceptance"
+	acceptanceAudience = "routers-api"
+)
+
+type gatewayInstance struct {
+	baseURL string
+	client  *http.Client
+}
+
+type upstreamMode int
+
+const (
+	modeHTTP upstreamMode = iota
+	modeGRPC
 )
 
 func TestGatewayDaemon_HTTPProxyAndReadiness(t *testing.T) {
 	// These acceptance tests exercise the compiled CLI and managed daemon,
 	// so keep them serial to avoid port clashes and expensive rebuilds.
-	trade := newMockUpstream(t, "trade")
+	trade := newHTTPUpstream(t, "trade")
 	defer trade.Close()
-	task := newMockUpstream(t, "task")
+	task := newHTTPUpstream(t, "task")
 	defer task.Close()
 
-	port := freePort(t)
-	cfg := buildAcceptanceConfig(t, port, trade.URL(), task.URL())
+	instance := startGatewayInstance(t, trade, task)
 
-	dir := t.TempDir()
-	configPath := filepath.Join(dir, "gateway.yaml")
-	pidPath := filepath.Join(dir, "apigw.pid")
-	logPath := filepath.Join(dir, "apigw.log")
+	token := issueToken(t, acceptanceSecret, acceptanceIssuer, acceptanceAudience, []string{"trade.read"})
 
-	writeYAML(t, configPath, cfg)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	startCmd := exec.CommandContext(ctx,
-		"go", "run", "./cmd/apigw",
-		"daemon", "start",
-		"--config", configPath,
-		"--pid", pidPath,
-		"--log", logPath,
-		"--background",
-	)
-	startCmd.Dir = repoRoot(t)
-	startCmd.Env = os.Environ()
-
-	startCmd.Stdout = os.Stdout
-	startCmd.Stderr = os.Stderr
-	if err := startCmd.Run(); err != nil {
-		t.Fatalf("daemon start failed: %v", err)
-	}
-	t.Log("daemon start command completed")
-
-	t.Cleanup(func() {
-		stopCmd := exec.Command("go", "run", "./cmd/apigw", "daemon", "stop", "--pid", pidPath, "--wait", "5s")
-		stopCmd.Dir = repoRoot(t)
-		stopCmd.Env = os.Environ()
-		_, _ = stopCmd.CombinedOutput()
-	})
-
-	gatewayURL := fmt.Sprintf("http://127.0.0.1:%d", port)
-	waitForReady(t, gatewayURL, 10*time.Second)
-	t.Log("gateway reported ready")
-
-	const (
-		secret   = "acceptance-secret"
-		issuer   = "acceptance"
-		audience = "routers-api"
-	)
-
-	token := issueToken(t, secret, issuer, audience, []string{"trade.read"})
-
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := instance.client
+	gatewayURL := instance.baseURL
 
 	// Successful proxy response.
 	req, err := http.NewRequest(http.MethodGet, gatewayURL+"/v1/trade/orders", nil)
@@ -199,6 +178,179 @@ func TestGatewayDaemon_HTTPProxyAndReadiness(t *testing.T) {
 	}
 }
 
+func TestGatewayDaemon_WebSocketProxy(t *testing.T) {
+	trade := newHTTPUpstream(t, "trade")
+	defer trade.Close()
+	task := newHTTPUpstream(t, "task")
+	defer task.Close()
+
+	instance := startGatewayInstance(t, trade, task)
+
+	token := issueToken(t, acceptanceSecret, acceptanceIssuer, acceptanceAudience, []string{"trade.read"})
+
+	wsURL := strings.Replace(instance.baseURL, "http", "ws", 1) + "/v1/trade/ws"
+	header := http.Header{}
+	header.Set("Authorization", "Bearer "+token)
+
+	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, header)
+	if err != nil {
+		t.Fatalf("websocket dial failed: %v", err)
+	}
+	defer conn.Close()
+
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		t.Fatalf("expected 101 from websocket handshake, got %d", resp.StatusCode)
+	}
+
+	if err := conn.WriteMessage(websocket.TextMessage, []byte("ping")); err != nil {
+		t.Fatalf("write websocket message: %v", err)
+	}
+
+	_, payload, err := conn.ReadMessage()
+	if err != nil {
+		t.Fatalf("read websocket message: %v", err)
+	}
+	if string(payload) != "echo:ping" {
+		t.Fatalf("unexpected websocket payload: %s", string(payload))
+	}
+
+	trade.assertLastRequest(t, func(r requestRecord) {
+		if got := r.Headers.Get("X-Router-Product"); got != "trade" {
+			t.Errorf("expected X-Router-Product trade, got %s", got)
+		}
+		if got := r.Headers.Get("X-Request-Id"); got == "" {
+			t.Errorf("expected X-Request-Id header to be set")
+		}
+		if got := r.Headers.Get("X-Trace-Id"); got == "" {
+			t.Errorf("expected X-Trace-Id header to be set")
+		}
+		if !strings.HasPrefix(r.Path, "/v1/trade/ws") {
+			t.Errorf("expected websocket path, got %s", r.Path)
+		}
+	})
+}
+
+func TestGatewayDaemon_GRPCProxy(t *testing.T) {
+	t.Skip("TODO(#51): enable gRPC acceptance once h2c proxying is wired")
+
+	trade := newGRPCUpstream(t, "trade")
+	defer trade.Close()
+	task := newHTTPUpstream(t, "task")
+	defer task.Close()
+
+	instance := startGatewayInstance(t, trade, task)
+
+	token := issueToken(t, acceptanceSecret, acceptanceIssuer, acceptanceAudience, []string{"trade.read"})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	address := strings.TrimPrefix(instance.baseURL, "http://")
+	conn, err := grpc.DialContext(
+		ctx,
+		address,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			dialer := &net.Dialer{}
+			return dialer.DialContext(ctx, "tcp", address)
+		}),
+		grpc.WithBlock(),
+	)
+	if err != nil {
+		t.Fatalf("dial grpc gateway: %v", err)
+	}
+	defer conn.Close()
+
+	md := metadata.Pairs("authorization", "Bearer "+token)
+	reqCtx := metadata.NewOutgoingContext(ctx, md)
+
+	req := &healthgrpc.HealthCheckRequest{Service: ""}
+	var resp healthgrpc.HealthCheckResponse
+	if err := conn.Invoke(reqCtx, "/v1/trade/grpc.health.v1.Health/Check", req, &resp); err != nil {
+		trade.assertLastRequest(t, func(r requestRecord) {
+			t.Logf("gRPC request debug: headers=%v path=%s", r.Headers, r.Path)
+		})
+		t.Fatalf("grpc health check failed: %v", err)
+	}
+	if resp.Status != healthgrpc.HealthCheckResponse_SERVING {
+		t.Fatalf("expected SERVING status, got %s", resp.Status)
+	}
+
+	trade.assertLastRequest(t, func(r requestRecord) {
+		if got := r.Headers.Get("X-Router-Product"); got != "trade" {
+			t.Errorf("expected X-Router-Product trade, got %s", got)
+		}
+		if got := r.Headers.Get("Authorization"); got == "" {
+			t.Errorf("expected Authorization metadata forwarded")
+		}
+		if !strings.HasPrefix(r.Path, "/v1/trade/grpc.health.v1.Health/Check") {
+			t.Errorf("unexpected gRPC path: %s", r.Path)
+		}
+	})
+
+	trade.SetHealthy(false)
+
+	var degraded healthgrpc.HealthCheckResponse
+	if err := conn.Invoke(reqCtx, "/v1/trade/grpc.health.v1.Health/Check", req, &degraded); err != nil {
+		t.Fatalf("grpc health check after degrade failed: %v", err)
+	}
+	if degraded.Status != healthgrpc.HealthCheckResponse_NOT_SERVING {
+		t.Fatalf("expected NOT_SERVING status after degrade, got %s", degraded.Status)
+	}
+}
+
+func startGatewayInstance(t *testing.T, trade, task *mockUpstream) gatewayInstance {
+	t.Helper()
+
+	port := freePort(t)
+	cfg := buildAcceptanceConfig(t, port, trade.URL(), task.URL())
+
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "gateway.yaml")
+	pidPath := filepath.Join(dir, "apigw.pid")
+	logPath := filepath.Join(dir, "apigw.log")
+
+	writeYAML(t, configPath, cfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx,
+		"go", "run", "./cmd/apigw",
+		"daemon", "start",
+		"--config", configPath,
+		"--pid", pidPath,
+		"--log", logPath,
+		"--background",
+	)
+	cmd.Dir = repoRoot(t)
+	cmd.Env = os.Environ()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("daemon start failed: %v", err)
+	}
+
+	t.Cleanup(func() {
+		stopCmd := exec.Command("go", "run", "./cmd/apigw", "daemon", "stop", "--pid", pidPath, "--wait", "5s")
+		stopCmd.Dir = repoRoot(t)
+		stopCmd.Env = os.Environ()
+		_, _ = stopCmd.CombinedOutput()
+	})
+
+	baseURL := fmt.Sprintf("http://127.0.0.1:%d", port)
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	waitForReady(t, client, baseURL, 10*time.Second)
+	t.Logf("gateway ready at %s", baseURL)
+
+	return gatewayInstance{
+		baseURL: baseURL,
+		client:  client,
+	}
+}
+
 type readinessResponse struct {
 	Status    string              `json:"status"`
 	Upstreams []readinessUpstream `json:"upstreams"`
@@ -209,14 +361,6 @@ type readinessUpstream struct {
 	Healthy bool   `json:"healthy"`
 }
 
-type mockUpstream struct {
-	name    string
-	server  *httptest.Server
-	mu      sync.Mutex
-	healthy bool
-	logs    []requestRecord
-}
-
 type requestRecord struct {
 	Method  string
 	Path    string
@@ -224,20 +368,39 @@ type requestRecord struct {
 	Body    []byte
 }
 
-func newMockUpstream(t *testing.T, name string) *mockUpstream {
-	m := &mockUpstream{name: name, healthy: true}
+type mockUpstream struct {
+	name       string
+	mode       upstreamMode
+	healthy    bool
+	mu         sync.Mutex
+	logs       []requestRecord
+	httpServer *http.Server
+	listener   net.Listener
+	baseURL    string
+	grpcServer *grpc.Server
+	grpcHealth *grpcHealth.Server
+}
 
-	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func newHTTPUpstream(t *testing.T, name string) *mockUpstream {
+	return newMockUpstreamWithMode(t, name, modeHTTP)
+}
+
+func newGRPCUpstream(t *testing.T, name string) *mockUpstream {
+	return newMockUpstreamWithMode(t, name, modeGRPC)
+}
+
+func newMockUpstreamWithMode(t *testing.T, name string, mode upstreamMode) *mockUpstream {
+	t.Helper()
+
+	m := &mockUpstream{
+		name:    name,
+		mode:    mode,
+		healthy: true,
+	}
+
+	baseHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/health" {
-			if m.isHealthy() {
-				w.Header().Set("content-type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte(`{"status":"ok","upstream":"` + name + `"}`))
-			} else {
-				w.Header().Set("content-type", "application/json")
-				w.WriteHeader(http.StatusServiceUnavailable)
-				_, _ = w.Write([]byte(`{"status":"degraded","upstream":"` + name + `"}`))
-			}
+			m.handleReadiness(w)
 			return
 		}
 
@@ -251,6 +414,19 @@ func newMockUpstream(t *testing.T, name string) *mockUpstream {
 			Body:    body,
 		})
 
+		if mode == modeGRPC && isGRPCRequest(r) {
+			req := r
+			if strings.HasPrefix(r.URL.Path, "/v1/"+name) {
+				req = r.Clone(r.Context())
+				req.URL.Path = strings.TrimPrefix(req.URL.Path, "/v1/"+name)
+				if req.URL.Path == "" {
+					req.URL.Path = "/"
+				}
+			}
+			m.grpcServer.ServeHTTP(w, req)
+			return
+		}
+
 		switch name {
 		case "trade":
 			m.handleTrade(w, r)
@@ -261,17 +437,47 @@ func newMockUpstream(t *testing.T, name string) *mockUpstream {
 		}
 	})
 
-	m.server = httptest.NewServer(handler)
+	var handler http.Handler = baseHandler
+
+	if mode == modeGRPC {
+		m.grpcServer = grpc.NewServer()
+		m.grpcHealth = grpcHealth.NewServer()
+		m.grpcHealth.SetServingStatus("", healthgrpc.HealthCheckResponse_SERVING)
+		m.grpcHealth.SetServingStatus(name, healthgrpc.HealthCheckResponse_SERVING)
+		healthgrpc.RegisterHealthServer(m.grpcServer, m.grpcHealth)
+		handler = h2c.NewHandler(handler, &http2.Server{})
+	}
+
+	server := &http.Server{Handler: handler}
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen upstream: %v", err)
+	}
+
+	go func() {
+		_ = server.Serve(ln)
+	}()
+
+	m.httpServer = server
+	m.listener = ln
+	m.baseURL = "http://" + ln.Addr().String()
+
+	t.Cleanup(func() { m.Close() })
 	return m
 }
 
 func (m *mockUpstream) URL() string {
-	return m.server.URL
+	return m.baseURL
 }
 
 func (m *mockUpstream) Close() {
-	if m.server != nil {
-		m.server.Close()
+	if m.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = m.httpServer.Shutdown(ctx)
+	}
+	if m.listener != nil {
+		_ = m.listener.Close()
 	}
 }
 
@@ -279,6 +485,14 @@ func (m *mockUpstream) SetHealthy(v bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.healthy = v
+	if m.mode == modeGRPC && m.grpcHealth != nil {
+		status := healthgrpc.HealthCheckResponse_SERVING
+		if !v {
+			status = healthgrpc.HealthCheckResponse_NOT_SERVING
+		}
+		m.grpcHealth.SetServingStatus("", status)
+		m.grpcHealth.SetServingStatus(m.name, status)
+	}
 }
 
 func (m *mockUpstream) isHealthy() bool {
@@ -303,8 +517,38 @@ func (m *mockUpstream) assertLastRequest(t *testing.T, fn func(requestRecord)) {
 	fn(m.logs[len(m.logs)-1])
 }
 
+func (m *mockUpstream) handleReadiness(w http.ResponseWriter) {
+	m.mu.Lock()
+	healthy := m.healthy
+	m.mu.Unlock()
+
+	w.Header().Set("content-type", "application/json")
+	if healthy {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok","upstream":"` + m.name + `"}`))
+	} else {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte(`{"status":"degraded","upstream":"` + m.name + `"}`))
+	}
+}
+
 func (m *mockUpstream) handleTrade(w http.ResponseWriter, r *http.Request) {
 	switch {
+	case strings.HasPrefix(r.URL.Path, "/v1/trade/ws"):
+		upgrader := websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return true },
+		}
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		messageType, payload, err := conn.ReadMessage()
+		if err != nil {
+			return
+		}
+		_ = conn.WriteMessage(messageType, append([]byte("echo:"), payload...))
 	case strings.HasPrefix(r.URL.Path, "/v1/trade"):
 		if r.URL.Query().Get("simulate") == "error" {
 			w.Header().Set("content-type", "application/json")
@@ -331,6 +575,10 @@ func (m *mockUpstream) handleTask(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func isGRPCRequest(r *http.Request) bool {
+	return r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc")
+}
+
 func buildAcceptanceConfig(t *testing.T, port int, tradeURL, taskURL string) gatewayconfig.Config {
 	cfg := gatewayconfig.Default()
 	cfg.HTTP.Port = port
@@ -342,9 +590,9 @@ func buildAcceptanceConfig(t *testing.T, port int, tradeURL, taskURL string) gat
 		{Name: "task", BaseURL: taskURL, HealthPath: "/health"},
 	}
 	cfg.Auth = gatewayconfig.AuthConfig{
-		Secret:    "acceptance-secret",
-		Issuer:    "acceptance",
-		Audiences: []string{"routers-api"},
+		Secret:    acceptanceSecret,
+		Issuer:    acceptanceIssuer,
+		Audiences: []string{acceptanceAudience},
 	}
 	cfg.RateLimit.Window = gatewayconfig.DurationFrom(30 * time.Second)
 	cfg.RateLimit.Max = 100
@@ -364,12 +612,12 @@ func writeYAML(t *testing.T, path string, cfg gatewayconfig.Config) {
 	}
 }
 
-func waitForReady(t *testing.T, baseURL string, timeout time.Duration) {
+func waitForReady(t *testing.T, client *http.Client, baseURL string, timeout time.Duration) {
 	deadline := time.Now().Add(timeout)
 	var lastStatus int
 	var lastErr error
 	for time.Now().Before(deadline) {
-		resp, err := http.Get(baseURL + "/readyz")
+		resp, err := client.Get(baseURL + "/readyz")
 		if err == nil {
 			io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
