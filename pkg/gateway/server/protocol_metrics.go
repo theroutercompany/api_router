@@ -68,6 +68,11 @@ func (m *protocolMetrics) track(r *http.Request) func(status int, elapsed time.D
 		m.inflight.WithLabelValues(protocol, product).Inc()
 	}
 
+	trackConnection := m.connections != nil && trackConnectionForProtocol(protocol)
+	if trackConnection {
+		m.connections.WithLabelValues(protocol, product).Inc()
+	}
+
 	return func(status int, elapsed time.Duration) {
 		if status <= 0 {
 			status = http.StatusOK
@@ -86,6 +91,9 @@ func (m *protocolMetrics) track(r *http.Request) func(status int, elapsed time.D
 		}
 		if m.inflight != nil {
 			m.inflight.WithLabelValues(protocol, product).Dec()
+		}
+		if trackConnection {
+			m.connections.WithLabelValues(protocol, product).Dec()
 		}
 	}
 }
@@ -107,9 +115,25 @@ func (m *protocolMetrics) hijacked(r *http.Request) func() {
 	}
 }
 
+func trackConnectionForProtocol(protocol string) bool {
+	switch protocol {
+	case "sse", "grpc":
+		return true
+	default:
+		return false
+	}
+}
+
 func classifyProtocol(r *http.Request) string {
 	if r == nil {
 		return "unknown"
+	}
+
+	accept := strings.ToLower(r.Header.Get("Accept"))
+	contentType := strings.ToLower(r.Header.Get("Content-Type"))
+
+	if strings.Contains(accept, "text/event-stream") || strings.HasPrefix(contentType, "text/event-stream") {
+		return "sse"
 	}
 
 	if upgrade := r.Header.Get("Upgrade"); upgrade != "" && strings.EqualFold(upgrade, "websocket") {
@@ -122,7 +146,6 @@ func classifyProtocol(r *http.Request) string {
 		}
 	}
 
-	contentType := strings.ToLower(r.Header.Get("Content-Type"))
 	if strings.HasPrefix(contentType, "application/grpc") {
 		return "grpc"
 	}

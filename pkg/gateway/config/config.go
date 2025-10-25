@@ -18,41 +18,43 @@ import (
 )
 
 const (
-	defaultPort               = 8080
-	defaultShutdownTimeout    = 15 * time.Second
-	defaultReadinessTimeout   = 2 * time.Second
-	defaultReadinessUserAgent = "api-router-gateway/readyz"
-	defaultHealthPath         = "/health"
-	defaultRateLimitWindow    = 60 * time.Second
-	defaultRateLimitMax       = 120
-	defaultMetricsEnabled     = true
-	defaultAdminListen        = "127.0.0.1:9090"
-	defaultConfigEnvVar       = "APIGW_CONFIG"
-	envTradePrefix            = "TRADE"
-	envTaskPrefix             = "TASK"
-	envPort                   = "PORT"
-	envShutdownTimeout        = "SHUTDOWN_TIMEOUT_MS"
-	envReadinessTimeout       = "READINESS_TIMEOUT_MS"
-	envReadinessUserAgent     = "READINESS_USER_AGENT"
-	envGitSHA                 = "GIT_SHA"
-	envJWTSecret              = "JWT_SECRET"
-	envJWTAudience            = "JWT_AUDIENCE"
-	envJWTIssuer              = "JWT_ISSUER"
-	envCorsAllowedOrigins     = "CORS_ALLOWED_ORIGINS"
-	envRateLimitWindow        = "RATE_LIMIT_WINDOW_MS"
-	envRateLimitMax           = "RATE_LIMIT_MAX"
-	envMetricsEnabled         = "METRICS_ENABLED"
-	envAdminEnabled           = "ADMIN_ENABLED"
-	envAdminListen            = "ADMIN_LISTEN"
-	envAdminToken             = "ADMIN_TOKEN"
-	envAdminAllow             = "ADMIN_ALLOW"
-	envTLSInsecureSkipVerify  = "_TLS_INSECURE_SKIP_VERIFY"
-	envTLSEnabled             = "_TLS_ENABLED"
-	envTLSCAFile              = "_TLS_CA_FILE"
-	envTLSCertFile            = "_TLS_CERT_FILE"
-	envTLSKeyFile             = "_TLS_KEY_FILE"
-	envAPIURL                 = "_API_URL"
-	envHealthPath             = "_HEALTH_PATH"
+	defaultPort                   = 8080
+	defaultShutdownTimeout        = 15 * time.Second
+	defaultReadinessTimeout       = 2 * time.Second
+	defaultReadinessUserAgent     = "api-router-gateway/readyz"
+	defaultHealthPath             = "/health"
+	defaultRateLimitWindow        = 60 * time.Second
+	defaultRateLimitMax           = 120
+	defaultMetricsEnabled         = true
+	defaultAdminListen            = "127.0.0.1:9090"
+	defaultWebSocketMaxConcurrent = 0
+	defaultWebSocketIdleTimeout   = 5 * time.Minute
+	defaultConfigEnvVar           = "APIGW_CONFIG"
+	envTradePrefix                = "TRADE"
+	envTaskPrefix                 = "TASK"
+	envPort                       = "PORT"
+	envShutdownTimeout            = "SHUTDOWN_TIMEOUT_MS"
+	envReadinessTimeout           = "READINESS_TIMEOUT_MS"
+	envReadinessUserAgent         = "READINESS_USER_AGENT"
+	envGitSHA                     = "GIT_SHA"
+	envJWTSecret                  = "JWT_SECRET"
+	envJWTAudience                = "JWT_AUDIENCE"
+	envJWTIssuer                  = "JWT_ISSUER"
+	envCorsAllowedOrigins         = "CORS_ALLOWED_ORIGINS"
+	envRateLimitWindow            = "RATE_LIMIT_WINDOW_MS"
+	envRateLimitMax               = "RATE_LIMIT_MAX"
+	envMetricsEnabled             = "METRICS_ENABLED"
+	envAdminEnabled               = "ADMIN_ENABLED"
+	envAdminListen                = "ADMIN_LISTEN"
+	envAdminToken                 = "ADMIN_TOKEN"
+	envAdminAllow                 = "ADMIN_ALLOW"
+	envTLSInsecureSkipVerify      = "_TLS_INSECURE_SKIP_VERIFY"
+	envTLSEnabled                 = "_TLS_ENABLED"
+	envTLSCAFile                  = "_TLS_CA_FILE"
+	envTLSCertFile                = "_TLS_CERT_FILE"
+	envTLSKeyFile                 = "_TLS_KEY_FILE"
+	envAPIURL                     = "_API_URL"
+	envHealthPath                 = "_HEALTH_PATH"
 )
 
 // Config captures runtime configuration for the gateway runtime and SDK.
@@ -65,6 +67,7 @@ type Config struct {
 	RateLimit RateLimitConfig `yaml:"rateLimit"`
 	Metrics   MetricsConfig   `yaml:"metrics"`
 	Admin     AdminConfig     `yaml:"admin"`
+	WebSocket WebSocketConfig `yaml:"websocket"`
 }
 
 // HTTPConfig configures listener behaviour.
@@ -118,6 +121,12 @@ type RateLimitConfig struct {
 // MetricsConfig toggles metrics exposure.
 type MetricsConfig struct {
 	Enabled bool `yaml:"enabled"`
+}
+
+// WebSocketConfig governs websocket connection limits.
+type WebSocketConfig struct {
+	MaxConcurrent int      `yaml:"maxConcurrent"`
+	IdleTimeout   Duration `yaml:"idleTimeout"`
 }
 
 // AdminConfig toggles the control-plane server that exposes status and reload endpoints.
@@ -222,6 +231,10 @@ func Default() Config {
 			Listen:  defaultAdminListen,
 			Token:   "",
 			Allow:   nil,
+		},
+		WebSocket: WebSocketConfig{
+			MaxConcurrent: defaultWebSocketMaxConcurrent,
+			IdleTimeout:   DurationFrom(defaultWebSocketIdleTimeout),
 		},
 	}
 }
@@ -474,6 +487,13 @@ func (cfg *Config) normalize() error {
 		cfg.Admin.Listen = defaultAdminListen
 	}
 
+	if cfg.WebSocket.IdleTimeout.AsDuration() <= 0 {
+		cfg.WebSocket.IdleTimeout = DurationFrom(defaultWebSocketIdleTimeout)
+	}
+	if cfg.WebSocket.MaxConcurrent < 0 {
+		cfg.WebSocket.MaxConcurrent = defaultWebSocketMaxConcurrent
+	}
+
 	cfg.ensureUpstream(envTradePrefix)
 	cfg.ensureUpstream(envTaskPrefix)
 
@@ -567,6 +587,13 @@ func (cfg Config) Validate() error {
 				errs = append(errs, fmt.Errorf("invalid admin allow value %q: %w", e, err))
 			}
 		}
+	}
+
+	if cfg.WebSocket.MaxConcurrent < 0 {
+		errs = append(errs, fmt.Errorf("websocket.maxConcurrent cannot be negative"))
+	}
+	if cfg.WebSocket.IdleTimeout.AsDuration() < 0 {
+		errs = append(errs, fmt.Errorf("websocket.idleTimeout cannot be negative"))
 	}
 
 	if len(errs) == 0 {

@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/cors"
@@ -72,6 +73,7 @@ type Server struct {
 	openapiProvider openapi.DocumentProvider
 	protocolMetrics *protocolMetrics
 	logger          pkglog.Logger
+	wsLimiter       *websocketLimiter
 }
 
 // New constructs a server with baseline dependencies configured.
@@ -108,6 +110,8 @@ func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaym
 		s.protocolMetrics = newProtocolMetrics(nil)
 	}
 
+	s.wsLimiter = newWebsocketLimiter(cfg.WebSocket.MaxConcurrent)
+
 	if cfg.Auth.Secret != "" {
 		if authenticator, err := gatewayauth.New(cfg.Auth); err != nil {
 			s.logger.Errorw("failed to initialize authenticator", "error", err)
@@ -139,11 +143,14 @@ func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaym
 	}
 	var tracker gatewaymiddleware.TrackFunc
 	var hijacker gatewaymiddleware.HijackedFunc
-	if s.protocolMetrics != nil {
-		tracker = s.protocolMetrics.track
-		hijacker = s.protocolMetrics.hijacked
+	if s.protocolMetrics != nil || s.wsLimiter != nil {
+		tracker = s.trackRequest
+		hijacker = s.hijackedRequest
 	}
 	handler = gatewaymiddleware.Logging(s.logger, tracker, hijacker, requestIDFromContext, traceIDFromContext, clientAddress)(handler)
+	if s.wsLimiter != nil {
+		handler = websocketLimitMiddleware(s.wsLimiter, s.cfg.WebSocket.IdleTimeout.AsDuration(), traceIDFromContext, gatewayproblem.Write, s.logger)(handler)
+	}
 	handler = gatewaymiddleware.SecurityHeaders()(handler)
 	handler = gatewaymiddleware.RequestMetadata(ensureRequestIDs)(handler)
 	http2Server := &http2.Server{}
@@ -246,6 +253,171 @@ func (s *Server) initProxies() {
 			s.taskHandler = s.buildProtectedHandler("task", []string{"task.read", "task.write"}, handler)
 		}
 	}
+}
+
+func (s *Server) trackRequest(r *http.Request) func(status int, elapsed time.Duration) {
+	var track func(int, time.Duration)
+	if s.protocolMetrics != nil {
+		track = s.protocolMetrics.track(r)
+	}
+	wc, ok := websocketContextFromRequest(r)
+	return func(status int, elapsed time.Duration) {
+		if track != nil {
+			track(status, elapsed)
+		}
+		if ok {
+			wc.release()
+		}
+	}
+}
+
+func (s *Server) hijackedRequest(r *http.Request) (func(), func(net.Conn) net.Conn) {
+	var metricsCloser func()
+	if s.protocolMetrics != nil {
+		metricsCloser = s.protocolMetrics.hijacked(r)
+	}
+	wc, ok := websocketContextFromRequest(r)
+	if !ok {
+		return metricsCloser, nil
+	}
+	release := wc.release
+	if release == nil {
+		release = func() {}
+	}
+	combined := func() {
+		release()
+		if metricsCloser != nil {
+			metricsCloser()
+		}
+	}
+	return combined, func(conn net.Conn) net.Conn {
+		if wc.timeout <= 0 {
+			return conn
+		}
+		return &deadlineConn{Conn: conn, timeout: wc.timeout}
+	}
+}
+
+func websocketLimitMiddleware(limiter *websocketLimiter, timeout time.Duration, trace gatewaymiddleware.TraceIDFromContext, write gatewaymiddleware.ProblemWriter, logger pkglog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		if limiter == nil || next == nil {
+			return next
+		}
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !isWebSocketRequest(r) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			release, ok := limiter.Acquire()
+			if !ok {
+				if write != nil {
+					tid := ""
+					if trace != nil {
+						tid = trace(r.Context())
+					}
+					write(w, http.StatusServiceUnavailable, "WebSocket Limit Reached", "Gateway is at websocket capacity", tid, r.URL.Path)
+				} else {
+					http.Error(w, http.StatusText(http.StatusServiceUnavailable), http.StatusServiceUnavailable)
+				}
+				if logger != nil {
+					logger.Warnw("websocket connection rejected", "limit", limiter.limit)
+				}
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), websocketContextKey{}, websocketContext{
+				release: release,
+				timeout: timeout,
+			})
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+type deadlineConn struct {
+	net.Conn
+	timeout time.Duration
+}
+
+func (c *deadlineConn) Read(b []byte) (int, error) {
+	if c.timeout > 0 {
+		_ = c.Conn.SetReadDeadline(time.Now().Add(c.timeout))
+	}
+	return c.Conn.Read(b)
+}
+
+func (c *deadlineConn) Write(b []byte) (int, error) {
+	if c.timeout > 0 {
+		_ = c.Conn.SetWriteDeadline(time.Now().Add(c.timeout))
+	}
+	return c.Conn.Write(b)
+}
+
+type websocketLimiter struct {
+	limit  int
+	active int
+	mu     sync.Mutex
+}
+
+func newWebsocketLimiter(limit int) *websocketLimiter {
+	return &websocketLimiter{limit: limit}
+}
+
+func (l *websocketLimiter) Acquire() (func(), bool) {
+	if l == nil {
+		return func() {}, true
+	}
+	if l.limit <= 0 {
+		var once sync.Once
+		return func() { once.Do(func() {}) }, true
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.active >= l.limit {
+		return nil, false
+	}
+	l.active++
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			l.mu.Lock()
+			l.active--
+			l.mu.Unlock()
+		})
+	}, true
+}
+
+func isWebSocketRequest(r *http.Request) bool {
+	if r == nil {
+		return false
+	}
+	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+		return true
+	}
+	connection := strings.ToLower(r.Header.Get("Connection"))
+	return strings.Contains(connection, "upgrade") && strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
+}
+
+type websocketContext struct {
+	release func()
+	timeout time.Duration
+}
+
+type websocketContextKey struct{}
+
+func websocketContextFromRequest(r *http.Request) (websocketContext, bool) {
+	if r == nil {
+		return websocketContext{}, false
+	}
+	v, ok := r.Context().Value(websocketContextKey{}).(websocketContext)
+	if !ok {
+		return websocketContext{}, false
+	}
+	if v.release == nil {
+		v.release = func() {}
+	}
+	return v, true
 }
 
 func (s *Server) buildProtectedHandler(product string, requiredScopes []string, next http.Handler) http.Handler {

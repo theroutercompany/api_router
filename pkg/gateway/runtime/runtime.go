@@ -5,11 +5,14 @@ package runtime
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -248,15 +251,46 @@ func buildComponents(cfg gatewayconfig.Config, logger pkglog.Logger) (struct {
 }, error,
 ) {
 	readinessTimeout := cfg.Readiness.Timeout.AsDuration()
-	httpClient := &http.Client{Timeout: readinessTimeout}
+	defaultTransport := defaultHTTPTransport()
+	hostTransports := make(map[string]*http.Transport)
 
 	upstreams := make([]health.Upstream, len(cfg.Readiness.Upstreams))
 	for i, upstreamCfg := range cfg.Readiness.Upstreams {
+		host, err := hostFromURL(upstreamCfg.BaseURL)
+		if err != nil {
+			return struct {
+				server   *gatewayserver.Server
+				checker  *health.Checker
+				registry *gatewaymetrics.Registry
+			}{}, fmt.Errorf("parse upstream %s base url: %w", upstreamCfg.Name, err)
+		}
+		if upstreamCfg.TLS.Enabled {
+			tlsCfg, err := buildReadinessTLSConfig(upstreamCfg.TLS)
+			if err != nil {
+				return struct {
+					server   *gatewayserver.Server
+					checker  *health.Checker
+					registry *gatewaymetrics.Registry
+				}{}, fmt.Errorf("build readiness tls config for %s: %w", upstreamCfg.Name, err)
+			}
+			tr := defaultHTTPTransport()
+			tr.TLSClientConfig = tlsCfg
+			hostTransports[host] = tr
+		}
+
 		upstreams[i] = health.Upstream{
 			Name:       upstreamCfg.Name,
 			BaseURL:    upstreamCfg.BaseURL,
 			HealthPath: upstreamCfg.HealthPath,
 		}
+	}
+
+	httpClient := &http.Client{
+		Timeout: readinessTimeout,
+		Transport: &upstreamTransport{
+			defaultTransport: defaultTransport,
+			transports:       hostTransports,
+		},
 	}
 
 	checker := health.NewChecker(httpClient, upstreams, readinessTimeout, cfg.Readiness.UserAgent)
@@ -276,6 +310,84 @@ func buildComponents(cfg gatewayconfig.Config, logger pkglog.Logger) (struct {
 		checker  *health.Checker
 		registry *gatewaymetrics.Registry
 	}{server: srv, checker: checker, registry: registry}, nil
+}
+
+type upstreamTransport struct {
+	defaultTransport *http.Transport
+	transports       map[string]*http.Transport
+}
+
+func (t *upstreamTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req == nil || req.URL == nil {
+		return t.defaultTransport.RoundTrip(req)
+	}
+	if transport, ok := t.transports[req.URL.Host]; ok {
+		return transport.RoundTrip(req)
+	}
+	return t.defaultTransport.RoundTrip(req)
+}
+
+func (t *upstreamTransport) CloseIdleConnections() {
+	if t.defaultTransport != nil {
+		t.defaultTransport.CloseIdleConnections()
+	}
+	for _, transport := range t.transports {
+		transport.CloseIdleConnections()
+	}
+}
+
+func defaultHTTPTransport() *http.Transport {
+	if base, ok := http.DefaultTransport.(*http.Transport); ok && base != nil {
+		return base.Clone()
+	}
+	return &http.Transport{}
+}
+
+func buildReadinessTLSConfig(cfg gatewayconfig.TLSConfig) (*tls.Config, error) {
+	tlsCfg := &tls.Config{
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+		NextProtos:         []string{"h2", "http/1.1"},
+	}
+
+	if cfg.CAFile != "" {
+		data, err := os.ReadFile(cfg.CAFile)
+		if err != nil {
+			return nil, fmt.Errorf("read ca file %q: %w", cfg.CAFile, err)
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(data) {
+			return nil, fmt.Errorf("parse ca bundle %q", cfg.CAFile)
+		}
+		tlsCfg.RootCAs = pool
+	}
+
+	if cfg.ClientCertFile != "" || cfg.ClientKeyFile != "" {
+		if cfg.ClientCertFile == "" || cfg.ClientKeyFile == "" {
+			return nil, errors.New("client certificate and key must both be provided")
+		}
+		cert, err := tls.LoadX509KeyPair(cfg.ClientCertFile, cfg.ClientKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("load client key pair: %w", err)
+		}
+		tlsCfg.Certificates = []tls.Certificate{cert}
+	}
+
+	return tlsCfg, nil
+}
+
+func hostFromURL(raw string) (string, error) {
+	if strings.TrimSpace(raw) == "" {
+		return "", fmt.Errorf("empty url")
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return "", err
+	}
+	if parsed.Host == "" {
+		return "", fmt.Errorf("url %q missing host", raw)
+	}
+	return parsed.Host, nil
 }
 
 func parseAllowList(entries []string) []*net.IPNet {

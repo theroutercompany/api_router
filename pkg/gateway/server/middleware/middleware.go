@@ -39,8 +39,8 @@ type ClientAddress func(*http.Request) string
 // TrackFunc captures protocol metrics for a completed request.
 type TrackFunc func(*http.Request) func(status int, elapsed time.Duration)
 
-// HijackedFunc captures protocol metrics for upgraded connections.
-type HijackedFunc func(*http.Request) func()
+// HijackedFunc captures protocol metrics for upgraded connections and optionally wraps the net.Conn.
+type HijackedFunc func(*http.Request) (func(), func(net.Conn) net.Conn)
 
 // AllowFunc determines whether a client is permitted to proceed based on a key and timestamp.
 type AllowFunc func(key string, now time.Time) bool
@@ -192,9 +192,9 @@ func Logging(
 				}
 			}
 
-			var hijackTracker func() func()
+			var hijackTracker func() (func(), func(net.Conn) net.Conn)
 			if hijacked != nil {
-				hijackTracker = func() func() {
+				hijackTracker = func() (func(), func(net.Conn) net.Conn) {
 					return hijacked(r)
 				}
 			}
@@ -250,11 +250,11 @@ type loggingResponseWriter struct {
 	http.ResponseWriter
 	status        int
 	bytes         int
-	hijackTracker func() func()
+	hijackTracker func() (func(), func(net.Conn) net.Conn)
 	hijackOnce    sync.Once
 }
 
-func newLoggingResponseWriter(w http.ResponseWriter, tracker func() func()) *loggingResponseWriter {
+func newLoggingResponseWriter(w http.ResponseWriter, tracker func() (func(), func(net.Conn) net.Conn)) *loggingResponseWriter {
 	return &loggingResponseWriter{
 		ResponseWriter: w,
 		status:         http.StatusOK,
@@ -294,9 +294,13 @@ func (w *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 	if w.hijackTracker != nil {
 		var closer func()
+		var wrapper func(net.Conn) net.Conn
 		w.hijackOnce.Do(func() {
-			closer = w.hijackTracker()
+			closer, wrapper = w.hijackTracker()
 		})
+		if wrapper != nil {
+			conn = wrapper(conn)
+		}
 		if closer != nil {
 			conn = &trackingConn{Conn: conn, onClose: closer}
 		}
@@ -316,6 +320,7 @@ type trackingConn struct {
 	net.Conn
 	onClose func()
 	once    sync.Once
+	timeout time.Duration
 }
 
 func (c *trackingConn) Close() error {
@@ -326,4 +331,18 @@ func (c *trackingConn) Close() error {
 		}
 	})
 	return err
+}
+
+func (c *trackingConn) Read(b []byte) (int, error) {
+	if c.timeout > 0 {
+		_ = c.Conn.SetReadDeadline(time.Now().Add(c.timeout))
+	}
+	return c.Conn.Read(b)
+}
+
+func (c *trackingConn) Write(b []byte) (int, error) {
+	if c.timeout > 0 {
+		_ = c.Conn.SetWriteDeadline(time.Now().Add(c.timeout))
+	}
+	return c.Conn.Write(b)
 }

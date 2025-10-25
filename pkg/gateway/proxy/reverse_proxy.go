@@ -8,14 +8,17 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/theroutercompany/api_router/pkg/gateway/problem"
 	pkglog "github.com/theroutercompany/api_router/pkg/log"
+	"golang.org/x/net/http2"
 )
 
 // TLSConfig represents TLS settings applied to upstream requests.
@@ -58,7 +61,8 @@ func New(opts Options) (http.Handler, error) {
 		transport.TLSClientConfig = tlsCfg
 	}
 
-	proxy.Transport = transport
+	h2cTransport := buildH2CTransport(target)
+	proxy.Transport = &grpcAwareTransport{base: transport, h2c: h2cTransport}
 
 	originalDirector := proxy.Director
 	proxy.Director = func(r *http.Request) {
@@ -79,6 +83,79 @@ func New(opts Options) (http.Handler, error) {
 	}
 
 	return proxy, nil
+}
+
+func buildH2CTransport(target *url.URL) *http2.Transport {
+	if target == nil || target.Scheme != "http" {
+		return nil
+	}
+
+	return &http2.Transport{
+		AllowHTTP: true,
+		DialTLS: func(network, addr string, _ *tls.Config) (net.Conn, error) {
+			var d net.Dialer
+			return d.Dial(network, addr)
+		},
+	}
+}
+
+type grpcAwareTransport struct {
+	base *http.Transport
+	h2c  *http2.Transport
+}
+
+func (t *grpcAwareTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if t.shouldUseH2C(req) {
+		h2cReq := cloneRequest(req)
+		sanitizeH2CRequest(h2cReq)
+		return t.h2c.RoundTrip(h2cReq)
+	}
+	return t.base.RoundTrip(req)
+}
+
+func (t *grpcAwareTransport) shouldUseH2C(req *http.Request) bool {
+	if t.h2c == nil || req == nil || req.URL == nil {
+		return false
+	}
+	if req.URL.Scheme != "http" {
+		return false
+	}
+	ct := strings.ToLower(req.Header.Get("Content-Type"))
+	return strings.Contains(ct, "application/grpc")
+}
+
+func (t *grpcAwareTransport) CloseIdleConnections() {
+	if t.base != nil {
+		t.base.CloseIdleConnections()
+	}
+	if t.h2c != nil {
+		t.h2c.CloseIdleConnections()
+	}
+}
+
+func cloneRequest(req *http.Request) *http.Request {
+	if req == nil {
+		return nil
+	}
+	clone := req.Clone(req.Context())
+	clone.Body = req.Body
+	clone.GetBody = req.GetBody
+	clone.ContentLength = req.ContentLength
+	clone.Host = req.Host
+	clone.RequestURI = ""
+	return clone
+}
+
+func sanitizeH2CRequest(req *http.Request) {
+	if req == nil {
+		return
+	}
+	for _, key := range []string{"Connection", "Proxy-Connection", "Upgrade", "Keep-Alive", "Transfer-Encoding"} {
+		req.Header.Del(key)
+	}
+	req.Proto = "HTTP/2.0"
+	req.ProtoMajor = 2
+	req.ProtoMinor = 0
 }
 
 func buildTLSConfig(cfg TLSConfig) (*tls.Config, error) {

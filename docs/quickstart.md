@@ -49,6 +49,13 @@
 - Migrate existing environment-based setups to YAML with `go run ./cmd/apigw convert-env --output gateway.yaml` (see `docs/config-migration.md`).
 - Update observability dashboards to track the Go gateway’s metrics and logs.
 - Review the runnable samples under `examples/` (see `docs/examples.md`) for embedding, CLI, and TLS usage patterns.
+- Cap websocket concurrency and define idle timeouts to prevent resource exhaustion:
+  ```yaml
+  websocket:
+    maxConcurrent: 512
+    idleTimeout: 2m
+  ```
+  Requests beyond `maxConcurrent` receive a `503`, and idle connections are closed after the configured timeout.
 
 ## Docker & Deployment
 

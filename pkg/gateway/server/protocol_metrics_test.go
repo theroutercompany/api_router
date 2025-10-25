@@ -18,6 +18,15 @@ func TestProtocolMetricsTrack(t *testing.T) {
 		t.Fatalf("expected protocol metrics to be initialised")
 	}
 
+	sseReq := httptest.NewRequest(http.MethodGet, "/v1/task/sse", nil)
+	sseReq.Header.Set("Accept", "text/event-stream")
+	sseReq.Header.Set("X-Router-Product", "task")
+
+	sseDone := pm.track(sseReq)
+	if got := testutil.ToFloat64(pm.connections.WithLabelValues("sse", "task")); got != 1 {
+		t.Fatalf("expected sse connections gauge to be 1, got %v", got)
+	}
+
 	wsReq := httptest.NewRequest(http.MethodGet, "/socket", nil)
 	wsReq.Header.Set("Upgrade", "websocket")
 	wsReq.Header.Set("Connection", "Upgrade")
@@ -48,10 +57,21 @@ func TestProtocolMetricsTrack(t *testing.T) {
 	errReq.Header.Set("X-Router-Product", "task")
 
 	doneErr := pm.track(errReq)
+	if got := testutil.ToFloat64(pm.connections.WithLabelValues("grpc", "task")); got != 1 {
+		t.Fatalf("expected grpc connections gauge to be 1, got %v", got)
+	}
 	doneErr(http.StatusInternalServerError, 25*time.Millisecond)
 
 	if got := testutil.ToFloat64(pm.requests.WithLabelValues("grpc", "task", "error")); got != 1 {
 		t.Fatalf("expected grpc error counter to be 1, got %v", got)
+	}
+	if got := testutil.ToFloat64(pm.connections.WithLabelValues("grpc", "task")); got != 0 {
+		t.Fatalf("expected grpc connections gauge to return to 0, got %v", got)
+	}
+
+	sseDone(http.StatusOK, 10*time.Millisecond)
+	if got := testutil.ToFloat64(pm.connections.WithLabelValues("sse", "task")); got != 0 {
+		t.Fatalf("expected sse connections gauge to be 0, got %v", got)
 	}
 }
 
@@ -91,6 +111,12 @@ func TestClassifyProtocol(t *testing.T) {
 	wsReq.Header.Set("Connection", "Upgrade")
 	if got := classifyProtocol(wsReq); got != "websocket" {
 		t.Fatalf("expected websocket, got %s", got)
+	}
+
+	sseReq := httptest.NewRequest(http.MethodGet, "/v1/task/sse", nil)
+	sseReq.Header.Set("Accept", "text/event-stream")
+	if got := classifyProtocol(sseReq); got != "sse" {
+		t.Fatalf("expected sse, got %s", got)
 	}
 
 	grpcReq := httptest.NewRequest(http.MethodPost, "/health.v1.Health/Check", nil)

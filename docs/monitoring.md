@@ -14,10 +14,10 @@
 - Capture JWT validation errors by watching for `401`/`403` spikes tagged with `authentication` in the logs.
 
 ## Metrics
-- `gateway_protocol_requests_total{protocol,product,outcome}`: counter of proxied requests; watch the `outcome="error"` slice for regressions by protocol.
-- `gateway_protocol_inflight{protocol,product}`: gauge of active requests; alert when websockets or gRPC streams stay elevated beyond expected concurrency.
-- `gateway_protocol_active_connections{protocol,product}`: gauge of upgraded connections (e.g., websockets); pair with inflight to spot long-lived sessions that never tear down.
-- `gateway_protocol_request_duration_seconds{protocol,product}`: histogram capturing upstream latency; track SLOs for `trade` and `task` by watching p95/p99.
+- `gateway_protocol_requests_total{protocol,product,outcome}`: counter of proxied requests; watch the `outcome="error"` slice for regressions by protocol (`http`, `grpc`, `websocket`, `sse`).
+- `gateway_protocol_inflight{protocol,product}`: gauge of active requests; alert when websockets, gRPC streams, or SSE clients stay elevated beyond expected concurrency.
+- `gateway_protocol_active_connections{protocol,product}`: gauge of long-lived connections (websocket hijacks, gRPC calls, SSE streams); pair with inflight to spot sessions that never tear down.
+- `gateway_protocol_request_duration_seconds{protocol,product}`: histogram capturing upstream latency; track SLOs for `trade` and `task` by watching p95/p99 for each protocol.
 
 ### Sample Prometheus Rules
 ```yaml
@@ -53,5 +53,11 @@ groups:
 
 ### Grafana Dashboard Starters
 - **Overview**: Single Stat for total `gateway_protocol_requests_total` per protocol/product, stacked bar for `outcome` split.
-- **Latency**: Use `histogram_quantile` panels for p50/p95/p99; add thresholds matching SLOs.
-- **Connections**: Dual-axis chart of `gateway_protocol_inflight` and `gateway_protocol_active_connections` to highlight leaks.
+- **Latency**: Use `histogram_quantile` panels for p50/p95/p99; add thresholds matching SLOs. Break out rows for `grpc`, `websocket`, and `sse`.
+- **Connections**: Dual-axis chart of `gateway_protocol_inflight` and `gateway_protocol_active_connections` to highlight leaks; overlay expected concurrency envelopes.
+- **Health**: Table of `rate(gateway_protocol_requests_total{outcome="error"}[5m])` and `gateway_protocol_active_connections` to surface websocket/gRPC/SSE anomalies quickly.
+
+### Scaling & Limits
+- **WebSockets**: Size pods for the maximum concurrent websocket sessions you expect. Use `gateway_protocol_active_connections{protocol="websocket"}` to track headroom and configure connection idle timeouts in upstreams to avoid leaks.
+- **gRPC**: Monitor `gateway_protocol_request_duration_seconds{protocol="grpc"}` for long-lived streams and alert when `gateway_protocol_active_connections` exceeds 80% of per-node limits. Set upstream server limits (`MAX_CONNECTION_AGE`) to rotate channels gracefully.
+- **SSE**: Keep `gateway_protocol_inflight{protocol="sse"}` below your file-descriptor threshold; consider sharding SSE clients across pods and enabling gzip offloading only when necessary.
