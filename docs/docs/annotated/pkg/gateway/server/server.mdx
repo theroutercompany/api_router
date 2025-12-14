@@ -18,7 +18,9 @@ Edit commentary in `docs/annotations/pkg/gateway/server/server.yaml`.
 
 **What:** Wires the public HTTP server for the gateway: routes, middleware, health/readiness handlers, OpenAPI endpoint, metrics, auth protection for upstream proxies, WebSocket limits, and webhook ingestion endpoints.
 
-**Why:** The gateway needs a single place where HTTP concerns are composed consistently:
+**Why:**
+
+The gateway needs a single place where HTTP concerns are composed consistently:
 - request metadata and structured logging
 - security headers and body limits
 - rate limiting and CORS
@@ -26,7 +28,9 @@ Edit commentary in `docs/annotations/pkg/gateway/server/server.yaml`.
 
 Keeping this wiring in one package makes runtime composition simple and keeps behavior consistent across entrypoints.
 
-**How:** `New()` constructs the router, initializes proxies/webhooks, mounts routes, then wraps everything in middleware.
+**How:**
+
+`New()` constructs the router, initializes proxies/webhooks, mounts routes, then wraps everything in middleware.
 `Start()` listens and serves until context cancellation or error, and `Shutdown()` triggers graceful stop.
 
 **Notes:** Auth is enforced per-product via `buildProtectedHandler` (JWT + scope checks). WebSocket limits are enforced before upgrade and tracked through hijack handling.
@@ -232,6 +236,15 @@ func WithOpenAPIProvider(provider openapi.DocumentProvider) Option {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L46**: `return func(s *Server) { s.openapiProvider = provider }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `WithLogger`
 
 **What:** Server option that overrides the logger used by the server.
@@ -249,6 +262,15 @@ func WithLogger(logger pkglog.Logger) Option {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L53**: `return func(s *Server) { if logger != nil { s.logger = logger } }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `New`
 
@@ -352,6 +374,127 @@ func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaym
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L82**: `mux := http.NewServeMux()`
+  - **What:** Defines mux.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L84**: `s := &Server{ cfg: cfg, router: mux, healthChecker: checker, bootTime: time.Now().UTC(), metricsHandler: nil, rateLimiter: newRateLimiter(c…`
+  - **What:** Defines s.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L95**: `for _, opt := range opts { if opt != nil { opt(s) } }`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L101**: `if s.logger == nil { s.logger = pkglog.Shared() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L105**: `if registry != nil && cfg.Metrics.Enabled { s.metricsHandler = registry.Handler() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L108**: `if cfg.Metrics.Enabled { s.protocolMetrics = newProtocolMetrics(registry) } else { s.protocolMetrics = newProtocolMetrics(nil) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L114**: `s.wsLimiter = newWebsocketLimiter(cfg.WebSocket.MaxConcurrent)`
+  - **What:** Assigns s.wsLimiter.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L116**: `if cfg.Auth.Secret != "" { if authenticator, err := gatewayauth.New(cfg.Auth); err != nil { s.logger.Errorw("failed to initialize authentic…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L124**: `if s.openapiProvider == nil { s.openapiProvider = openapi.NewService() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L128**: `s.initProxies()`
+  - **What:** Calls s.initProxies.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L129**: `s.initWebhooks()`
+  - **What:** Calls s.initWebhooks.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L131**: `s.mountRoutes()`
+  - **What:** Calls s.mountRoutes.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L132**: `handler := http.Handler(mux)`
+  - **What:** Defines handler.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L133**: `handler = gatewaymiddleware.BodyLimit(maxRequestBodyBytes, traceIDFromContext, gatewayproblem.Write)(handler)`
+  - **What:** Assigns handler.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L134**: `if s.rateLimiter != nil { handler = gatewaymiddleware.RateLimit( func(key string, now time.Time) bool { return s.rateLimiter.allow(key, now…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L143**: `if s.cors != nil { handler = gatewaymiddleware.CORS(s.cors, traceIDFromContext, gatewayproblem.Write)(handler) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L146**: `var tracker gatewaymiddleware.TrackFunc`
+  - **What:** Declares local names.
+  - **Why:** Introduces variables or types used later in the function.
+  - **How:** Executes a Go declaration statement inside the function body.
+- **L147**: `var hijacker gatewaymiddleware.HijackedFunc`
+  - **What:** Declares local names.
+  - **Why:** Introduces variables or types used later in the function.
+  - **How:** Executes a Go declaration statement inside the function body.
+- **L148**: `if s.protocolMetrics != nil || s.wsLimiter != nil { tracker = s.trackRequest hijacker = s.hijackedRequest }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L152**: `handler = gatewaymiddleware.Logging(s.logger, tracker, hijacker, requestIDFromContext, traceIDFromContext, clientAddress)(handler)`
+  - **What:** Assigns handler.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L153**: `if s.wsLimiter != nil { handler = websocketLimitMiddleware(s.wsLimiter, s.cfg.WebSocket.IdleTimeout.AsDuration(), traceIDFromContext, gatew…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L156**: `handler = gatewaymiddleware.SecurityHeaders()(handler)`
+  - **What:** Assigns handler.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L157**: `handler = gatewaymiddleware.RequestMetadata(ensureRequestIDs)(handler)`
+  - **What:** Assigns handler.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L158**: `http2Server := &http2.Server{}`
+  - **What:** Defines http2Server.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L159**: `handler = h2c.NewHandler(handler, http2Server)`
+  - **What:** Assigns handler.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L161**: `s.handler = handler`
+  - **What:** Assigns s.handler.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L162**: `s.httpServer = &http.Server{ Addr: fmt.Sprintf(":%d", cfg.HTTP.Port), Handler: handler, }`
+  - **What:** Assigns s.httpServer.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L166**: `if err := http2.ConfigureServer(s.httpServer, http2Server); err != nil { s.logger.Errorw("failed to configure http2 server", "error", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L170**: `return s`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*Server).Start`
 
 **What:** Starts listening and serving until context cancellation or server error.
@@ -393,6 +536,27 @@ func (s *Server) Start(ctx context.Context) error {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L175**: `if s.httpServer == nil { return errors.New("http server not initialised") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L179**: `errCh := make(chan error, 1)`
+  - **What:** Defines errCh.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L180**: `go func() { s.logger.Infow("http server listening", "addr", s.httpServer.Addr) if err := s.httpServer.ListenAndServe(); err != nil && !erro…`
+  - **What:** Starts a goroutine.
+  - **Why:** Runs work concurrently.
+  - **How:** Invokes the function call asynchronously using `go`.
+- **L188**: `select { case <-ctx.Done(): shutdownCtx, cancel := context.WithTimeout(context.Background(), s.cfg.HTTP.ShutdownTimeout.AsDuration()) defer…`
+  - **What:** Selects among concurrent operations.
+  - **Why:** Coordinates channel operations without blocking incorrectly.
+  - **How:** Executes a `select` statement and runs one ready case.
+
 ### `(*Server).Shutdown`
 
 **What:** Gracefully stops the underlying HTTP server.
@@ -409,6 +573,19 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.httpServer.Shutdown(ctx)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L207**: `if s.httpServer == nil { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L210**: `return s.httpServer.Shutdown(ctx)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*Server).mountRoutes`
 
@@ -439,6 +616,39 @@ func (s *Server) mountRoutes() {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L214**: `s.router.HandleFunc("/health", s.handleHealth)`
+  - **What:** Calls s.router.HandleFunc.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L215**: `s.router.HandleFunc("/readyz", s.handleReadiness)`
+  - **What:** Calls s.router.HandleFunc.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L216**: `s.router.HandleFunc("/readiness", s.handleReadiness)`
+  - **What:** Calls s.router.HandleFunc.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L217**: `if s.openapiProvider != nil { s.router.HandleFunc("/openapi.json", s.handleOpenAPI) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L220**: `if s.metricsHandler != nil { s.router.Handle("/metrics", s.metricsHandler) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L223**: `if s.tradeHandler != nil { s.router.Handle("/v1/trade", s.tradeHandler) s.router.Handle("/v1/trade/", s.tradeHandler) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L227**: `if s.taskHandler != nil { s.router.Handle("/v1/task", s.taskHandler) s.router.Handle("/v1/task/", s.taskHandler) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
 
 ### `(*Server).initProxies`
 
@@ -476,6 +686,15 @@ func (s *Server) initProxies() {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L234**: `for _, upstream := range s.cfg.Readiness.Upstreams { handler, err := gatewayproxy.New(gatewayproxy.Options{ Target: upstream.BaseURL, Produ…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
 
 ### `(*Server).initWebhooks`
 
@@ -519,6 +738,23 @@ func (s *Server) initWebhooks() {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L261**: `if !s.cfg.Webhooks.Enabled { return }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L264**: `if len(s.cfg.Webhooks.Endpoints) == 0 { return }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L267**: `for _, endpoint := range s.cfg.Webhooks.Endpoints { opts := gatewaywebhook.Options{ Name: endpoint.Name, Path: endpoint.Path, TargetURL: en…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+
 ### `(*Server).trackRequest`
 
 **What:** Integrates request completion tracking for protocol metrics and websocket limiter release.
@@ -544,6 +780,27 @@ func (s *Server) trackRequest(r *http.Request) func(status int, elapsed time.Dur
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L293**: `var track func(int, time.Duration)`
+  - **What:** Declares local names.
+  - **Why:** Introduces variables or types used later in the function.
+  - **How:** Executes a Go declaration statement inside the function body.
+- **L294**: `if s.protocolMetrics != nil { track = s.protocolMetrics.track(r) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L297**: `wc, ok := websocketContextFromRequest(r)`
+  - **What:** Defines wc, ok.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L298**: `return func(status int, elapsed time.Duration) { if track != nil { track(status, elapsed) } if ok { wc.release() } }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*Server).hijackedRequest`
 
@@ -581,6 +838,43 @@ func (s *Server) hijackedRequest(r *http.Request) (func(), func(net.Conn) net.Co
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L309**: `var metricsCloser func()`
+  - **What:** Declares local names.
+  - **Why:** Introduces variables or types used later in the function.
+  - **How:** Executes a Go declaration statement inside the function body.
+- **L310**: `if s.protocolMetrics != nil { metricsCloser = s.protocolMetrics.hijacked(r) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L313**: `wc, ok := websocketContextFromRequest(r)`
+  - **What:** Defines wc, ok.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L314**: `if !ok { return metricsCloser, nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L317**: `release := wc.release`
+  - **What:** Defines release.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L318**: `if release == nil { release = func() {} }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L321**: `combined := func() { release() if metricsCloser != nil { metricsCloser() } }`
+  - **What:** Defines combined.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L327**: `return combined, func(conn net.Conn) net.Conn { if wc.timeout <= 0 { return conn } return &deadlineConn{Conn: conn, timeout: wc.timeout} }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `websocketLimitMiddleware`
 
@@ -629,6 +923,15 @@ func websocketLimitMiddleware(limiter *websocketLimiter, timeout time.Duration, 
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L336**: `return func(next http.Handler) http.Handler { if limiter == nil || next == nil { return next } return http.HandlerFunc(func(w http.Response…`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*deadlineConn).Read`
 
 **What:** Wraps `net.Conn.Read` with a per-operation read deadline.
@@ -645,6 +948,19 @@ func (c *deadlineConn) Read(b []byte) (int, error) {
 	return c.Conn.Read(b)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L378**: `if c.timeout > 0 { _ = c.Conn.SetReadDeadline(time.Now().Add(c.timeout)) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L381**: `return c.Conn.Read(b)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*deadlineConn).Write`
 
@@ -663,6 +979,19 @@ func (c *deadlineConn) Write(b []byte) (int, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L385**: `if c.timeout > 0 { _ = c.Conn.SetWriteDeadline(time.Now().Add(c.timeout)) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L388**: `return c.Conn.Write(b)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `newWebsocketLimiter`
 
 **What:** Constructs a `websocketLimiter` for the configured max concurrency.
@@ -676,6 +1005,15 @@ func newWebsocketLimiter(limit int) *websocketLimiter {
 	return &websocketLimiter{limit: limit}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L398**: `return &websocketLimiter{limit: limit}`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*websocketLimiter).Acquire`
 
@@ -711,6 +1049,43 @@ func (l *websocketLimiter) Acquire() (func(), bool) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L402**: `if l == nil { return func() {}, true }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L405**: `if l.limit <= 0 { var once sync.Once return func() { once.Do(func() {}) }, true }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L409**: `l.mu.Lock()`
+  - **What:** Calls l.mu.Lock.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L410**: `defer l.mu.Unlock()`
+  - **What:** Defers a call for cleanup.
+  - **Why:** Ensures the deferred action runs even on early returns.
+  - **How:** Schedules the call to run when the surrounding function returns.
+- **L411**: `if l.active >= l.limit { return nil, false }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L414**: `l.active++`
+  - **What:** Updates a counter.
+  - **Why:** Maintains an index or tally used by subsequent logic.
+  - **How:** Executes an increment/decrement statement.
+- **L415**: `var once sync.Once`
+  - **What:** Declares local names.
+  - **Why:** Introduces variables or types used later in the function.
+  - **How:** Executes a Go declaration statement inside the function body.
+- **L416**: `return func() { once.Do(func() { l.mu.Lock() l.active-- l.mu.Unlock() }) }, true`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `isWebSocketRequest`
 
 **What:** Detects whether an HTTP request is attempting to upgrade to a WebSocket connection.
@@ -731,6 +1106,27 @@ func isWebSocketRequest(r *http.Request) bool {
 	return strings.Contains(connection, "upgrade") && strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L426**: `if r == nil { return false }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L429**: `if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") { return true }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L432**: `connection := strings.ToLower(r.Header.Get("Connection"))`
+  - **What:** Defines connection.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L433**: `return strings.Contains(connection, "upgrade") && strings.EqualFold(r.Header.Get("Upgrade"), "websocket")`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `websocketContextFromRequest`
 
@@ -755,6 +1151,31 @@ func websocketContextFromRequest(r *http.Request) (websocketContext, bool) {
 	return v, true
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L444**: `if r == nil { return websocketContext{}, false }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L447**: `v, ok := r.Context().Value(websocketContextKey{}).(websocketContext)`
+  - **What:** Defines v, ok.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L448**: `if !ok { return websocketContext{}, false }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L451**: `if v.release == nil { v.release = func() {} }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L454**: `return v, true`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*Server).buildProtectedHandler`
 
@@ -796,6 +1217,15 @@ func (s *Server) buildProtectedHandler(product string, requiredScopes []string, 
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L458**: `return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { req, requestID, traceID := ensureRequestIDs(r) w.Header().Set("X-Req…`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*Server).writeAuthProblem`
 
 **What:** Converts authentication errors into consistent Problem+JSON responses.
@@ -819,6 +1249,15 @@ func (s *Server) writeAuthProblem(w http.ResponseWriter, r *http.Request, err er
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L488**: `switch e := err.(type) { case gatewayauth.Error: if e.Status == http.StatusUnauthorized { w.Header().Set("WWW-Authenticate", "Bearer") } ga…`
+  - **What:** Selects a branch based on dynamic type.
+  - **Why:** Handles multiple concrete types cleanly.
+  - **How:** Executes a type switch statement.
+
 ### `clientKey`
 
 **What:** Derives the rate-limit key for a request.
@@ -836,6 +1275,23 @@ func clientKey(r *http.Request) string {
 	return addr
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L501**: `addr := clientAddress(r)`
+  - **What:** Defines addr.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L502**: `if addr == "" { return "global" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L505**: `return addr`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `clientAddress`
 
@@ -865,6 +1321,31 @@ func clientAddress(r *http.Request) string {
 	return host
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L509**: `if r == nil { return "" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L513**: `if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" { parts := strings.Split(forwarded, ",") if len(parts) > 0 { return string…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L520**: `host, _, err := net.SplitHostPort(r.RemoteAddr)`
+  - **What:** Defines host, _, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L521**: `if err != nil { return strings.TrimSpace(r.RemoteAddr) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L524**: `return host`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `buildCORS`
 
@@ -914,6 +1395,27 @@ func buildCORS(origins []string) *cors.Cors {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L528**: `allowAll := len(origins) == 0`
+  - **What:** Defines allowAll.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L530**: `allowed := make(map[string]struct{})`
+  - **What:** Defines allowed.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L531**: `for _, origin := range origins { o := strings.TrimSpace(origin) if o == "" { continue } if o == "*" { allowAll = true allowed = nil break }…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L544**: `return cors.New(cors.Options{ AllowedMethods: []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodPatch, …`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*Server).handleHealth`
 
 **What:** Implements `GET /health` and returns basic process health + metadata.
@@ -944,6 +1446,35 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L566**: `_, requestID, _ := ensureRequestIDs(r)`
+  - **What:** Defines _, requestID, _.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L567**: `w.Header().Set("Content-Type", "application/json")`
+  - **What:** Calls w.Header().Set.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L568**: `w.Header().Set("X-Request-Id", requestID)`
+  - **What:** Calls w.Header().Set.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L570**: `` response := struct { Status string `json:"status"` Uptime float64 `json:"uptime"` Timestamp string `json:"timestamp"` Version string `json:… ``
+  - **What:** Defines response.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L582**: `w.WriteHeader(http.StatusOK)`
+  - **What:** Calls w.WriteHeader.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L583**: `_ = json.NewEncoder(w).Encode(response)`
+  - **What:** Assigns _.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
 ### `(*Server).handleReadiness`
 
@@ -989,6 +1520,55 @@ func (s *Server) handleReadiness(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L587**: `var requestID, traceID string`
+  - **What:** Declares local names.
+  - **Why:** Introduces variables or types used later in the function.
+  - **How:** Executes a Go declaration statement inside the function body.
+- **L588**: `r, requestID, traceID = ensureRequestIDs(r)`
+  - **What:** Assigns r, requestID, traceID.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L589**: `w.Header().Set("Content-Type", "application/json")`
+  - **What:** Calls w.Header().Set.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L590**: `w.Header().Set("X-Request-Id", requestID)`
+  - **What:** Calls w.Header().Set.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L592**: `report := health.Report{Status: "ready", CheckedAt: time.Now().UTC()}`
+  - **What:** Defines report.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L593**: `if s.healthChecker != nil { report = s.healthChecker.Readiness(r.Context()) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L597**: `statusCode := http.StatusOK`
+  - **What:** Defines statusCode.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L598**: `if report.Status != "ready" { statusCode = http.StatusServiceUnavailable }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L602**: `` response := struct { Status string `json:"status"` CheckedAt time.Time `json:"checkedAt"` Upstreams []health.UpstreamReport `json:"upstream… ``
+  - **What:** Defines response.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L616**: `w.WriteHeader(statusCode)`
+  - **What:** Calls w.WriteHeader.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L617**: `_ = json.NewEncoder(w).Encode(response)`
+  - **What:** Assigns _.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+
 ### `(*Server).handleOpenAPI`
 
 **What:** Implements `GET /openapi.json` using the configured OpenAPI provider.
@@ -1018,4 +1598,33 @@ func (s *Server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L621**: `if s.openapiProvider == nil { gatewayproblem.Write(w, http.StatusServiceUnavailable, "OpenAPI Unavailable", "OpenAPI provider not configure…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L626**: `data, err := s.openapiProvider.Document(r.Context())`
+  - **What:** Defines data, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L627**: `if err != nil { traceID := traceIDFromContext(r.Context()) gatewayproblem.Write(w, http.StatusServiceUnavailable, "OpenAPI Unavailable", er…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L633**: `w.Header().Set("Content-Type", "application/json")`
+  - **What:** Calls w.Header().Set.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L634**: `w.WriteHeader(http.StatusOK)`
+  - **What:** Calls w.WriteHeader.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L635**: `if _, err := w.Write(data); err != nil { s.logger.Warnw("failed to write openapi response", "error", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
 

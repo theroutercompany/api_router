@@ -50,6 +50,15 @@ type funcEntry struct {
 	Heading   string
 	StartLine int
 	Snippet   string
+	Steps     []walkStep
+}
+
+type walkStep struct {
+	StartLine int
+	Code      string
+	What      string
+	Why       string
+	How       string
 }
 
 type fileDoc struct {
@@ -70,6 +79,7 @@ func main() {
 		annotationDir = flag.String("annotations", "docs/annotations", "directory for per-file annotation yaml")
 		githubBase    = flag.String("github-base", "https://github.com/theroutercompany/api_router/blob/main/", "base URL for source links")
 		initAnn       = flag.Bool("init-annotations", false, "create/update annotation yaml stubs for the generated files")
+		walkthrough   = flag.Bool("walkthrough", true, "include statement-by-statement walkthroughs for functions/methods")
 	)
 	flag.Parse()
 
@@ -80,7 +90,7 @@ func main() {
 
 	var errs []error
 	for _, rel := range files {
-		if err := generateFile(*repoRoot, *outDir, *annotationDir, *githubBase, rel, *initAnn); err != nil {
+		if err := generateFile(*repoRoot, *outDir, *annotationDir, *githubBase, rel, *initAnn, *walkthrough); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -98,8 +108,14 @@ func coreFiles() []string {
 		"cmd/gateway/main.go",
 		"cmd/openapi/main.go",
 
+		"cmd/shadowdiff/main.go",
+
 		"internal/openapi/service.go",
 		"internal/platform/health/health.go",
+		"internal/shadowdiff/config.go",
+		"internal/shadowdiff/diff.go",
+		"internal/shadowdiff/fixture.go",
+		"internal/shadowdiff/normalize.go",
 
 		"pkg/gateway/auth/authenticator.go",
 		"pkg/gateway/config/config.go",
@@ -119,7 +135,7 @@ func coreFiles() []string {
 	}
 }
 
-func generateFile(repoRoot, outDir, annotationDir, githubBase, relSrcPath string, initAnnotations bool) error {
+func generateFile(repoRoot, outDir, annotationDir, githubBase, relSrcPath string, initAnnotations bool, includeWalkthrough bool) error {
 	srcPath := filepath.Join(repoRoot, filepath.Clean(relSrcPath))
 	srcBytes, err := os.ReadFile(srcPath)
 	if err != nil {
@@ -134,7 +150,7 @@ func generateFile(repoRoot, outDir, annotationDir, githubBase, relSrcPath string
 
 	annPath := filepath.Join(repoRoot, annotationDir, replaceExt(relSrcPath, ".yaml"))
 	blocks := extractBlocks(fset, parsed, srcBytes)
-	funcs := extractFuncs(fset, parsed, srcBytes)
+	funcs := extractFuncs(fset, parsed, srcBytes, includeWalkthrough)
 	if initAnnotations {
 		if err := ensureAnnotationFile(annPath, relSrcPath, blocks, funcs); err != nil {
 			return fmt.Errorf("init annotations %s: %w", annPath, err)
@@ -254,7 +270,7 @@ func buildGenDeclBlock(fset *token.FileSet, gen *ast.GenDecl, src []byte, sectio
 	}
 }
 
-func extractFuncs(fset *token.FileSet, file *ast.File, src []byte) []funcEntry {
+func extractFuncs(fset *token.FileSet, file *ast.File, src []byte, includeWalkthrough bool) []funcEntry {
 	var entries []funcEntry
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
@@ -264,6 +280,10 @@ func extractFuncs(fset *token.FileSet, file *ast.File, src []byte) []funcEntry {
 
 		startLine := fset.Position(fn.Pos()).Line
 		snippet := sliceSource(fset, src, fn.Pos(), fn.End())
+		steps := []walkStep(nil)
+		if includeWalkthrough {
+			steps = extractWalkthroughSteps(fset, src, fn)
+		}
 
 		id := fmt.Sprintf("func %s", fn.Name.Name)
 		heading := fmt.Sprintf("`%s`", fn.Name.Name)
@@ -278,9 +298,157 @@ func extractFuncs(fset *token.FileSet, file *ast.File, src []byte) []funcEntry {
 			Heading:   heading,
 			StartLine: startLine,
 			Snippet:   snippet,
+			Steps:     steps,
 		})
 	}
 	return entries
+}
+
+func extractWalkthroughSteps(fset *token.FileSet, src []byte, fn *ast.FuncDecl) []walkStep {
+	if fn == nil || fn.Body == nil || len(fn.Body.List) == 0 {
+		return nil
+	}
+
+	steps := make([]walkStep, 0, len(fn.Body.List))
+	for _, stmt := range fn.Body.List {
+		if stmt == nil {
+			continue
+		}
+		startLine := fset.Position(stmt.Pos()).Line
+		code := condenseSnippet(sliceSource(fset, src, stmt.Pos(), stmt.End()))
+		what, why, how := describeStmt(fset, stmt)
+		steps = append(steps, walkStep{
+			StartLine: startLine,
+			Code:      code,
+			What:      what,
+			Why:       why,
+			How:       how,
+		})
+	}
+	return steps
+}
+
+func describeStmt(fset *token.FileSet, stmt ast.Stmt) (what, why, how string) {
+	switch s := stmt.(type) {
+	case *ast.AssignStmt:
+		names := strings.TrimSpace(exprListString(fset, s.Lhs))
+		if names == "" {
+			names = "value(s)"
+		}
+		if s.Tok == token.DEFINE {
+			what = fmt.Sprintf("Defines %s.", names)
+		} else {
+			what = fmt.Sprintf("Assigns %s.", names)
+		}
+		why = "Keeps intermediate state available for later steps in the function."
+		how = "Evaluates the right-hand side expressions and stores results in the left-hand variables."
+		return what, why, how
+
+	case *ast.DeclStmt:
+		what = "Declares local names."
+		why = "Introduces variables or types used later in the function."
+		how = "Executes a Go declaration statement inside the function body."
+		return what, why, how
+
+	case *ast.IfStmt:
+		what = "Branches conditionally."
+		if isGuardIf(s) {
+			why = "Short-circuits early when a precondition is not met or an error/edge case is detected."
+		} else {
+			why = "Handles different execution paths based on runtime state."
+		}
+		how = "Evaluates the condition and executes the matching branch."
+		return what, why, how
+
+	case *ast.ReturnStmt:
+		what = "Returns from the current function."
+		why = "Ends the current execution path and hands control back to the caller."
+		how = "Executes a `return` statement (possibly returning values)."
+		return what, why, how
+
+	case *ast.ExprStmt:
+		if call, ok := s.X.(*ast.CallExpr); ok {
+			callee := strings.TrimSpace(nodeString(fset, call.Fun))
+			if callee != "" {
+				what = fmt.Sprintf("Calls %s.", callee)
+			} else {
+				what = "Calls a function."
+			}
+		} else {
+			what = "Evaluates an expression."
+		}
+		why = "Performs side effects or delegates work to a helper."
+		how = "Executes the expression statement."
+		return what, why, how
+
+	case *ast.ForStmt:
+		what = "Runs a loop."
+		why = "Repeats logic until a condition is met or the loop terminates."
+		how = "Executes a `for` loop statement."
+		return what, why, how
+
+	case *ast.RangeStmt:
+		what = "Iterates over a collection."
+		why = "Processes multiple elements with the same logic."
+		how = "Executes a `for ... range` loop."
+		return what, why, how
+
+	case *ast.SwitchStmt:
+		what = "Selects a branch from multiple cases."
+		why = "Keeps multi-case branching readable and explicit."
+		how = "Evaluates the switch expression and executes the first matching case."
+		return what, why, how
+
+	case *ast.TypeSwitchStmt:
+		what = "Selects a branch based on dynamic type."
+		why = "Handles multiple concrete types cleanly."
+		how = "Executes a type switch statement."
+		return what, why, how
+
+	case *ast.SelectStmt:
+		what = "Selects among concurrent operations."
+		why = "Coordinates channel operations without blocking incorrectly."
+		how = "Executes a `select` statement and runs one ready case."
+		return what, why, how
+
+	case *ast.SendStmt:
+		what = "Sends a value on a channel."
+		why = "Communicates with another goroutine."
+		how = "Executes a channel send operation."
+		return what, why, how
+
+	case *ast.DeferStmt:
+		what = "Defers a call for cleanup."
+		why = "Ensures the deferred action runs even on early returns."
+		how = "Schedules the call to run when the surrounding function returns."
+		return what, why, how
+
+	case *ast.GoStmt:
+		what = "Starts a goroutine."
+		why = "Runs work concurrently."
+		how = "Invokes the function call asynchronously using `go`."
+		return what, why, how
+
+	case *ast.IncDecStmt:
+		what = "Updates a counter."
+		why = "Maintains an index or tally used by subsequent logic."
+		how = "Executes an increment/decrement statement."
+		return what, why, how
+
+	default:
+		what = "Executes a statement."
+		why = "Advances the function logic."
+		how = "Runs this statement as part of the function body."
+		return what, why, how
+	}
+}
+
+func isGuardIf(stmt *ast.IfStmt) bool {
+	if stmt == nil || stmt.Else != nil || stmt.Body == nil || len(stmt.Body.List) == 0 {
+		return false
+	}
+	_, ok := stmt.Body.List[0].(*ast.ReturnStmt)
+	return ok
 }
 
 func ensureAnnotationFile(path string, relSrcPath string, blocks []declBlock, funcs []funcEntry) error {
@@ -396,6 +564,23 @@ func receiverTypeString(fset *token.FileSet, expr ast.Expr) string {
 	return strings.TrimSpace(buf.String())
 }
 
+func nodeString(fset *token.FileSet, node any) string {
+	var buf bytes.Buffer
+	_ = printer.Fprint(&buf, fset, node)
+	return strings.TrimSpace(buf.String())
+}
+
+func exprListString(fset *token.FileSet, exprs []ast.Expr) string {
+	if len(exprs) == 0 {
+		return ""
+	}
+	var parts []string
+	for _, expr := range exprs {
+		parts = append(parts, strings.TrimSpace(nodeString(fset, expr)))
+	}
+	return strings.Join(parts, ", ")
+}
+
 func sliceSource(fset *token.FileSet, src []byte, start, end token.Pos) string {
 	file := fset.File(start)
 	if file == nil {
@@ -407,6 +592,57 @@ func sliceSource(fset *token.FileSet, src []byte, start, end token.Pos) string {
 		return ""
 	}
 	return strings.TrimRight(string(src[startOff:endOff]), "\n")
+}
+
+func condenseSnippet(src string) string {
+	out := strings.TrimSpace(src)
+	if out == "" {
+		return out
+	}
+	out = strings.ReplaceAll(out, "\r\n", "\n")
+	out = strings.ReplaceAll(out, "\n", " ")
+	out = strings.Join(strings.Fields(out), " ")
+	return truncateRunes(out, 140)
+}
+
+func truncateRunes(s string, max int) string {
+	if max <= 0 {
+		return ""
+	}
+	if len(s) <= max {
+		return s
+	}
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	if max <= 1 {
+		return string(r[:max])
+	}
+	return string(r[:max-1]) + "…"
+}
+
+func markdownInlineCode(src string) string {
+	if strings.TrimSpace(src) == "" {
+		return "`(empty)`"
+	}
+	maxRun := 0
+	curRun := 0
+	for _, r := range src {
+		if r == '`' {
+			curRun++
+			if curRun > maxRun {
+				maxRun = curRun
+			}
+		} else {
+			curRun = 0
+		}
+	}
+	delim := strings.Repeat("`", maxRun+1)
+	if maxRun == 0 {
+		return "`" + src + "`"
+	}
+	return delim + " " + src + " " + delim
 }
 
 func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
@@ -466,10 +702,31 @@ func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 			fmt.Fprintf(&buf, "### %s\n\n", fn.Heading)
 			writeWhatHowWhy(&buf, resolveSymbol(anns, fn.ID))
 			fmt.Fprintf(&buf, "```go title=%q showLineNumbers\n%s\n```\n\n", fmt.Sprintf("%s#L%d", doc.SrcPath, fn.StartLine), fn.Snippet)
+			writeWalkthrough(&buf, fn.Steps)
 		}
 	}
 
 	return buf.Bytes()
+}
+
+func writeWalkthrough(buf *bytes.Buffer, steps []walkStep) {
+	if len(steps) == 0 {
+		return
+	}
+
+	fmt.Fprintf(buf, "#### Walkthrough\n\n")
+	fmt.Fprintf(buf, "The list below documents the top-level statements inside the function body.\n\n")
+	for _, step := range steps {
+		code := strings.TrimSpace(step.Code)
+		if code == "" {
+			code = "(unavailable)"
+		}
+		fmt.Fprintf(buf, "- **L%d**: %s\n", step.StartLine, markdownInlineCode(code))
+		fmt.Fprintf(buf, "  - **What:** %s\n", strings.TrimSpace(step.What))
+		fmt.Fprintf(buf, "  - **Why:** %s\n", strings.TrimSpace(step.Why))
+		fmt.Fprintf(buf, "  - **How:** %s\n", strings.TrimSpace(step.How))
+	}
+	fmt.Fprintf(buf, "\n")
 }
 
 func resolveSymbol(anns fileAnnotations, id string) annotationText {
@@ -500,10 +757,46 @@ func resolveSymbol(anns fileAnnotations, id string) annotationText {
 }
 
 func writeWhatHowWhy(buf *bytes.Buffer, t annotationText) {
-	fmt.Fprintf(buf, "**What:** %s\n\n", strings.TrimSpace(t.What))
-	fmt.Fprintf(buf, "**Why:** %s\n\n", strings.TrimSpace(t.Why))
-	fmt.Fprintf(buf, "**How:** %s\n\n", strings.TrimSpace(t.How))
+	writeLabeledText(buf, "What", t.What)
+	writeLabeledText(buf, "Why", t.Why)
+	writeLabeledText(buf, "How", t.How)
 	if strings.TrimSpace(t.Notes) != "" {
-		fmt.Fprintf(buf, "**Notes:** %s\n\n", strings.TrimSpace(t.Notes))
+		writeLabeledText(buf, "Notes", t.Notes)
 	}
+}
+
+func writeLabeledText(buf *bytes.Buffer, label string, value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		fmt.Fprintf(buf, "**%s:**\n\n\n", label)
+		return
+	}
+
+	// When the value contains lists or multiple paragraphs, keep the label on its own line
+	// so markdown list markers can render correctly.
+	if strings.Contains(value, "\n") || strings.HasPrefix(value, "- ") || strings.HasPrefix(value, "* ") || looksLikeOrderedList(value) {
+		fmt.Fprintf(buf, "**%s:**\n\n%s\n\n", label, value)
+		return
+	}
+	fmt.Fprintf(buf, "**%s:** %s\n\n", label, value)
+}
+
+func looksLikeOrderedList(value string) bool {
+	if value == "" {
+		return false
+	}
+	i := 0
+	for i < len(value) && value[i] >= '0' && value[i] <= '9' {
+		i++
+	}
+	if i == 0 || i >= len(value) {
+		return false
+	}
+	if value[i] != '.' {
+		return false
+	}
+	if i+1 >= len(value) {
+		return false
+	}
+	return value[i+1] == ' ' || value[i+1] == '\t'
 }

@@ -40,6 +40,7 @@ const sidebars: SidebarsConfig = {
         'guides/websockets',
         'guides/webhooks',
         'guides/openapi',
+        'guides/shadowdiff',
         'guides/troubleshooting',
       ],
     },

@@ -1,0 +1,57 @@
+file: internal/shadowdiff/diff.go
+title: internal/shadowdiff/diff.go
+overview:
+  what: |
+    Implements the core shadow diff runner.
+
+    The runner:
+    - replays fixtures to two base URLs (Node and Go)
+    - applies optional normalizers to both response bodies
+    - compares status codes and bodies
+    - returns a structured per-fixture result with latency measurements
+  why: |
+    During migrations and refactors, regressions are often subtle:
+    - status codes may differ for edge cases
+    - JSON bodies may differ only in ordering or volatile fields
+    - latency can regress silently
+
+    This runner gives a deterministic mechanism to validate behavioral compatibility between two gateway implementations.
+  how: |
+    - `(*Runner).Run` executes the fixture list with bounded concurrency and returns results in the same order as the input.
+    - Each fixture is executed by `execute`, which sends one request to the Node base URL and one to the Go base URL.
+    - Bodies are read and normalized, then compared.
+    - When a mismatch is detected, `diffJSON` produces a stable, human-readable diff string.
+  notes: |
+    The runner compares only status codes and response bodies. It does not currently diff headers.
+    If you need header comparisons, extend `Result` and `execute` accordingly.
+symbols:
+  func diffJSON:
+    what: Produces a stable text diff of two JSON payloads (or raw bytes when not JSON).
+    why: Humans need a readable representation of a mismatch to diagnose what changed.
+    how: Attempts to unmarshal both payloads as JSON, re-encodes them with indentation for canonicalization, and returns a formatted "expected vs actual" string when they differ.
+    notes: If either payload is not valid JSON, it falls back to printing raw bytes for both sides.
+  method (*Runner).Run:
+    what: Executes all fixtures in a session and returns their results.
+    why: Provides the batch entrypoint for the CLI and scripts, while keeping results stable and structured.
+    how: Ensures an HTTP client exists, uses a buffered channel as a semaphore to enforce `Config.Concurrency`, spawns one goroutine per fixture, and writes each result into the correct slot in the output slice.
+    notes: Results preserve fixture order even though execution happens concurrently.
+  method (*Runner).execute:
+    what: Replays a single fixture against both Node and Go base URLs and compares the outcomes.
+    why: Separates per-fixture logic from the batch concurrency logic in `Run`.
+    how: Sends one request to each base URL, captures status and latency, reads and normalizes response bodies, compares status and body bytes, and computes a JSON diff when mismatched.
+    notes: The requests are performed sequentially per fixture in the current implementation.
+  method (*Runner).send:
+    what: Sends a fixture request to a specific base URL and returns the HTTP response plus latency.
+    why: Centralizes request construction, header application, and latency measurement for both Node and Go targets.
+    how: Joins base URL with the fixture path, constructs a request with context, copies fixture headers, executes the request, and returns the response and elapsed time.
+    notes: The response body must be closed by the caller.
+  type Result:
+    what: Result of replaying one fixture against both gateway implementations.
+    why: Bundles all useful debugging signals (statuses, diffs, latency, errors) into a single value.
+    how: Populated by `execute` and returned to the caller as part of the results slice.
+    notes: The `BodyDiff` field is empty when bodies match after normalization.
+  type Runner:
+    what: Configurable runner that executes fixtures and compares responses.
+    why: Allows the CLI and tests to provide a custom HTTP client and normalization strategy.
+    how: Holds an optional `*http.Client`, the `Config` (base URLs and concurrency), and a list of normalizers applied to both response bodies.
+    notes: Normalizers should be deterministic and safe to run repeatedly.

@@ -1,0 +1,30 @@
+file: internal/shadowdiff/config.go
+title: internal/shadowdiff/config.go
+overview:
+  what: |
+    Defines the JSON configuration schema for a shadow diff session and provides a loader with basic validation.
+  why: |
+    Shadow diff needs a small amount of runtime configuration:
+    - two base URLs to compare (Node and Go)
+    - a list of fixture files to replay
+    - a concurrency level for running fixtures in parallel
+
+    Keeping the schema small and JSON-based makes it easy for scripts to rewrite parts of the config
+    (for example, injecting a temporary base URL for a local gateway instance).
+  how: |
+    `LoadConfig(path)` reads the JSON file into `Config`, validates required fields, applies a default
+    concurrency value when unset, and returns the resulting struct.
+  notes: |
+    The loader currently validates only the presence of base URLs and a positive concurrency value.
+    Fixture paths are validated later when fixtures are loaded.
+symbols:
+  func LoadConfig:
+    what: Reads configuration from a JSON file on disk.
+    why: Ensures a shadow diff run has the minimum required inputs and sane defaults.
+    how: Reads the file, unmarshals into `Config`, checks required base URLs, applies a default concurrency when missing, and returns the final config.
+    notes: ""
+  type Config:
+    what: Configuration values required to run a shadow diff session.
+    why: Centralizes run parameters so the runner and CLI do not need additional global state.
+    how: JSON-tagged fields provide base URLs, fixture file paths, and a concurrency limit for the runner.
+    notes: Base URLs should include scheme and host (and port if needed).

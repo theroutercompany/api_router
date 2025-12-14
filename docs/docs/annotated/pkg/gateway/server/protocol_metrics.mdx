@@ -16,13 +16,17 @@ Edit commentary in `docs/annotations/pkg/gateway/server/protocol_metrics.yaml`.
 
 ## Overview
 
-**What:** Defines Prometheus metrics that describe gateway traffic by "protocol" and "product".
+**What:**
+
+Defines Prometheus metrics that describe gateway traffic by "protocol" and "product".
 
 In this context:
 - protocol is a best-effort classification of the inbound request (http, websocket, sse, grpc)
 - product is a high-level routing bucket (e.g. trade/task) derived from headers or URL prefixes
 
-**Why:** The gateway proxies multiple kinds of traffic (regular HTTP, streaming, upgrades).
+**Why:**
+
+The gateway proxies multiple kinds of traffic (regular HTTP, streaming, upgrades).
 For operations and capacity planning, it is useful to answer questions like:
 - Are we seeing more websocket connections than expected?
 - Is one product experiencing higher error rates or latency?
@@ -30,7 +34,9 @@ For operations and capacity planning, it is useful to answer questions like:
 
 These metrics are designed to be emitted from middleware without coupling the middleware to Prometheus directly.
 
-**How:** `newProtocolMetrics()` constructs four collectors and registers them with the gateway registry:
+**How:**
+
+`newProtocolMetrics()` constructs four collectors and registers them with the gateway registry:
 - `gateway_protocol_requests_total` counter labelled by protocol, product, outcome
 - `gateway_protocol_inflight` gauge labelled by protocol, product
 - `gateway_protocol_request_duration_seconds` histogram labelled by protocol, product
@@ -41,7 +47,9 @@ The middleware calls:
 - the returned closure at request end to record outcome, duration, and decrement gauges
 - `hijacked(r)` to handle websocket lifetime tracking for hijacked connections
 
-**Notes:** Protocol classification is heuristic by design. It uses standard headers and request metadata,
+**Notes:**
+
+Protocol classification is heuristic by design. It uses standard headers and request metadata,
 but it is not a perfect protocol detector. Prefer stable "product" labels for long-term dashboards.
 
 
@@ -139,6 +147,51 @@ func newProtocolMetrics(reg *gatewaymetrics.Registry) *protocolMetrics {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L21**: `if reg == nil { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L25**: `requests := prometheus.NewCounterVec(prometheus.CounterOpts{ Name: "gateway_protocol_requests_total", Help: "Count of proxied requests labe…`
+  - **What:** Defines requests.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L30**: `inflight := prometheus.NewGaugeVec(prometheus.GaugeOpts{ Name: "gateway_protocol_inflight", Help: "Current number of in-flight proxied requ…`
+  - **What:** Defines inflight.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L35**: `duration := prometheus.NewHistogramVec(prometheus.HistogramOpts{ Name: "gateway_protocol_request_duration_seconds", Help: "Upstream duratio…`
+  - **What:** Defines duration.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L41**: `connections := prometheus.NewGaugeVec(prometheus.GaugeOpts{ Name: "gateway_protocol_active_connections", Help: "Current number of active up…`
+  - **What:** Defines connections.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L46**: `reg.Register(requests)`
+  - **What:** Calls reg.Register.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L47**: `reg.Register(inflight)`
+  - **What:** Calls reg.Register.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L48**: `reg.Register(duration)`
+  - **What:** Calls reg.Register.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L49**: `reg.Register(connections)`
+  - **What:** Calls reg.Register.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L51**: `return &protocolMetrics{ requests: requests, inflight: inflight, duration: duration, connections: connections, }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*protocolMetrics).track`
 
 **What:** Produces a per-request tracking function for status/outcome/duration and inflight gauges.
@@ -193,6 +246,39 @@ func (m *protocolMetrics) track(r *http.Request) func(status int, elapsed time.D
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L60**: `if m == nil || r == nil { return func(int, time.Duration) {} }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L64**: `protocol := classifyProtocol(r)`
+  - **What:** Defines protocol.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L65**: `product := productFromRequest(r)`
+  - **What:** Defines product.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L67**: `if m.inflight != nil { m.inflight.WithLabelValues(protocol, product).Inc() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L71**: `trackConnection := m.connections != nil && trackConnectionForProtocol(protocol)`
+  - **What:** Defines trackConnection.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L72**: `if trackConnection { m.connections.WithLabelValues(protocol, product).Inc() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L76**: `return func(status int, elapsed time.Duration) { if status <= 0 { status = http.StatusOK } outcome := "success" if status >= 400 { outcome …`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*protocolMetrics).hijacked`
 
 **What:** Returns a closure that decrements the websocket connection gauge when an upgraded connection closes.
@@ -222,6 +308,35 @@ func (m *protocolMetrics) hijacked(r *http.Request) func() {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L102**: `if m == nil || m.connections == nil || r == nil { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L106**: `protocol := classifyProtocol(r)`
+  - **What:** Defines protocol.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L107**: `if protocol != "websocket" { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L111**: `product := productFromRequest(r)`
+  - **What:** Defines product.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L112**: `m.connections.WithLabelValues(protocol, product).Inc()`
+  - **What:** Calls m.connections.WithLabelValues(protocol, product).Inc.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L113**: `return func() { m.connections.WithLabelValues(protocol, product).Dec() }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `trackConnectionForProtocol`
 
 **What:** Indicates whether a protocol should be tracked as an "active connection".
@@ -242,6 +357,15 @@ func trackConnectionForProtocol(protocol string) bool {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L119**: `switch protocol { case "sse", "grpc": return true default: return false }`
+  - **What:** Selects a branch from multiple cases.
+  - **Why:** Keeps multi-case branching readable and explicit.
+  - **How:** Evaluates the switch expression and executes the first matching case.
 
 ### `classifyProtocol`
 
@@ -292,6 +416,51 @@ func classifyProtocol(r *http.Request) string {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L128**: `if r == nil { return "unknown" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L132**: `accept := strings.ToLower(r.Header.Get("Accept"))`
+  - **What:** Defines accept.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L133**: `contentType := strings.ToLower(r.Header.Get("Content-Type"))`
+  - **What:** Defines contentType.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L135**: `if strings.Contains(accept, "text/event-stream") || strings.HasPrefix(contentType, "text/event-stream") { return "sse" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L139**: `if upgrade := r.Header.Get("Upgrade"); upgrade != "" && strings.EqualFold(upgrade, "websocket") { return "websocket" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L143**: `if connection := r.Header.Get("Connection"); connection != "" && strings.Contains(strings.ToLower(connection), "upgrade") { if strings.Equa…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L149**: `if strings.HasPrefix(contentType, "application/grpc") { return "grpc" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L153**: `if r.Header.Get("Grpc-Timeout") != "" { return "grpc" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L157**: `if r.ProtoMajor == 2 && strings.Contains(strings.ToLower(r.Header.Get("TE")), "trailers") && strings.HasPrefix(contentType, "application/")…`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L161**: `return "http"`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `productFromRequest`
 
 **What:** Derives the "product" label for a request.
@@ -323,4 +492,25 @@ func productFromRequest(r *http.Request) string {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L165**: `if r == nil { return "unknown" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L169**: `if product := r.Header.Get("X-Router-Product"); product != "" { return product }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L173**: `path := r.URL.Path`
+  - **What:** Defines path.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L174**: `switch { case strings.HasPrefix(path, "/v1/trade"): return "trade" case strings.HasPrefix(path, "/v1/task"): return "task" default: return …`
+  - **What:** Selects a branch from multiple cases.
+  - **Why:** Keeps multi-case branching readable and explicit.
+  - **How:** Evaluates the switch expression and executes the first matching case.
 

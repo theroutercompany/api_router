@@ -214,6 +214,55 @@ func New(opts Options) (http.Handler, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L40**: `if strings.TrimSpace(opts.Secret) == "" { return nil, errors.New("webhook secret required") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L43**: `if strings.TrimSpace(opts.TargetURL) == "" { return nil, errors.New("webhook targetURL required") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L46**: `if strings.TrimSpace(opts.SignatureHeader) == "" { return nil, errors.New("webhook signature header required") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L49**: `if opts.MaxAttempts <= 0 { return nil, errors.New("webhook maxAttempts must be positive") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L52**: `if opts.InitialBackoff <= 0 { return nil, errors.New("webhook initial backoff must be positive") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L55**: `if opts.Timeout <= 0 { return nil, errors.New("webhook timeout must be positive") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L58**: `if opts.Client == nil { opts.Client = &http.Client{ Timeout: opts.Timeout, } }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L63**: `if opts.Logger == nil { opts.Logger = pkglog.Shared() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L66**: `if opts.MaxBodyBytes <= 0 { opts.MaxBodyBytes = defaultMaxBodyBytes }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L70**: `handler := &webhookHandler{ name: opts.Name, targetURL: opts.TargetURL, secret: []byte(opts.Secret), signatureHeader: opts.SignatureHeader,…`
+  - **What:** Defines handler.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L83**: `return handler, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*webhookHandler).ServeHTTP`
 
 **What:** Main HTTP handler for webhook ingestion.
@@ -259,6 +308,39 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L100**: `if r.Method != http.MethodPost { w.Header().Set("Allow", http.MethodPost) http.Error(w, "method not allowed", http.StatusMethodNotAllowed) …`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L105**: `defer r.Body.Close()`
+  - **What:** Defers a call for cleanup.
+  - **Why:** Ensures the deferred action runs even on early returns.
+  - **How:** Schedules the call to run when the surrounding function returns.
+- **L107**: `body, err := readRequestBody(r.Body, h.maxBodyBytes)`
+  - **What:** Defines body, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L108**: `if err != nil { var tooLarge *errBodyTooLarge if errors.As(err, &tooLarge) { http.Error(w, "payload too large", http.StatusRequestEntityToo…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L119**: `if err := h.verifySignature(r.Header.Get(h.signatureHeader), body); err != nil { h.logger.Warnw("webhook signature verification failed", "e…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L125**: `if err := h.forwardWithRetry(r.Context(), r, body); err != nil { h.logger.Errorw("webhook delivery failed", "error", err, "webhook", h.name…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L131**: `w.WriteHeader(http.StatusAccepted)`
+  - **What:** Calls w.WriteHeader.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+
 ### `(*webhookHandler).verifySignature`
 
 **What:** Verifies the incoming webhook signature header against the request body.
@@ -289,6 +371,43 @@ func (h *webhookHandler) verifySignature(sigHeader string, body []byte) error {
 	return nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L135**: `sig := strings.TrimSpace(sigHeader)`
+  - **What:** Defines sig.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L136**: `if sig == "" { return errors.New("signature header missing") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L139**: `if strings.HasPrefix(strings.ToLower(sig), "sha256=") { sig = sig[7:] }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L143**: `expectedMAC := computeHMAC(body, h.secret)`
+  - **What:** Defines expectedMAC.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L144**: `provided, err := hex.DecodeString(sig)`
+  - **What:** Defines provided, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L145**: `if err != nil { return fmt.Errorf("invalid signature encoding: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L149**: `if !hmac.Equal(expectedMAC, provided) { return errors.New("signature mismatch") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L152**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*webhookHandler).forwardWithRetry`
 
@@ -333,6 +452,23 @@ func (h *webhookHandler) forwardWithRetry(parentCtx context.Context, original *h
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L156**: `backoff := h.initialBackoff`
+  - **What:** Defines backoff.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L157**: `for attempt := 1; attempt <= h.maxAttempts; attempt++ { ctx, cancel := context.WithTimeout(parentCtx, h.timeout) err := h.forwardOnce(ctx, …`
+  - **What:** Runs a loop.
+  - **Why:** Repeats logic until a condition is met or the loop terminates.
+  - **How:** Executes a `for` loop statement.
+- **L185**: `return errors.New("webhook delivery exhausted retries")`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*webhookHandler).forwardOnce`
 
 **What:** Performs a single forwarding attempt to the configured target.
@@ -369,6 +505,59 @@ func (h *webhookHandler) forwardOnce(ctx context.Context, original *http.Request
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L189**: `req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.targetURL, bytes.NewReader(body))`
+  - **What:** Defines req, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L190**: `if err != nil { return fmt.Errorf("build request: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L194**: `copyHeaders(original.Header, req.Header)`
+  - **What:** Calls copyHeaders.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L195**: `req.Header.Set("X-Router-Webhook-Name", h.name)`
+  - **What:** Calls req.Header.Set.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L196**: `req.Header.Set("X-Router-Webhook-Attempt", fmt.Sprintf("%d", attempt))`
+  - **What:** Calls req.Header.Set.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L198**: `resp, err := h.client.Do(req)`
+  - **What:** Defines resp, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L199**: `if err != nil { return fmt.Errorf("%w: %v", errUpstreamRetryable, err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L202**: `defer resp.Body.Close()`
+  - **What:** Defers a call for cleanup.
+  - **Why:** Ensures the deferred action runs even on early returns.
+  - **How:** Schedules the call to run when the surrounding function returns.
+- **L203**: `io.Copy(io.Discard, resp.Body)`
+  - **What:** Calls io.Copy.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L205**: `if resp.StatusCode >= 200 && resp.StatusCode < 300 { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L208**: `if resp.StatusCode >= 400 && resp.StatusCode < 500 { return fmt.Errorf("upstream returned status %d", resp.StatusCode) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L211**: `return fmt.Errorf("%w: upstream status %d", errUpstreamRetryable, resp.StatusCode)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `readRequestBody`
 
 **What:** Reads the request body up to a maximum number of bytes.
@@ -394,6 +583,35 @@ func readRequestBody(body io.Reader, maxBytes int64) ([]byte, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L215**: `if maxBytes <= 0 { maxBytes = defaultMaxBodyBytes }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L218**: `limited := io.LimitReader(body, maxBytes+1)`
+  - **What:** Defines limited.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L219**: `data, err := io.ReadAll(limited)`
+  - **What:** Defines data, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L220**: `if err != nil { return nil, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L223**: `if int64(len(data)) > maxBytes { return nil, &errBodyTooLarge{size: int64(len(data)), limit: maxBytes} }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L226**: `return data, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `computeHMAC`
 
 **What:** Computes an HMAC-SHA256 digest for a request body using a secret key.
@@ -409,6 +627,23 @@ func computeHMAC(body []byte, secret []byte) []byte {
 	return mac.Sum(nil)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L230**: `mac := hmac.New(sha256.New, secret)`
+  - **What:** Defines mac.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L231**: `mac.Write(body)`
+  - **What:** Calls mac.Write.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L232**: `return mac.Sum(nil)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `copyHeaders`
 
@@ -429,6 +664,19 @@ func copyHeaders(src http.Header, dst http.Header) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L236**: `for key, values := range src { for _, value := range values { dst.Add(key, value) } }`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L241**: `dst.Del("Host")`
+  - **What:** Calls dst.Del.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+
 ### `increaseBackoff`
 
 **What:** Computes the next backoff duration for a retry loop with an upper bound.
@@ -447,6 +695,23 @@ func increaseBackoff(current time.Duration, max time.Duration) time.Duration {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L245**: `next := current * 2`
+  - **What:** Defines next.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L246**: `if next > max { return max }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L249**: `return next`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*errBodyTooLarge).Error`
 
 **What:** Formats an error message describing how much the request exceeded the body size limit.
@@ -460,4 +725,13 @@ func (e *errBodyTooLarge) Error() string {
 	return fmt.Sprintf("body size %d exceeds limit %d bytes", e.size, e.limit)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L260**: `return fmt.Sprintf("body size %d exceeds limit %d bytes", e.size, e.limit)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 

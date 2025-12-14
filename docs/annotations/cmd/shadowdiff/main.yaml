@@ -1,0 +1,34 @@
+file: cmd/shadowdiff/main.go
+title: cmd/shadowdiff/main.go
+overview:
+  what: |
+    CLI entrypoint for running a shadow diff session.
+
+    It replays captured HTTP fixtures against two gateway implementations:
+    - a Node-based gateway
+    - the Go gateway in this repository
+
+    It then reports any mismatches in status code and (normalized) JSON bodies.
+  why: |
+    Shadow diff is the migration safety net when porting gateway behavior from Node to Go.
+
+    Instead of relying on manual spot checks, shadow diff:
+    - runs a repeatable set of fixture requests
+    - measures latency for each implementation
+    - normalizes away volatile response fields (timestamps, uptime, etc)
+    - prints diffs in a human-readable form
+  how: |
+    - Parse `--config` (defaults to `shadowdiff.config.json`).
+    - Load configuration and fixtures via `internal/shadowdiff`.
+    - Construct a `shadowdiff.Runner` with JSON normalizers.
+    - Run the fixture set within a timeout context.
+    - Print per-fixture mismatches and a summary count.
+  notes: |
+    Prefer using `scripts/shadowdiff-run.sh` for local runs because it also boots mock upstreams
+    and starts a Go gateway instance wired to them.
+symbols:
+  func main:
+    what: Runs the shadowdiff CLI flow end-to-end.
+    why: Provides a simple executable wrapper around `internal/shadowdiff` for humans and scripts.
+    how: Loads config and fixtures, configures a runner (including normalizers), executes the run with a timeout, prints any diffs, and emits a final summary.
+    notes: ""

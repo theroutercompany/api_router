@@ -59,6 +59,15 @@ func main() {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L15**: `if err := run(context.Background()); err != nil { log.Fatalf("gateway failed: %v", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+
 ### `run`
 
 **What:** Loads config, builds the runtime, runs it, and handles shutdown/log flush semantics.
@@ -94,4 +103,37 @@ func run(ctx context.Context) error {
 	return nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L21**: `cfg, err := gatewayconfig.Load()`
+  - **What:** Defines cfg, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L22**: `if err != nil { return fmt.Errorf("load config: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L26**: `rt, err := gatewayruntime.New(cfg)`
+  - **What:** Defines rt, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L27**: `if err != nil { return fmt.Errorf("build runtime: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L31**: `defer func() { if syncErr := pkglog.Sync(); syncErr != nil { log.Printf("logger sync failed: %v", syncErr) } }()`
+  - **What:** Defers a call for cleanup.
+  - **Why:** Ensures the deferred action runs even on early returns.
+  - **How:** Schedules the call to run when the surrounding function returns.
+- **L37**: `if err := rt.Run(ctx); err != nil { if errors.Is(err, context.Canceled) { return nil } return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L43**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 

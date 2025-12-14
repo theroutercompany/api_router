@@ -1,0 +1,79 @@
+---
+title: Shadowdiff
+---
+
+Shadowdiff compares gateway behavior between two implementations (typically the legacy Node gateway and this Go gateway) by replaying a set of captured request fixtures and diffing the responses.
+
+## When to use it
+
+- Porting a route/middleware from Node to Go and you want confidence that behavior matches.
+- Refactoring proxy/auth/cors behavior and you want to catch regressions early.
+- Validating that “expected differences” (timestamps, latency fields, etc.) are excluded via normalization.
+
+## Quickstart (recommended)
+
+Use the helper script that also boots the local mock upstreams and a Go gateway instance:
+
+```bash
+NODE_BASE_URL="https://node-gateway.example.com" ./scripts/shadowdiff-run.sh
+```
+
+Notes:
+
+- `NODE_BASE_URL` must point at a running Node gateway. If unset, the script will start the Go gateway and upstream mocks but will skip the diff run.
+- The script starts the Go gateway on `http://127.0.0.1:8080` by default.
+- Configure upstream URLs via `TRADE_API_URL` / `TASK_API_URL` if you want something other than the mock upstreams.
+
+## Config
+
+Shadowdiff uses a JSON config file (default `shadowdiff.config.json`). The repo provides an example:
+
+- `shadowdiff.config.example.json`
+
+The helper script rewrites the `nodeBaseUrl` and `goBaseUrl` fields at runtime so you can keep a stable config checked in.
+
+To point at a different config file:
+
+```bash
+SHADOWDIFF_CONFIG="shadowdiff.config.example.json" NODE_BASE_URL="https://node-gateway.example.com" ./scripts/shadowdiff-run.sh
+```
+
+## Fixtures
+
+Each fixture file is a JSON array of request scenarios. Example shape:
+
+```json
+[
+  {
+    "name": "health",
+    "method": "GET",
+    "path": "/health",
+    "headers": {"Accept": "application/json"},
+    "body": null,
+    "expectStatus": 200
+  }
+]
+```
+
+Fixtures live under `shadowdiff/fixtures/` by convention.
+
+## Normalization (ignoring volatile fields)
+
+Shadowdiff can normalize response bodies before diffing. The CLI currently strips common volatile fields like timestamps and latency measurements.
+
+If you add a new volatile field to a response, update the normalizer list in:
+
+- `cmd/shadowdiff/main.go`
+
+The core implementation lives in:
+
+- `internal/shadowdiff/normalize.go`
+
+## Deep dive (annotated source)
+
+- CLI entrypoint: `../annotated/cmd/shadowdiff/main`
+- Runner + diffing: `../annotated/internal/shadowdiff/diff`
+- Config schema/loading: `../annotated/internal/shadowdiff/config`
+- Fixture schema/loading: `../annotated/internal/shadowdiff/fixture`
+- Normalization helpers: `../annotated/internal/shadowdiff/normalize`
+

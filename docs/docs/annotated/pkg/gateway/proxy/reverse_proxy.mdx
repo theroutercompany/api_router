@@ -16,17 +16,23 @@ Edit commentary in `docs/annotations/pkg/gateway/proxy/reverse_proxy.yaml`.
 
 ## Overview
 
-**What:** Builds reverse proxy handlers with gateway-specific defaults:
+**What:**
+
+Builds reverse proxy handlers with gateway-specific defaults:
 - optional TLS/mTLS to upstreams
 - gRPC-aware HTTP/2 and h2c transport selection
 - product header injection
 - Problem+JSON error responses on upstream failures
 - streaming-friendly flushing behavior
 
-**Why:** Reverse proxying is subtle and easy to get wrong (TLS, HTTP/2, streaming, error formatting).
+**Why:**
+
+Reverse proxying is subtle and easy to get wrong (TLS, HTTP/2, streaming, error formatting).
 Centralizing proxy construction ensures consistent behavior across trade/task upstreams and keeps the server wiring simple.
 
-**How:** `New()` constructs an `httputil.ReverseProxy`, then:
+**How:**
+
+`New()` constructs an `httputil.ReverseProxy`, then:
 - configures a base `http.Transport` with HTTP/2 support
 - optionally applies TLS settings (CA bundle, client cert/key, insecure skip verify)
 - adds an h2c transport for plaintext gRPC upstreams
@@ -196,6 +202,59 @@ func New(opts Options) (http.Handler, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L42**: `target, err := url.Parse(opts.Target)`
+  - **What:** Defines target, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L43**: `if err != nil { return nil, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L47**: `proxy := httputil.NewSingleHostReverseProxy(target)`
+  - **What:** Defines proxy.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L48**: `proxy.FlushInterval = 200 * time.Millisecond`
+  - **What:** Assigns proxy.FlushInterval.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L50**: `transport := &http.Transport{ Proxy: http.ProxyFromEnvironment, ForceAttemptHTTP2: true, MaxIdleConnsPerHost: 10, }`
+  - **What:** Defines transport.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L56**: `if opts.TLS.Enabled { tlsCfg, err := buildTLSConfig(opts.TLS) if err != nil { return nil, err } transport.TLSClientConfig = tlsCfg }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L64**: `h2cTransport := buildH2CTransport(target)`
+  - **What:** Defines h2cTransport.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L65**: `proxy.Transport = &grpcAwareTransport{base: transport, h2c: h2cTransport}`
+  - **What:** Assigns proxy.Transport.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L67**: `originalDirector := proxy.Director`
+  - **What:** Defines originalDirector.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L68**: `proxy.Director = func(r *http.Request) { originalDirector(r) r.URL.Scheme = target.Scheme r.URL.Host = target.Host r.Host = target.Host if …`
+  - **What:** Assigns proxy.Director.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L79**: `proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) { pkglog.Shared().Errorw("proxy upstream failure", "error", er…`
+  - **What:** Assigns proxy.ErrorHandler.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L85**: `return proxy, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `buildH2CTransport`
 
 **What:** Builds an `http2.Transport` configured for h2c (HTTP/2 over cleartext TCP).
@@ -220,6 +279,19 @@ func buildH2CTransport(target *url.URL) *http2.Transport {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L89**: `if target == nil || target.Scheme != "http" { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L93**: `return &http2.Transport{ AllowHTTP: true, DialTLS: func(network, addr string, _ *tls.Config) (net.Conn, error) { var d net.Dialer return d.…`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*grpcAwareTransport).RoundTrip`
 
 **What:** Performs the request using either the base transport or the h2c transport.
@@ -238,6 +310,19 @@ func (t *grpcAwareTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return t.base.RoundTrip(req)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L108**: `if t.shouldUseH2C(req) { h2cReq := cloneRequest(req) sanitizeH2CRequest(h2cReq) return t.h2c.RoundTrip(h2cReq) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L113**: `return t.base.RoundTrip(req)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*grpcAwareTransport).shouldUseH2C`
 
@@ -260,6 +345,27 @@ func (t *grpcAwareTransport) shouldUseH2C(req *http.Request) bool {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L117**: `if t.h2c == nil || req == nil || req.URL == nil { return false }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L120**: `if req.URL.Scheme != "http" { return false }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L123**: `ct := strings.ToLower(req.Header.Get("Content-Type"))`
+  - **What:** Defines ct.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L124**: `return strings.Contains(ct, "application/grpc")`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*grpcAwareTransport).CloseIdleConnections`
 
 **What:** Closes idle connections on both the base transport and the h2c transport.
@@ -278,6 +384,19 @@ func (t *grpcAwareTransport) CloseIdleConnections() {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L128**: `if t.base != nil { t.base.CloseIdleConnections() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L131**: `if t.h2c != nil { t.h2c.CloseIdleConnections() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
 
 ### `cloneRequest`
 
@@ -302,6 +421,43 @@ func cloneRequest(req *http.Request) *http.Request {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L137**: `if req == nil { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L140**: `clone := req.Clone(req.Context())`
+  - **What:** Defines clone.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L141**: `clone.Body = req.Body`
+  - **What:** Assigns clone.Body.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L142**: `clone.GetBody = req.GetBody`
+  - **What:** Assigns clone.GetBody.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L143**: `clone.ContentLength = req.ContentLength`
+  - **What:** Assigns clone.ContentLength.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L144**: `clone.Host = req.Host`
+  - **What:** Assigns clone.Host.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L145**: `clone.RequestURI = ""`
+  - **What:** Assigns clone.RequestURI.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L146**: `return clone`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `sanitizeH2CRequest`
 
 **What:** Removes hop-by-hop headers and forces the request protocol fields to reflect HTTP/2.
@@ -323,6 +479,31 @@ func sanitizeH2CRequest(req *http.Request) {
 	req.ProtoMinor = 0
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L150**: `if req == nil { return }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L153**: `for _, key := range []string{"Connection", "Proxy-Connection", "Upgrade", "Keep-Alive", "Transfer-Encoding"} { req.Header.Del(key) }`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L156**: `req.Proto = "HTTP/2.0"`
+  - **What:** Assigns req.Proto.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L157**: `req.ProtoMajor = 2`
+  - **What:** Assigns req.ProtoMajor.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L158**: `req.ProtoMinor = 0`
+  - **What:** Assigns req.ProtoMinor.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
 ### `buildTLSConfig`
 
@@ -367,4 +548,25 @@ func buildTLSConfig(cfg TLSConfig) (*tls.Config, error) {
 	return tlsCfg, nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L162**: `tlsCfg := &tls.Config{ MinVersion: tls.VersionTLS12, InsecureSkipVerify: cfg.InsecureSkipVerify, }`
+  - **What:** Defines tlsCfg.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L167**: `if cfg.CAFile != "" { data, err := os.ReadFile(cfg.CAFile) if err != nil { return nil, fmt.Errorf("read CA file %q: %w", cfg.CAFile, err) }…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L180**: `if cfg.ClientCertFile != "" || cfg.ClientKeyFile != "" { if cfg.ClientCertFile == "" || cfg.ClientKeyFile == "" { return nil, errors.New("c…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L192**: `return tlsCfg, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 

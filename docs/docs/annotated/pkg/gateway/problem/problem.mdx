@@ -86,3 +86,24 @@ func Write(w http.ResponseWriter, status int, title, detail, traceID, instance s
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L23**: `resp := Response{ Type: "about:blank", Title: title, Status: status, Detail: detail, Instance: instance, TraceID: traceID, }`
+  - **What:** Defines resp.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L32**: `w.Header().Set("Content-Type", "application/problem+json")`
+  - **What:** Calls w.Header().Set.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L33**: `w.WriteHeader(status)`
+  - **What:** Calls w.WriteHeader.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L34**: `_ = json.NewEncoder(w).Encode(resp)`
+  - **What:** Assigns _.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+

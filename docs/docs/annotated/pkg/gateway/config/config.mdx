@@ -18,14 +18,18 @@ Edit commentary in `docs/annotations/pkg/gateway/config/config.yaml`.
 
 **What:** Defines the gateway's configuration schema (Go structs + YAML tags), default values, YAML decoding, environment-variable overrides, normalization, and semantic validation.
 
-**Why:** The gateway needs one source of truth for configuration shared across:
+**Why:**
+
+The gateway needs one source of truth for configuration shared across:
 - the CLI (`cmd/apigw`)
 - the runtime (`pkg/gateway/runtime`)
 - downstream SDK consumers (who reuse the config schema)
 
 Centralizing defaults and validation here avoids "magic values" spread across the codebase and turns configuration mistakes into early, actionable errors.
 
-**How:** `Load()` applies configuration layers in order:
+**How:**
+
+`Load()` applies configuration layers in order:
 1) `Default()` (baseline values)
 2) optional YAML file(s)
 3) environment overrides (secrets/platform knobs/legacy env config)
@@ -742,6 +746,15 @@ func (d Duration) AsDuration() time.Duration {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L168**: `return time.Duration(d)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(Duration).MarshalYAML`
 
 **What:** Encodes a `Duration` as a Go duration string for YAML output.
@@ -755,6 +768,15 @@ func (d Duration) MarshalYAML() (interface{}, error) {
 	return d.AsDuration().String(), nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L173**: `return d.AsDuration().String(), nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*Duration).UnmarshalYAML`
 
@@ -799,6 +821,19 @@ func (d *Duration) UnmarshalYAML(value *yaml.Node) error {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L178**: `if value == nil { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L182**: `switch value.Kind { case yaml.ScalarNode: txt := strings.TrimSpace(value.Value) if txt == "" { *d = Duration(0) return nil } if ms, err := …`
+  - **What:** Selects a branch from multiple cases.
+  - **Why:** Keeps multi-case branching readable and explicit.
+  - **How:** Evaluates the switch expression and executes the first matching case.
+
 ### `DurationFrom`
 
 **What:** Converts `time.Duration` into the config `Duration` wrapper type.
@@ -812,6 +847,15 @@ func DurationFrom(d time.Duration) Duration {
 	return Duration(d)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L212**: `return Duration(d)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `Default`
 
@@ -876,6 +920,15 @@ func Default() Config {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L217**: `return Config{ Version: os.Getenv(envGitSHA), HTTP: HTTPConfig{ Port: defaultPort, ShutdownTimeout: DurationFrom(defaultShutdownTimeout), }…`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `WithPath`
 
 **What:** Option that adds a YAML config path to attempt loading.
@@ -894,6 +947,15 @@ func WithPath(path string) Option {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L279**: `return func(o *loaderOptions) { if strings.TrimSpace(path) != "" { o.paths = append(o.paths, path) } }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `WithLookupEnv`
 
 **What:** Option that overrides how environment variables are looked up.
@@ -910,13 +972,24 @@ func WithLookupEnv(fn func(string) (string, bool)) Option {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L288**: `return func(o *loaderOptions) { o.lookupEnv = fn }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `Load`
 
 **What:** Loads configuration by merging defaults, YAML file(s), and environment overrides.
 
 **Why:** Supports both config-file-driven deployments and env-driven deployments (especially for secrets).
 
-**How:** - Builds `loaderOptions` (paths + env lookup)
+**How:**
+
+- Builds `loaderOptions` (paths + env lookup)
 - Seeds paths from `APIGW_CONFIG`
 - Applies any `Option`s (e.g. `WithPath`)
 - Starts from `Default()`
@@ -974,13 +1047,56 @@ func Load(opts ...Option) (Config, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L295**: `options := loaderOptions{ lookupEnv: os.LookupEnv, }`
+  - **What:** Defines options.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L298**: `if envPath := strings.TrimSpace(os.Getenv(defaultConfigEnvVar)); envPath != "" { options.paths = append(options.paths, envPath) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L301**: `for _, opt := range opts { if opt != nil { opt(&options) } }`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L307**: `cfg := Default()`
+  - **What:** Defines cfg.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L309**: `for _, path := range options.paths { if strings.TrimSpace(path) == "" { continue } data, err := os.ReadFile(path) switch { case errors.Is(e…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L325**: `if err := applyEnvOverrides(&cfg, options.lookupEnv); err != nil { return cfg, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L329**: `if err := cfg.normalize(); err != nil { return cfg, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L333**: `if err := cfg.Validate(); err != nil { return cfg, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L337**: `return cfg, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `applyEnvOverrides`
 
 **What:** Applies environment-variable overrides to an existing `Config`.
 
 **Why:** Deployments frequently inject secrets and runtime knobs via env vars; this layer keeps overrides explicit and validated.
 
-**How:** - Reads known gateway-level env vars (port, timeouts, auth, CORS, rate limiting, metrics, admin)
+**How:**
+
+- Reads known gateway-level env vars (port, timeouts, auth, CORS, rate limiting, metrics, admin)
 - Calls `applyUpstreamOverrides` for the trade/task upstream prefixes
 - Leaves YAML/default values untouched when env vars are absent
 
@@ -1093,6 +1209,91 @@ func applyEnvOverrides(cfg *Config, lookup func(string) (string, bool)) error {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L341**: `if lookup == nil { lookup = os.LookupEnv }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L345**: `if val, ok := lookup(envPort); ok && strings.TrimSpace(val) != "" { port, err := strconv.Atoi(strings.TrimSpace(val)) if err != nil || port…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L353**: `if val, ok := lookup(envShutdownTimeout); ok && strings.TrimSpace(val) != "" { timeout, err := parsePositiveDurationMillis(val) if err != n…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L361**: `if val, ok := lookup(envReadinessTimeout); ok && strings.TrimSpace(val) != "" { timeout, err := parsePositiveDurationMillis(val) if err != …`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L369**: `if val, ok := lookup(envReadinessUserAgent); ok && strings.TrimSpace(val) != "" { cfg.Readiness.UserAgent = strings.TrimSpace(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L373**: `if val, ok := lookup(envGitSHA); ok && strings.TrimSpace(val) != "" { cfg.Version = strings.TrimSpace(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L377**: `if val, ok := lookup(envJWTSecret); ok && strings.TrimSpace(val) != "" { cfg.Auth.Secret = strings.TrimSpace(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L381**: `if val, ok := lookup(envJWTAudience); ok && strings.TrimSpace(val) != "" { cfg.Auth.Audiences = splitAndTrim(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L385**: `if val, ok := lookup(envJWTIssuer); ok && strings.TrimSpace(val) != "" { cfg.Auth.Issuer = strings.TrimSpace(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L389**: `if val, ok := lookup(envCorsAllowedOrigins); ok && strings.TrimSpace(val) != "" { cfg.CORS.AllowedOrigins = splitAndTrim(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L393**: `if val, ok := lookup(envRateLimitWindow); ok && strings.TrimSpace(val) != "" { window, err := parsePositiveDurationMillis(val) if err != ni…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L401**: `if val, ok := lookup(envRateLimitMax); ok && strings.TrimSpace(val) != "" { max, err := strconv.Atoi(strings.TrimSpace(val)) if err != nil …`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L409**: `if val, ok := lookup(envMetricsEnabled); ok && strings.TrimSpace(val) != "" { enabled, err := strconv.ParseBool(strings.TrimSpace(val)) if …`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L417**: `if err := applyUpstreamOverrides(cfg, lookup, envTradePrefix); err != nil { return fmt.Errorf("trade upstream config: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L420**: `if err := applyUpstreamOverrides(cfg, lookup, envTaskPrefix); err != nil { return fmt.Errorf("task upstream config: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L424**: `if val, ok := lookup(envAdminEnabled); ok && strings.TrimSpace(val) != "" { enabled, err := strconv.ParseBool(strings.TrimSpace(val)) if er…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L432**: `if val, ok := lookup(envAdminListen); ok && strings.TrimSpace(val) != "" { cfg.Admin.Listen = strings.TrimSpace(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L436**: `if val, ok := lookup(envAdminToken); ok { cfg.Admin.Token = strings.TrimSpace(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L440**: `if val, ok := lookup(envAdminAllow); ok && strings.TrimSpace(val) != "" { cfg.Admin.Allow = splitAndTrim(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L444**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `applyUpstreamOverrides`
 
 **What:** Applies per-upstream env overrides for a given upstream prefix (e.g. `TRADE`, `TASK`).
@@ -1147,6 +1348,47 @@ func applyUpstreamOverrides(cfg *Config, lookup func(string) (string, bool), pre
 	return nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L448**: `upstream := cfg.ensureUpstream(prefix)`
+  - **What:** Defines upstream.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L450**: `if val, ok := lookup(prefix + envAPIURL); ok && strings.TrimSpace(val) != "" { upstream.BaseURL = strings.TrimSpace(val) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L453**: `if val, ok := lookup(prefix + envHealthPath); ok && strings.TrimSpace(val) != "" { upstream.HealthPath = ensureLeadingSlash(strings.TrimSpa…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L457**: `if val, ok := lookup(prefix + envTLSEnabled); ok && strings.TrimSpace(val) != "" { enabled, err := strconv.ParseBool(strings.TrimSpace(val)…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L465**: `if val, ok := lookup(prefix + envTLSInsecureSkipVerify); ok && strings.TrimSpace(val) != "" { enabled, err := strconv.ParseBool(strings.Tri…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L476**: `if val, ok := lookup(prefix + envTLSCAFile); ok && strings.TrimSpace(val) != "" { upstream.TLS.CAFile = strings.TrimSpace(val) upstream.TLS…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L480**: `if val, ok := lookup(prefix + envTLSCertFile); ok && strings.TrimSpace(val) != "" { upstream.TLS.ClientCertFile = strings.TrimSpace(val) up…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L484**: `if val, ok := lookup(prefix + envTLSKeyFile); ok && strings.TrimSpace(val) != "" { upstream.TLS.ClientKeyFile = strings.TrimSpace(val) upst…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L489**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*Config).normalize`
 
@@ -1222,6 +1464,67 @@ func (cfg *Config) normalize() error {
 	return nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L494**: `if cfg.HTTP.Port == 0 { cfg.HTTP.Port = defaultPort }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L497**: `if cfg.HTTP.ShutdownTimeout.AsDuration() <= 0 { cfg.HTTP.ShutdownTimeout = DurationFrom(defaultShutdownTimeout) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L500**: `if cfg.Readiness.Timeout.AsDuration() <= 0 { cfg.Readiness.Timeout = DurationFrom(defaultReadinessTimeout) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L503**: `if strings.TrimSpace(cfg.Readiness.UserAgent) == "" { cfg.Readiness.UserAgent = defaultReadinessUserAgent }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L506**: `if cfg.RateLimit.Window.AsDuration() <= 0 { cfg.RateLimit.Window = DurationFrom(defaultRateLimitWindow) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L509**: `if cfg.RateLimit.Max <= 0 { cfg.RateLimit.Max = defaultRateLimitMax }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L513**: `if strings.TrimSpace(cfg.Admin.Listen) == "" { cfg.Admin.Listen = defaultAdminListen }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L517**: `if cfg.WebSocket.IdleTimeout.AsDuration() <= 0 { cfg.WebSocket.IdleTimeout = DurationFrom(defaultWebSocketIdleTimeout) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L520**: `if cfg.WebSocket.MaxConcurrent < 0 { cfg.WebSocket.MaxConcurrent = defaultWebSocketMaxConcurrent }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L524**: `cfg.ensureUpstream(envTradePrefix)`
+  - **What:** Calls cfg.ensureUpstream.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L525**: `cfg.ensureUpstream(envTaskPrefix)`
+  - **What:** Calls cfg.ensureUpstream.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L527**: `for i := range cfg.Readiness.Upstreams { if strings.TrimSpace(cfg.Readiness.Upstreams[i].HealthPath) == "" { cfg.Readiness.Upstreams[i].Hea…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L538**: `for i := range cfg.Webhooks.Endpoints { cfg.Webhooks.Endpoints[i].Name = strings.ToLower(strings.TrimSpace(cfg.Webhooks.Endpoints[i].Name))…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L555**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(Config).Validate`
 
@@ -1373,6 +1676,79 @@ func (cfg Config) Validate() error {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L560**: `var errs []error`
+  - **What:** Declares local names.
+  - **Why:** Introduces variables or types used later in the function.
+  - **How:** Executes a Go declaration statement inside the function body.
+- **L562**: `if cfg.HTTP.Port <= 0 { errs = append(errs, fmt.Errorf("http.port must be positive")) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L565**: `if cfg.HTTP.ShutdownTimeout.AsDuration() <= 0 { errs = append(errs, fmt.Errorf("http.shutdownTimeout must be positive")) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L568**: `if cfg.Readiness.Timeout.AsDuration() <= 0 { errs = append(errs, fmt.Errorf("readiness.timeout must be positive")) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L571**: `if len(cfg.Readiness.Upstreams) == 0 { errs = append(errs, fmt.Errorf("at least one readiness upstream required")) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L575**: `requiredUpstreams := map[string]bool{"trade": false, "task": false}`
+  - **What:** Defines requiredUpstreams.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L576**: `seen := make(map[string]struct{})`
+  - **What:** Defines seen.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L577**: `for _, upstream := range cfg.Readiness.Upstreams { name := strings.TrimSpace(strings.ToLower(upstream.Name)) if name == "" { errs = append(…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L604**: `for key, satisfied := range requiredUpstreams { if !satisfied { errs = append(errs, fmt.Errorf("%s upstream configuration is required", key…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L610**: `if cfg.RateLimit.Max <= 0 { errs = append(errs, fmt.Errorf("rateLimit.max must be positive")) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L613**: `if cfg.RateLimit.Window.AsDuration() <= 0 { errs = append(errs, fmt.Errorf("rateLimit.window must be positive")) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L617**: `if cfg.Admin.Enabled { if strings.TrimSpace(cfg.Admin.Listen) == "" { errs = append(errs, fmt.Errorf("admin.listen must be provided when ad…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L636**: `if cfg.WebSocket.MaxConcurrent < 0 { errs = append(errs, fmt.Errorf("websocket.maxConcurrent cannot be negative")) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L639**: `if cfg.WebSocket.IdleTimeout.AsDuration() < 0 { errs = append(errs, fmt.Errorf("websocket.idleTimeout cannot be negative")) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L643**: `if cfg.Webhooks.Enabled { if len(cfg.Webhooks.Endpoints) == 0 { errs = append(errs, fmt.Errorf("webhooks.enabled is true but no endpoints c…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L693**: `if len(errs) == 0 { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L696**: `return errors.Join(errs...)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*Config).ensureUpstream`
 
 **What:** Ensures an upstream entry exists for the provided prefix/name and returns it.
@@ -1401,6 +1777,31 @@ func (cfg *Config) ensureUpstream(prefix string) *UpstreamConfig {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L700**: `name := strings.ToLower(prefix)`
+  - **What:** Defines name.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L701**: `for i := range cfg.Readiness.Upstreams { if strings.EqualFold(cfg.Readiness.Upstreams[i].Name, name) { cfg.Readiness.Upstreams[i].Name = na…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L708**: `upstream := UpstreamConfig{ Name: name, BaseURL: "", HealthPath: defaultHealthPath, }`
+  - **What:** Defines upstream.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L713**: `cfg.Readiness.Upstreams = append(cfg.Readiness.Upstreams, upstream)`
+  - **What:** Assigns cfg.Readiness.Upstreams.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L714**: `return &cfg.Readiness.Upstreams[len(cfg.Readiness.Upstreams)-1]`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `parsePositiveDurationMillis`
 
 **What:** Parses a millisecond duration env var into a `time.Duration`.
@@ -1421,6 +1822,27 @@ func parsePositiveDurationMillis(value string) (time.Duration, error) {
 	return time.Duration(ms) * time.Millisecond, nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L718**: `ms, err := strconv.Atoi(strings.TrimSpace(value))`
+  - **What:** Defines ms, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L719**: `if err != nil { return 0, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L722**: `if ms <= 0 { return 0, fmt.Errorf("value must be positive: %d", ms) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L725**: `return time.Duration(ms) * time.Millisecond, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `splitAndTrim`
 
@@ -1445,6 +1867,27 @@ func splitAndTrim(value string) []string {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L729**: `parts := strings.FieldsFunc(value, func(r rune) bool { return r == ',' || r == ' ' || r == ';' })`
+  - **What:** Defines parts.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L732**: `result := make([]string, 0, len(parts))`
+  - **What:** Defines result.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L733**: `for _, part := range parts { if trimmed := strings.TrimSpace(part); trimmed != "" { result = append(result, trimmed) } }`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L738**: `return result`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `ensureLeadingSlash`
 
 **What:** Ensures a URL path begins with `/`.
@@ -1464,4 +1907,21 @@ func ensureLeadingSlash(path string) string {
 	return "/" + path
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L742**: `if path == "" { return "/" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L745**: `if strings.HasPrefix(path, "/") { return path }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L748**: `return "/" + path`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 

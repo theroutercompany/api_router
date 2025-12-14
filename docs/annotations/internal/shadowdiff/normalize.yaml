@@ -1,0 +1,30 @@
+file: internal/shadowdiff/normalize.go
+title: internal/shadowdiff/normalize.go
+overview:
+  what: |
+    Implements response-body normalization helpers for shadowdiff.
+
+    Normalizers transform raw response bytes into a canonical form before comparison.
+  why: |
+    Many responses contain volatile fields that are expected to differ between runs or implementations,
+    such as timestamps, uptime counters, and measured latencies.
+
+    Without normalization, those expected differences would drown out real regressions.
+  how: |
+    `StripJSONKeys` builds a normalizer function that:
+    - parses a JSON response into an interface{} tree
+    - recursively removes selected keys from all nested objects
+    - re-marshals the JSON to bytes for comparison
+  notes: |
+    Normalizers should be conservative. Only strip fields that are genuinely volatile and do not change semantics.
+symbols:
+  func StripJSONKeys:
+    what: Constructs a normalizer that removes a set of keys from JSON objects.
+    why: Helps shadowdiff ignore volatile response fields that are not meaningful for semantic comparisons.
+    how: Builds a key set, returns a function that parses JSON, calls `stripKeys` recursively, and marshals back to JSON bytes (returning the original bytes on any error).
+    notes: If no keys are provided, it returns a no-op normalizer.
+  func stripKeys:
+    what: Recursively deletes keys from JSON objects and traverses arrays/objects.
+    why: Volatile fields can appear at any nesting level, especially inside arrays of objects.
+    how: Walks the decoded JSON structure, deletes matching keys from maps, and recurses into child values.
+    notes: Only handles JSON structures produced by `encoding/json` unmarshalling (maps and slices).

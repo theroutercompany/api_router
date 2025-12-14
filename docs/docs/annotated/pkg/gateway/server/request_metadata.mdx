@@ -113,6 +113,39 @@ func ensureRequestIDs(r *http.Request) (*http.Request, string, string) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L18**: `requestID := r.Header.Get("X-Request-Id")`
+  - **What:** Defines requestID.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L19**: `if requestID == "" { requestID = uuid.NewString() r.Header.Set("X-Request-Id", requestID) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L24**: `traceID := r.Header.Get("X-Trace-Id")`
+  - **What:** Defines traceID.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L25**: `if traceID == "" { traceID = requestID r.Header.Set("X-Trace-Id", traceID) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L30**: `ctx := context.WithValue(r.Context(), requestIDKey, requestID)`
+  - **What:** Defines ctx.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L31**: `ctx = context.WithValue(ctx, traceIDKey, traceID)`
+  - **What:** Assigns ctx.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L33**: `return r.WithContext(ctx), requestID, traceID`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `requestIDFromContext`
 
 **What:** Extracts the request ID from context.
@@ -133,6 +166,23 @@ func requestIDFromContext(ctx context.Context) string {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L37**: `if ctx == nil { return "" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L40**: `if value, ok := ctx.Value(requestIDKey).(string); ok { return value }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L43**: `return ""`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `traceIDFromContext`
 
 **What:** Extracts the trace ID from context.
@@ -152,4 +202,21 @@ func traceIDFromContext(ctx context.Context) string {
 	return ""
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L47**: `if ctx == nil { return "" }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L50**: `if value, ok := ctx.Value(traceIDKey).(string); ok { return value }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L53**: `return ""`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 

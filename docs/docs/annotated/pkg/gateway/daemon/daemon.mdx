@@ -16,14 +16,18 @@ Edit commentary in `docs/annotations/pkg/gateway/daemon/daemon.yaml`.
 
 ## Overview
 
-**What:** Implements the managed "daemon" lifecycle used by the `cmd/apigw daemon` subcommands.
+**What:**
+
+Implements the managed "daemon" lifecycle used by the `cmd/apigw daemon` subcommands.
 
 This package provides:
 - helpers to write/read a PID file for the running process
 - optional redirection of logs to a file via `APIGW_LOG_PATH`
 - `Run/Status/Stop` entrypoints that the CLI can call
 
-**Why:** The gateway supports both foreground execution and a "managed" mode that behaves like a lightweight daemon.
+**Why:**
+
+The gateway supports both foreground execution and a "managed" mode that behaves like a lightweight daemon.
 Operators often want:
 - a deterministic PID file location for stop/status scripts
 - logs written to a file for background runs
@@ -31,7 +35,9 @@ Operators often want:
 
 Keeping this logic in a dedicated package makes the CLI implementation thin and avoids duplicating OS/process logic.
 
-**How:** `Run()`:
+**How:**
+
+`Run()`:
 - optionally writes the PID file
 - optionally sets up log output by setting `APIGW_LOG_PATH`
 - loads config, builds runtime, starts it, then blocks in `Wait()`
@@ -161,6 +167,67 @@ func Run(ctx context.Context, opts Options) error {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L34**: `cleanupPID, err := writePIDFile(opts.PIDFile)`
+  - **What:** Defines cleanupPID, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L35**: `if err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L38**: `defer cleanupPID()`
+  - **What:** Defers a call for cleanup.
+  - **Why:** Ensures the deferred action runs even on early returns.
+  - **How:** Schedules the call to run when the surrounding function returns.
+- **L40**: `logCloser, err := setupLogFile(opts.LogFile)`
+  - **What:** Defines logCloser, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L41**: `if err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L44**: `defer logCloser()`
+  - **What:** Defers a call for cleanup.
+  - **Why:** Ensures the deferred action runs even on early returns.
+  - **How:** Schedules the call to run when the surrounding function returns.
+- **L46**: `loadOpts := []gatewayconfig.Option{}`
+  - **What:** Defines loadOpts.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L47**: `if strings.TrimSpace(opts.ConfigPath) != "" { loadOpts = append(loadOpts, gatewayconfig.WithPath(opts.ConfigPath)) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L51**: `cfg, err := gatewayconfig.Load(loadOpts...)`
+  - **What:** Defines cfg, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L52**: `if err != nil { return fmt.Errorf("load config: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L56**: `rt, err := gatewayruntime.New(cfg)`
+  - **What:** Defines rt, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L57**: `if err != nil { return fmt.Errorf("build runtime: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L61**: `if err := rt.Start(ctx); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L64**: `return rt.Wait()`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `Status`
 
 **What:** Returns the current daemon PID and whether the process appears to be running.
@@ -194,6 +261,43 @@ func Status(pidPath string) (ProcessStatus, error) {
 	return status, nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L69**: `pid, err := readPIDFile(pidPath)`
+  - **What:** Defines pid, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L70**: `if errors.Is(err, os.ErrNotExist) { return ProcessStatus{}, nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L73**: `if err != nil { return ProcessStatus{}, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L77**: `status := ProcessStatus{PID: pid}`
+  - **What:** Defines status.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L78**: `proc, err := os.FindProcess(pid)`
+  - **What:** Defines proc, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L79**: `if err != nil { return status, fmt.Errorf("find process: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L82**: `if err := proc.Signal(syscall.Signal(0)); err == nil { status.Running = true } else { status.Running = false }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L87**: `return status, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `Stop`
 
@@ -255,6 +359,63 @@ func Stop(pidPath string, sig syscall.Signal) (ProcessStatus, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L92**: `if sig == 0 { sig = syscall.SIGTERM }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L96**: `status, err := Status(pidPath)`
+  - **What:** Defines status, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L97**: `if err != nil { return status, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L100**: `if status.PID == 0 { return status, os.ErrNotExist }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L103**: `if !status.Running { _ = os.Remove(pidPath) return status, nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L108**: `proc, err := os.FindProcess(status.PID)`
+  - **What:** Defines proc, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L109**: `if err != nil { return status, fmt.Errorf("find process: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L112**: `if err := proc.Signal(sig); err != nil { return status, fmt.Errorf("signal process: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L116**: `deadline := time.Now().Add(5 * time.Second)`
+  - **What:** Defines deadline.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L117**: `for time.Now().Before(deadline) { time.Sleep(200 * time.Millisecond) st, err := Status(pidPath) if errors.Is(err, os.ErrNotExist) || (err =…`
+  - **What:** Runs a loop.
+  - **Why:** Repeats logic until a condition is met or the loop terminates.
+  - **How:** Executes a `for` loop statement.
+- **L129**: `if sig != syscall.SIGKILL { if err := proc.Signal(syscall.SIGKILL); err != nil { return status, fmt.Errorf("force kill process: %w", err) }…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L135**: `_ = os.Remove(pidPath)`
+  - **What:** Assigns _.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L136**: `return status, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `writePIDFile`
 
 **What:** Writes the current process PID to a file and returns a cleanup function.
@@ -291,6 +452,39 @@ func writePIDFile(path string) (func(), error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L140**: `path = strings.TrimSpace(path)`
+  - **What:** Assigns path.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L141**: `if path == "" { return func() {}, nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L145**: `if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { return func() {}, fmt.Errorf("ensure pid directory: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L149**: `if _, err := readPIDFile(path); err == nil { return func() {}, fmt.Errorf("pid file %s already exists", path) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L153**: `tmp := []byte(fmt.Sprintf("%d\n", os.Getpid()))`
+  - **What:** Defines tmp.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L154**: `if err := os.WriteFile(path, tmp, 0o644); err != nil { return func() {}, fmt.Errorf("write pid file: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L158**: `return func() { _ = os.Remove(path) }, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `readPIDFile`
 
 **What:** Reads and parses a PID file into an integer PID.
@@ -326,6 +520,43 @@ func readPIDFile(path string) (int, error) {
 	return pid, nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L164**: `path = strings.TrimSpace(path)`
+  - **What:** Assigns path.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L165**: `if path == "" { return 0, fmt.Errorf("pid file path is required") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L169**: `data, err := os.ReadFile(path)`
+  - **What:** Defines data, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L170**: `if err != nil { if errors.Is(err, os.ErrNotExist) { return 0, os.ErrNotExist } return 0, fmt.Errorf("read pid file: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L177**: `pid, err := strconv.Atoi(strings.TrimSpace(string(data)))`
+  - **What:** Defines pid, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L178**: `if err != nil { return 0, fmt.Errorf("parse pid: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L181**: `if pid <= 0 { return 0, fmt.Errorf("invalid pid value %d", pid) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L184**: `return pid, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `setupLogFile`
 
@@ -364,6 +595,39 @@ func setupLogFile(path string) (func(), error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L188**: `path = strings.TrimSpace(path)`
+  - **What:** Assigns path.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L189**: `if path == "" { return func() {}, nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L193**: `if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { return func() {}, fmt.Errorf("ensure log directory: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L197**: `file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)`
+  - **What:** Defines file, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L198**: `if err != nil { return func() {}, fmt.Errorf("open log file: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L202**: `if err := os.Setenv("APIGW_LOG_PATH", path); err != nil { _ = file.Close() return func() {}, fmt.Errorf("set log env: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L207**: `return func() { _ = file.Close() }, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `WaitSignal`
 
 **What:** Blocks until a termination signal is received or the context is done.
@@ -384,4 +648,21 @@ func WaitSignal(ctx context.Context) {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L214**: `sigCh := make(chan os.Signal, 1)`
+  - **What:** Defines sigCh.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L215**: `signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)`
+  - **What:** Calls signal.Notify.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L216**: `select { case <-ctx.Done(): case <-sigCh: }`
+  - **What:** Selects among concurrent operations.
+  - **Why:** Coordinates channel operations without blocking incorrectly.
+  - **How:** Executes a `select` statement and runs one ready case.
 

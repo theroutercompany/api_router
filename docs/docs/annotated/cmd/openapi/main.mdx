@@ -65,3 +65,28 @@ func main() {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L13**: `outPath := flag.String("out", "dist/openapi.json", "Path to write the merged OpenAPI document")`
+  - **What:** Defines outPath.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L14**: `flag.Parse()`
+  - **What:** Calls flag.Parse.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L16**: `svc := openapi.NewService(openapi.WithDistPath(*outPath))`
+  - **What:** Defines svc.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L18**: `if _, err := svc.Document(context.Background()); err != nil { fmt.Fprintf(os.Stderr, "openapi merge failed: %v\n", err) os.Exit(1) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L23**: `fmt.Fprintf(os.Stdout, "OpenAPI document written to %s\n", *outPath)`
+  - **What:** Calls fmt.Fprintf.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+

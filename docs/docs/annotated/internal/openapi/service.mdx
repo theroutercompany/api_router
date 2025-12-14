@@ -16,12 +16,16 @@ Edit commentary in `docs/annotations/internal/openapi/service.yaml`.
 
 ## Overview
 
-**What:** Merges multiple OpenAPI fragments into a single OpenAPI document and exposes it as JSON bytes.
+**What:**
+
+Merges multiple OpenAPI fragments into a single OpenAPI document and exposes it as JSON bytes.
 
 The merge inputs are described by a small JSON config file (default `openapi-merge.config.json`).
 The merged output is typically persisted to `dist/openapi.json` and also cached in memory for reuse.
 
-**Why:** The project keeps OpenAPI definitions in fragments under `specs/` and other locations to keep
+**Why:**
+
+The project keeps OpenAPI definitions in fragments under `specs/` and other locations to keep
 the spec maintainable as the gateway grows.
 
 This service provides a repeatable, deterministic merge step that:
@@ -31,7 +35,9 @@ This service provides a repeatable, deterministic merge step that:
 
 The generated `dist/openapi.json` can be served by the gateway and used by tooling (clients, docs, validation).
 
-**How:** - `NewService(...)` constructs a service with default config/dist paths (both overridable via options).
+**How:**
+
+- `NewService(...)` constructs a service with default config/dist paths (both overridable via options).
 - `(*Service).Document(ctx)` is the main entrypoint:
   1) returns an in-memory cached copy when the on-disk dist file is unchanged
   2) otherwise tries to read the dist file and caches it
@@ -39,7 +45,9 @@ The generated `dist/openapi.json` can be served by the gateway and used by tooli
 
 Merge behaviour is implemented by `mergeDocuments` and helpers that merge paths, components, tags, servers, and security.
 
-**Notes:** `mergeDocuments` mutates the first document in the slice (it becomes the merge base).
+**Notes:**
+
+`mergeDocuments` mutates the first document in the slice (it becomes the merge base).
 Ensure your first input represents the canonical root document (info/servers) and treat it as owned by the merge.
 
 
@@ -219,6 +227,15 @@ func WithConfigPath(path string) Option {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L47**: `return func(s *Service) { if path != "" { s.configPath = path } }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `WithDistPath`
 
 **What:** Option that overrides where the merged OpenAPI JSON is persisted.
@@ -236,6 +253,15 @@ func WithDistPath(path string) Option {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L56**: `return func(s *Service) { if path != "" { s.distPath = path } }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `NewService`
 
@@ -259,6 +285,23 @@ func NewService(opts ...Option) *Service {
 	return s
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L65**: `s := &Service{ configPath: resolveConfigPath(), distPath: filepath.FromSlash(defaultDistFile), }`
+  - **What:** Defines s.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L70**: `for _, opt := range opts { opt(s) }`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L74**: `return s`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*Service).Document`
 
@@ -309,6 +352,59 @@ func (s *Service) Document(ctx context.Context) ([]byte, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L79**: `s.mu.Lock()`
+  - **What:** Calls s.mu.Lock.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L80**: `defer s.mu.Unlock()`
+  - **What:** Defers a call for cleanup.
+  - **Why:** Ensures the deferred action runs even on early returns.
+  - **How:** Schedules the call to run when the surrounding function returns.
+- **L82**: `if data, ok := s.cachedIfCurrent(); ok { return data, nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L86**: `if data, modTime, err := s.readDist(); err == nil { s.cache = &cacheEntry{raw: data, modTime: modTime} return clone(data), nil } else if !e…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L93**: `doc, err := s.buildDocument(ctx)`
+  - **What:** Defines doc, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L94**: `if err != nil { return nil, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L98**: `raw, err := json.MarshalIndent(doc, "", " ")`
+  - **What:** Defines raw, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L99**: `if err != nil { return nil, fmt.Errorf("encode document: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L103**: `if err := s.persist(raw); err != nil { pkglog.Shared().Warnw("failed to persist merged openapi document", "error", err, "path", s.distPath)…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L109**: `modTime := fileModTime(s.distPath)`
+  - **What:** Defines modTime.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L110**: `s.cache = &cacheEntry{raw: clone(raw), modTime: modTime}`
+  - **What:** Assigns s.cache.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L112**: `return clone(raw), nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*Service).cachedIfCurrent`
 
 **What:** Returns cached document bytes when the on-disk dist file is unchanged.
@@ -335,6 +431,31 @@ func (s *Service) cachedIfCurrent() ([]byte, bool) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L116**: `if s.cache == nil { return nil, false }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L119**: `info, err := os.Stat(s.distPath)`
+  - **What:** Defines info, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L120**: `if err != nil { return nil, false }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L123**: `if info.ModTime().Equal(s.cache.modTime) { return clone(s.cache.raw), true }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L126**: `return nil, false`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*Service).readDist`
 
 **What:** Reads the dist file and returns its bytes plus modification time.
@@ -360,6 +481,31 @@ func (s *Service) readDist() ([]byte, time.Time, error) {
 	return data, info.ModTime(), nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L130**: `info, err := os.Stat(s.distPath)`
+  - **What:** Defines info, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L131**: `if err != nil { return nil, time.Time{}, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L135**: `data, err := os.ReadFile(s.distPath)`
+  - **What:** Defines data, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L136**: `if err != nil { return nil, time.Time{}, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L140**: `return data, info.ModTime(), nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*Service).buildDocument`
 
@@ -410,6 +556,47 @@ func (s *Service) buildDocument(ctx context.Context) (*openapi3.T, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L144**: `cfg, baseDir, err := s.loadConfig()`
+  - **What:** Defines cfg, baseDir, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L145**: `if err != nil { return nil, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L149**: `loader := openapi3.NewLoader()`
+  - **What:** Defines loader.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L150**: `loader.IsExternalRefsAllowed = true`
+  - **What:** Assigns loader.IsExternalRefsAllowed.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L152**: `docs := make([]*openapi3.T, 0, len(cfg.Inputs))`
+  - **What:** Defines docs.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L153**: `for _, input := range cfg.Inputs { select { case <-ctx.Done(): return nil, ctx.Err() default: } path := input.InputFile if !filepath.IsAbs(…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L172**: `merged, err := mergeDocuments(docs)`
+  - **What:** Defines merged, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L173**: `if err != nil { return nil, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L177**: `return merged, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*Service).persist`
 
 **What:** Persists merged JSON bytes to the configured dist path.
@@ -435,6 +622,31 @@ func (s *Service) persist(raw []byte) error {
 	return nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L181**: `if s.distPath == "" { return errors.New("dist path not configured") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L184**: `dir := filepath.Dir(s.distPath)`
+  - **What:** Defines dir.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L185**: `if err := os.MkdirAll(dir, 0o755); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L188**: `if err := os.WriteFile(s.distPath, raw, 0o644); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L191**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*Service).loadConfig`
 
@@ -469,6 +681,39 @@ func (s *Service) loadConfig() (*mergeConfig, string, error) {
 	return &cfg, filepath.Dir(s.configPath), nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L195**: `if s.configPath == "" { return nil, "", errors.New("config path not configured") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L199**: `raw, err := os.ReadFile(s.configPath)`
+  - **What:** Defines raw, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L200**: `if err != nil { return nil, "", fmt.Errorf("read config: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L204**: `var cfg mergeConfig`
+  - **What:** Declares local names.
+  - **Why:** Introduces variables or types used later in the function.
+  - **How:** Executes a Go declaration statement inside the function body.
+- **L205**: `if err := json.Unmarshal(raw, &cfg); err != nil { return nil, "", fmt.Errorf("parse config: %w", err) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L209**: `if len(cfg.Inputs) == 0 { return nil, "", errors.New("openapi merge configuration has no inputs") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L213**: `return &cfg, filepath.Dir(s.configPath), nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `mergeDocuments`
 
@@ -512,6 +757,35 @@ func mergeDocuments(docs []*openapi3.T) (*openapi3.T, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L225**: `if len(docs) == 0 { return nil, errors.New("no openapi documents to merge") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L229**: `base := docs[0]`
+  - **What:** Defines base.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L231**: `if base.Paths == nil { base.Paths = openapi3.NewPaths() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L234**: `if base.Components == nil { components := openapi3.NewComponents() base.Components = &components }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L239**: `for _, doc := range docs[1:] { if err := mergePaths(base.Paths, doc.Paths); err != nil { return nil, err } if err := mergeComponents(base.C…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L251**: `return base, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `mergePaths`
 
 **What:** Merges OpenAPI path items and path extensions from one document into another.
@@ -554,6 +828,35 @@ func mergePaths(dst, src *openapi3.Paths) error {
 	return nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L255**: `if src == nil { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L258**: `if dst == nil { return errors.New("destination paths not initialised") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L262**: `dstMap := dst.Map()`
+  - **What:** Defines dstMap.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L263**: `for path, item := range src.Map() { if _, exists := dstMap[path]; exists { return fmt.Errorf("duplicate path detected: %s", path) } dst.Set…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L270**: `if len(src.Extensions) > 0 { if dst.Extensions == nil { dst.Extensions = make(map[string]interface{}, len(src.Extensions)) } for key, value…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L282**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `mergeComponents`
 
@@ -609,6 +912,63 @@ func mergeComponents(dst, src *openapi3.Components) error {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L286**: `if src == nil { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L289**: `if dst == nil { return errors.New("destination components not initialised") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L293**: `if err := mergeComponentMap(&dst.Schemas, src.Schemas, "schema"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L296**: `if err := mergeComponentMap(&dst.Parameters, src.Parameters, "parameter"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L299**: `if err := mergeComponentMap(&dst.Headers, src.Headers, "header"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L302**: `if err := mergeComponentMap(&dst.RequestBodies, src.RequestBodies, "request body"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L305**: `if err := mergeComponentMap(&dst.Responses, src.Responses, "response"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L308**: `if err := mergeComponentMap(&dst.Examples, src.Examples, "example"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L311**: `if err := mergeComponentMap(&dst.SecuritySchemes, src.SecuritySchemes, "security scheme"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L314**: `if err := mergeComponentMap(&dst.Links, src.Links, "link"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L317**: `if err := mergeComponentMap(&dst.Callbacks, src.Callbacks, "callback"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L320**: `if err := mergeComponentMap(&dst.Extensions, src.Extensions, "extension"); err != nil { return err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L324**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `mergeComponentMap`
 
 **What:** Generic helper to merge OpenAPI component maps while rejecting duplicates.
@@ -636,6 +996,27 @@ func mergeComponentMap[M ~map[string]V, V any](dst *M, src M, label string) erro
 	return nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L328**: `if len(src) == 0 { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L331**: `if *dst == nil { *dst = make(M, len(src)) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L334**: `for key, value := range src { if _, exists := (*dst)[key]; exists { return fmt.Errorf("duplicate %s detected: %s", label, key) } (*dst)[key…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L340**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `mergeTags`
 
@@ -674,6 +1055,31 @@ func mergeTags(dst, src openapi3.Tags) openapi3.Tags {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L344**: `if len(src) == 0 { return dst }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L348**: `existing := make(map[string]struct{}, len(dst))`
+  - **What:** Defines existing.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L349**: `for _, tag := range dst { if tag != nil { existing[tag.Name] = struct{}{} } }`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L355**: `for _, tag := range src { if tag == nil { continue } if _, ok := existing[tag.Name]; ok { continue } dst = append(dst, tag) existing[tag.Na…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L365**: `return dst`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `mergeServers`
 
 **What:** Merges OpenAPI server entries while avoiding duplicates.
@@ -711,6 +1117,31 @@ func mergeServers(dst, src openapi3.Servers) openapi3.Servers {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L369**: `if len(src) == 0 { return dst }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L373**: `existing := make(map[string]struct{}, len(dst))`
+  - **What:** Defines existing.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L374**: `for _, server := range dst { if server != nil { existing[server.URL] = struct{}{} } }`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L380**: `for _, server := range src { if server == nil { continue } if _, ok := existing[server.URL]; ok { continue } dst = append(dst, server) exis…`
+  - **What:** Iterates over a collection.
+  - **Why:** Processes multiple elements with the same logic.
+  - **How:** Executes a `for ... range` loop.
+- **L390**: `return dst`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `mergeSecurity`
 
 **What:** Merges OpenAPI security requirements slices.
@@ -730,6 +1161,19 @@ func mergeSecurity(dst, src openapi3.SecurityRequirements) openapi3.SecurityRequ
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L394**: `if len(src) == 0 { return dst }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L397**: `return append(dst, src...)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `resolveConfigPath`
 
 **What:** Resolves the merge configuration path from environment or default.
@@ -746,6 +1190,19 @@ func resolveConfigPath() string {
 	return filepath.FromSlash(defaultConfigFile)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L401**: `if path := os.Getenv("OPENAPI_MERGE_CONFIG_PATH"); path != "" { return path }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L404**: `return filepath.FromSlash(defaultConfigFile)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `fileModTime`
 
@@ -764,6 +1221,23 @@ func fileModTime(path string) time.Time {
 	return info.ModTime()
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L408**: `info, err := os.Stat(path)`
+  - **What:** Defines info, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L409**: `if err != nil { return time.Time{} }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L412**: `return info.ModTime()`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `clone`
 
@@ -785,4 +1259,25 @@ func clone(src []byte) []byte {
 	return dst
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L416**: `if src == nil { return nil }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L419**: `dst := make([]byte, len(src))`
+  - **What:** Defines dst.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L420**: `copy(dst, src)`
+  - **What:** Calls copy.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L421**: `return dst`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 

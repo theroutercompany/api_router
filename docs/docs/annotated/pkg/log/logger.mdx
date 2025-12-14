@@ -16,19 +16,25 @@ Edit commentary in `docs/annotations/pkg/log/logger.yaml`.
 
 ## Overview
 
-**What:** Defines the gateway's minimal logging interface and a process-wide shared logger implementation.
+**What:**
+
+Defines the gateway's minimal logging interface and a process-wide shared logger implementation.
 
 The package intentionally exposes a small `Logger` interface (Debugw/Infow/Warnw/Errorw),
 and provides a Zap-backed default logger plus hooks to replace it in tests or embeddings.
 
-**Why:** Most of the gateway code uses structured logging, but does not want to:
+**Why:**
+
+Most of the gateway code uses structured logging, but does not want to:
 - import Zap directly everywhere
 - carry a concrete logger through every constructor
 - leak a rich logging API surface into packages that only need "log with fields"
 
 This package provides a narrow abstraction and a safe default so the rest of the codebase can log consistently.
 
-**How:** - `Shared()` returns the global logger, initializing the default implementation once (`ensureDefault`).
+**How:**
+
+- `Shared()` returns the global logger, initializing the default implementation once (`ensureDefault`).
 - `Configure(...)` replaces the global logger and its sync function.
 - `Sync()` flushes buffered logs via the configured sync function and suppresses a few known-benign errors.
 
@@ -219,6 +225,15 @@ func (z *zapLogger) Debugw(msg string, keysAndValues ...any) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L32**: `z.s.Debugw(msg, keysAndValues...)`
+  - **What:** Calls z.s.Debugw.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+
 ### `(*zapLogger).Infow`
 
 **What:** Emits an info-level structured log entry.
@@ -232,6 +247,15 @@ func (z *zapLogger) Infow(msg string, keysAndValues ...any) {
 	z.s.Infow(msg, keysAndValues...)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L36**: `z.s.Infow(msg, keysAndValues...)`
+  - **What:** Calls z.s.Infow.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
 
 ### `(*zapLogger).Warnw`
 
@@ -247,6 +271,15 @@ func (z *zapLogger) Warnw(msg string, keysAndValues ...any) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L40**: `z.s.Warnw(msg, keysAndValues...)`
+  - **What:** Calls z.s.Warnw.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+
 ### `(*zapLogger).Errorw`
 
 **What:** Emits an error-level structured log entry.
@@ -260,6 +293,15 @@ func (z *zapLogger) Errorw(msg string, keysAndValues ...any) {
 	z.s.Errorw(msg, keysAndValues...)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L44**: `z.s.Errorw(msg, keysAndValues...)`
+  - **What:** Calls z.s.Errorw.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
 
 ### `Shared`
 
@@ -280,6 +322,27 @@ func Shared() Logger {
 	return global
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L56**: `ensureDefault()`
+  - **What:** Calls ensureDefault.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L58**: `mu.RLock()`
+  - **What:** Calls mu.RLock.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L59**: `defer mu.RUnlock()`
+  - **What:** Defers a call for cleanup.
+  - **Why:** Ensures the deferred action runs even on early returns.
+  - **How:** Schedules the call to run when the surrounding function returns.
+- **L60**: `return global`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `Configure`
 
@@ -310,6 +373,35 @@ func Configure(logger Logger, syncFn func() error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L65**: `if logger == nil { panic("log: Configure called with nil logger") }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L69**: `once.Do(func() {})`
+  - **What:** Calls once.Do.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L71**: `mu.Lock()`
+  - **What:** Calls mu.Lock.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L72**: `global = logger`
+  - **What:** Assigns global.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L73**: `if syncFn == nil { syncLogger = func() error { return nil } } else { syncLogger = syncFn }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L78**: `mu.Unlock()`
+  - **What:** Calls mu.Unlock.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+
 ### `NewZapLogger`
 
 **What:** Adapts a `*zap.Logger` to the package's `Logger` interface.
@@ -329,6 +421,19 @@ func NewZapLogger(base *zap.Logger) (Logger, func() error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L83**: `if base == nil { return NewNoop(), func() error { return nil } }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L86**: `return &zapLogger{s: base.Sugar()}, base.Sync`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `NewZapSugaredLogger`
 
 **What:** Adapts a `*zap.SugaredLogger` to the package's `Logger` interface.
@@ -346,6 +451,19 @@ func NewZapSugaredLogger(s *zap.SugaredLogger) (Logger, func() error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L91**: `if s == nil { return NewNoop(), func() error { return nil } }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L94**: `return &zapLogger{s: s}, s.Sync`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `NewNoop`
 
 **What:** Constructs a logger that discards all output.
@@ -359,6 +477,15 @@ func NewNoop() Logger {
 	return noopLogger{}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L99**: `return noopLogger{}`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `Sync`
 
@@ -382,6 +509,19 @@ func Sync() error {
 	return nil
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L104**: `if err := syncLogger(); err != nil { msg := err.Error() if strings.Contains(msg, "bad file descriptor") || strings.Contains(msg, "invalid a…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L111**: `return nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `ensureDefault`
 
@@ -420,4 +560,13 @@ func ensureDefault() {
 	})
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L115**: `once.Do(func() { cfg := zap.NewProductionConfig() if path := strings.TrimSpace(os.Getenv("APIGW_LOG_PATH")); path != "" { cfg.OutputPaths =…`
+  - **What:** Calls once.Do.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
 

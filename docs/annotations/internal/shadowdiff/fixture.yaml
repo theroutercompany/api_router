@@ -1,0 +1,31 @@
+file: internal/shadowdiff/fixture.go
+title: internal/shadowdiff/fixture.go
+overview:
+  what: |
+    Defines the fixture schema used by shadowdiff and provides a helper to load fixture files from disk.
+
+    A fixture is a captured HTTP request description plus minimal expectations used for analysis.
+  why: |
+    Shadow diff runs should be deterministic and easy to share.
+
+    Storing fixtures as JSON files on disk makes it easy to:
+    - add new scenarios by committing new fixture files
+    - review and version fixture changes like code
+    - replay the same requests against different gateway versions
+  how: |
+    `LoadFixtures(paths)` reads each fixture file (each file contains a JSON array of fixtures),
+    decodes it into `[]Fixture`, and concatenates the results into one slice.
+  notes: |
+    Fixtures are request-focused. The runner currently compares response status and body,
+    and uses `ExpectStatus` mostly as metadata for humans.
+symbols:
+  func LoadFixtures:
+    what: Loads one or more fixture files from disk.
+    why: Allows a shadowdiff session to be composed from multiple fixture files (grouped by feature or endpoint).
+    how: For each path, reads the file, unmarshals an array of fixtures, and appends them into a single slice.
+    notes: Errors include the fixture path for debugging.
+  type Fixture:
+    what: A single captured HTTP request scenario.
+    why: Provides the input needed to replay a request (method, path, headers, body) and label it for reporting.
+    how: Stored and loaded as JSON; the runner uses it to build requests and to label output.
+    notes: The `Body` field uses `json.RawMessage` so fixtures can represent arbitrary JSON payloads without schema coupling.

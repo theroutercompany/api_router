@@ -16,7 +16,9 @@ Edit commentary in `docs/annotations/pkg/gateway/server/middleware/middleware.ya
 
 ## Overview
 
-**What:** A collection of HTTP middleware functions used by the gateway server.
+**What:**
+
+A collection of HTTP middleware functions used by the gateway server.
 
 The middleware in this file covers common cross-cutting concerns:
 - request/trace ID propagation to responses
@@ -26,7 +28,9 @@ The middleware in this file covers common cross-cutting concerns:
 - CORS enforcement
 - structured request logging and protocol metrics integration (including upgraded connections)
 
-**Why:** Middleware is the "seam" where the gateway enforces platform policy consistently for every request.
+**Why:**
+
+Middleware is the "seam" where the gateway enforces platform policy consistently for every request.
 
 This package keeps the middleware logic decoupled from specific implementations by expressing its
 dependencies as small interfaces and function types (logger, problem writer, ID generators,
@@ -37,7 +41,9 @@ That design makes it easier to:
 - swap implementations (e.g., different logging backend)
 - compose a server pipeline without creating import cycles
 
-**How:** Each exported middleware constructor returns a standard wrapper:
+**How:**
+
+Each exported middleware constructor returns a standard wrapper:
 `func(http.Handler) http.Handler`.
 
 Callers (typically `pkg/gateway/server`) build a chain by composing these wrappers.
@@ -49,7 +55,9 @@ The `Logging` middleware uses a custom `ResponseWriter` wrapper to:
 - support `Flush`/`Push` passthrough
 - intercept `Hijack()` so upgraded connections can be wrapped and tracked on close
 
-**Notes:** Be careful about logging sensitive data. This middleware logs request path and metadata, not bodies.
+**Notes:**
+
+Be careful about logging sensitive data. This middleware logs request path and metadata, not bodies.
 Body size limits use both `Content-Length` checks and `http.MaxBytesReader` for enforcement.
 
 
@@ -302,6 +310,19 @@ func RequestMetadata(ensure EnsureIDs) func(http.Handler) http.Handler {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L53**: `if ensure == nil { return func(next http.Handler) http.Handler { return next } }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L57**: `return func(next http.Handler) http.Handler { if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) } retur…`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `SecurityHeaders`
 
 **What:** Adds baseline security hardening headers to all responses.
@@ -329,6 +350,15 @@ func SecurityHeaders() func(http.Handler) http.Handler {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L74**: `return func(next http.Handler) http.Handler { if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) } retur…`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `BodyLimit`
 
@@ -367,6 +397,15 @@ func BodyLimit(limit int64, trace TraceIDFromContext, write ProblemWriter) func(
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L91**: `return func(next http.Handler) http.Handler { if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) } retur…`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `RateLimit`
 
@@ -408,6 +447,15 @@ func RateLimit(allow AllowFunc, key ClientKey, now func() time.Time, trace Trace
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L118**: `return func(next http.Handler) http.Handler { if next == nil || allow == nil || key == nil || now == nil { return next } return http.Handle…`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `CORS`
 
 **What:** Applies CORS policy using the provided `*cors.Cors` configuration.
@@ -445,14 +493,27 @@ func CORS(handler *cors.Cors, trace TraceIDFromContext, write ProblemWriter) fun
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L147**: `return func(next http.Handler) http.Handler { if handler == nil || next == nil { return next } corsHandler := handler.Handler(next) return …`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `Logging`
 
 **What:** Emits structured logs for each HTTP request and optionally integrates protocol metrics tracking.
 
-**Why:** Request logs are the primary operational visibility mechanism for the gateway.
+**Why:**
+
+Request logs are the primary operational visibility mechanism for the gateway.
 Integrating protocol metrics here keeps metrics emission aligned with request lifecycle and avoids duplicating timing logic.
 
-**How:** - Records start time and builds a `trackFn` by calling `track(r)` (if provided).
+**How:**
+
+- Records start time and builds a `trackFn` by calling `track(r)` (if provided).
 - Wraps the `ResponseWriter` with `loggingResponseWriter` to capture status and bytes.
 - Calls `next.ServeHTTP`.
 - Computes elapsed duration and calls `trackFn(status, duration)`.
@@ -462,7 +523,9 @@ When `hijacked` is provided, the response writer's `Hijack()` path calls it to o
 - an on-close callback (for metrics)
 - an optional `net.Conn` wrapper (for deadline enforcement or additional tracking)
 
-**Notes:** Logging level is chosen by status code (5xx error, 4xx warn, otherwise info).
+**Notes:**
+
+Logging level is chosen by status code (5xx error, 4xx warn, otherwise info).
 Avoid adding headers or bodies to logs unless they are explicitly scrubbed.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L172" showLineNumbers
@@ -544,6 +607,15 @@ func Logging(
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L180**: `return func(next http.Handler) http.Handler { if next == nil || logger == nil { return next } return http.HandlerFunc(func(w http.ResponseW…`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `newLoggingResponseWriter`
 
 **What:** Constructs a `loggingResponseWriter` wrapper.
@@ -562,6 +634,15 @@ func newLoggingResponseWriter(w http.ResponseWriter, tracker func() (func(), fun
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L258**: `return &loggingResponseWriter{ ResponseWriter: w, status: http.StatusOK, hijackTracker: tracker, }`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*loggingResponseWriter).WriteHeader`
 
 **What:** Captures the status code while delegating header writes.
@@ -576,6 +657,19 @@ func (w *loggingResponseWriter) WriteHeader(status int) {
 	w.ResponseWriter.WriteHeader(status)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L266**: `w.status = status`
+  - **What:** Assigns w.status.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L267**: `w.ResponseWriter.WriteHeader(status)`
+  - **What:** Calls w.ResponseWriter.WriteHeader.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
 
 ### `(*loggingResponseWriter).Write`
 
@@ -596,6 +690,27 @@ func (w *loggingResponseWriter) Write(b []byte) (int, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L271**: `if w.status == 0 { w.status = http.StatusOK }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L274**: `n, err := w.ResponseWriter.Write(b)`
+  - **What:** Defines n, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L275**: `w.bytes += n`
+  - **What:** Assigns w.bytes.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L276**: `return n, err`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*loggingResponseWriter).Flush`
 
 **What:** Implements `http.Flusher` when the underlying writer supports it.
@@ -611,6 +726,15 @@ func (w *loggingResponseWriter) Flush() {
 	}
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L280**: `if flusher, ok := w.ResponseWriter.(http.Flusher); ok { flusher.Flush() }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
 
 ### `(*loggingResponseWriter).Hijack`
 
@@ -651,6 +775,35 @@ func (w *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L286**: `hijacker, ok := w.ResponseWriter.(http.Hijacker)`
+  - **What:** Defines hijacker, ok.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L287**: `if !ok { return nil, nil, errors.New("hijacker not supported") }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L290**: `conn, rw, err := hijacker.Hijack()`
+  - **What:** Defines conn, rw, err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L291**: `if err != nil { return nil, nil, err }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L295**: `if w.hijackTracker != nil { var closer func() var wrapper func(net.Conn) net.Conn w.hijackOnce.Do(func() { closer, wrapper = w.hijackTracke…`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L309**: `return conn, rw, nil`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*loggingResponseWriter).Push`
 
 **What:** Implements `http.Pusher` when the underlying writer supports it.
@@ -667,6 +820,19 @@ func (w *loggingResponseWriter) Push(target string, opts *http.PushOptions) erro
 	return http.ErrNotSupported
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L313**: `if pusher, ok := w.ResponseWriter.(http.Pusher); ok { return pusher.Push(target, opts) }`
+  - **What:** Branches conditionally.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L316**: `return http.ErrNotSupported`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*trackingConn).Close`
 
@@ -688,6 +854,23 @@ func (c *trackingConn) Close() error {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L327**: `err := c.Conn.Close()`
+  - **What:** Defines err.
+  - **Why:** Keeps intermediate state available for later steps in the function.
+  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+- **L328**: `c.once.Do(func() { if c.onClose != nil { c.onClose() } })`
+  - **What:** Calls c.once.Do.
+  - **Why:** Performs side effects or delegates work to a helper.
+  - **How:** Executes the expression statement.
+- **L333**: `return err`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*trackingConn).Read`
 
 **What:** Reads from the underlying connection with optional deadline enforcement.
@@ -707,6 +890,19 @@ func (c *trackingConn) Read(b []byte) (int, error) {
 }
 ```
 
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L337**: `if c.timeout > 0 { _ = c.Conn.SetReadDeadline(time.Now().Add(c.timeout)) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L340**: `return c.Conn.Read(b)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
+
 ### `(*trackingConn).Write`
 
 **What:** Writes to the underlying connection with optional deadline enforcement.
@@ -725,4 +921,17 @@ func (c *trackingConn) Write(b []byte) (int, error) {
 	return c.Conn.Write(b)
 }
 ```
+
+#### Walkthrough
+
+The list below documents the top-level statements inside the function body.
+
+- **L344**: `if c.timeout > 0 { _ = c.Conn.SetWriteDeadline(time.Now().Add(c.timeout)) }`
+  - **What:** Branches conditionally.
+  - **Why:** Handles different execution paths based on runtime state.
+  - **How:** Evaluates the condition and executes the matching branch.
+- **L347**: `return c.Conn.Write(b)`
+  - **What:** Returns from the current function.
+  - **Why:** Ends the current execution path and hands control back to the caller.
+  - **How:** Executes a `return` statement (possibly returning values).
 
