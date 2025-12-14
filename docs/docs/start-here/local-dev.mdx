@@ -1,0 +1,34 @@
+---
+title: Local Development
+---
+
+## Prereqs
+
+- Go 1.22+
+- Node 20+ (for docs site)
+
+## Run the gateway
+
+```bash
+go run ./cmd/apigw init --path gateway.yaml
+go run ./cmd/apigw run --config gateway.yaml
+```
+
+Health endpoints:
+
+- `GET http://localhost:8080/health`
+- `GET http://localhost:8080/readyz`
+
+## Run tests
+
+```bash
+go test ./...
+```
+
+## Run the docs site
+
+```bash
+cd docs
+npm start
+```
+

@@ -1,0 +1,43 @@
+file: pkg/gateway/server/protocol_metrics.go
+title: pkg/gateway/server/protocol_metrics.go
+overview:
+  what: ""
+  why: ""
+  how: ""
+  notes: ""
+symbols:
+  func classifyProtocol:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  func newProtocolMetrics:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  func productFromRequest:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  func trackConnectionForProtocol:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  method (*protocolMetrics).hijacked:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  method (*protocolMetrics).track:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  type protocolMetrics:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""

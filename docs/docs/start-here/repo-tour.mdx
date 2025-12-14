@@ -1,0 +1,22 @@
+---
+title: Repo Tour
+---
+
+## High-level layout
+
+- `cmd/`: CLI entrypoints (`apigw` is the primary runtime CLI).
+- `pkg/gateway/`: SDK surface + gateway runtime packages (config, server, proxy, auth, metrics).
+- `internal/`: supporting services (OpenAPI merge, readiness/health, shadow diff tooling).
+- `specs/`: OpenAPI fragments merged into `dist/openapi.json`.
+- `test/acceptance/`: black-box acceptance tests that exercise the gateway behavior.
+- `docs/`: Docusaurus documentation site.
+- `docs-archive/`: previous markdown docs (preserved during migration).
+
+## Where to start reading code
+
+1. `cmd/apigw/main.go` (CLI wiring)
+2. `pkg/gateway/runtime/runtime.go` (runtime composition)
+3. `pkg/gateway/server/server.go` (HTTP server + routes + middleware)
+4. `pkg/gateway/proxy/reverse_proxy.go` (proxy behavior)
+5. `pkg/gateway/config/config.go` (all configuration shapes and defaults)
+

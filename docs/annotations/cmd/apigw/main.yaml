@@ -1,0 +1,115 @@
+file: cmd/apigw/main.go
+title: cmd/apigw/main.go
+overview:
+  what: |
+    CLI entrypoint for operating the gateway.
+
+    This command is the primary user-facing interface for:
+    - running the gateway (`run`)
+    - validating config (`validate`)
+    - generating a sample config (`init`)
+    - managing a background daemon (`daemon`)
+    - calling the control-plane admin endpoints (`admin`)
+    - snapshotting env-based config into YAML (`convert-env`)
+  why: |
+    The gateway is designed to be both embeddable and operable.
+    A thin CLI makes it easy to run locally, integrate with deployment scripts, and manage long-running processes without forcing a specific process manager.
+  how: |
+    `main()` dispatches based on the first CLI argument.
+    Each subcommand parses its own flags and then calls into shared packages:
+    - `pkg/gateway/config` for config loading/validation
+    - `pkg/gateway/runtime` for runtime lifecycle (including reload callback)
+    - `pkg/gateway/daemon` for PID-file based daemon management
+  notes: |
+    The CLI does not attempt to hide secrets beyond what the admin endpoints do. Avoid printing full configs with secrets to logs/terminals in production.
+symbols:
+  const daemonChildEnv:
+    what: Environment variable used to mark a background daemon child process.
+    why: Prevents recursive respawning when `apigw daemon start --background` launches a child that should run in the foreground.
+    how: The parent sets `APIGW_DAEMON_CHILD=1` on the child process environment; the child checks it to decide whether to spawn again.
+    notes: ""
+  const sampleConfigYAML:
+    what: Embedded sample YAML used by the `init` command.
+    why: Provides a quick starting point without requiring users to copy files from the repo.
+    how: Writes this string to disk in `initCommand` (optionally overwriting via `--force`).
+    notes: ""
+  func adminCommand:
+    what: Implements the `apigw admin` subcommand (status/config/reload).
+    why: Provides a simple way to query or trigger control-plane behavior from scripts and terminals.
+    how: Parses flags (base URL, token, timeout) and dispatches to `adminGET` or `adminPOST` based on subcommand.
+    notes: ""
+  func adminGET:
+    what: Performs an admin GET request and prints the JSON response body.
+    why: Shared helper for `admin status` and `admin config`.
+    how: Builds an HTTP request, optionally sets bearer token header, checks for 200 OK, and prints the response body.
+    notes: ""
+  func adminPOST:
+    what: Performs an admin POST request and prints the response body (or a fallback message).
+    why: Shared helper for `admin reload`.
+    how: Builds an HTTP POST request, optionally sets bearer token header, checks for 202 Accepted, and prints the response body or `"reload requested"`.
+    notes: ""
+  func convertEnvCommand:
+    what: Implements `apigw convert-env` to snapshot the effective configuration into YAML.
+    why: Helps migrate legacy env-driven deployments to YAML by producing a reproducible config file.
+    how: Loads config (optionally merging an input YAML first), marshals to YAML, and writes to stdout or an output path (with optional `--force`).
+    notes: ""
+  func daemonCommand:
+    what: Implements `apigw daemon` subcommand dispatch (start/stop/status).
+    why: Groups daemon lifecycle operations under a single top-level command.
+    how: Selects a subcommand (default `start`) and delegates to `daemonStart`, `daemonStop`, or `daemonStatus`.
+    notes: ""
+  func daemonStart:
+    what: Starts the gateway daemon, optionally in background mode.
+    why: Supports running the gateway as a managed process with PID/log files without requiring external tooling.
+    how: If `--background` and not already a child, spawns a child `apigw daemon start` process; otherwise calls `gatewaydaemon.Run` with config/pid/log options and a signal-cancelled context.
+    notes: ""
+  func daemonStatus:
+    what: Reports daemon status based on the PID file.
+    why: Allows scripts and operators to check whether the managed process is running.
+    how: Calls `gatewaydaemon.Status` and prints `daemon running`, `daemon stopped`, or `daemon not running` depending on the PID/state.
+    notes: ""
+  func daemonStop:
+    what: Stops the daemon process by sending a signal and waiting for exit.
+    why: Provides a controlled shutdown path and cleans up stale PID files.
+    how: Parses a signal, calls `gatewaydaemon.Stop`, then polls `gatewaydaemon.Status` until the process exits or the wait timeout expires.
+    notes: ""
+  func initCommand:
+    what: Implements `apigw init` to write a sample configuration file.
+    why: Reduces friction for first-time setup and local development.
+    how: Writes `sampleConfigYAML` to `--path` (default `apigw.yaml`) and refuses to overwrite unless `--force` is set.
+    notes: ""
+  func main:
+    what: Program entrypoint that dispatches to subcommands.
+    why: Keeps the CLI simple and avoids a large framework for a small command surface.
+    how: Switches on `os.Args[1]`, calls the matching command function, and exits non-zero on error.
+    notes: ""
+  func parseSignal:
+    what: Parses a signal name or number into a `syscall.Signal`.
+    why: Allows `daemon stop` to accept both human-friendly names and numeric values.
+    how: Accepts integers and a small set of common names (TERM, KILL, INT, QUIT), returning an error for unsupported values.
+    notes: ""
+  func runCommand:
+    what: Implements `apigw run` to start the gateway runtime and optionally hot-reload on config changes.
+    why: Provides the primary "run the gateway locally/in containers" workflow with an optional file watcher.
+    how: Loads config, builds a runtime with a reload callback, optionally starts a config watcher, and loops handling OS signals, runtime exit, watcher errors, and reload requests by stopping and restarting the runtime with `rt.Reload`.
+    notes: ""
+  func targetsFile:
+    what: Checks whether a filesystem watcher event refers to the target config file.
+    why: fsnotify emits directory-level events; this filters down to the single config file we care about.
+    how: Resolves the event path to an absolute path and compares it to the expected absolute config path.
+    notes: ""
+  func usage:
+    what: Prints CLI usage text.
+    why: Provides a quick help message when the CLI is invoked incorrectly.
+    how: Writes a static usage block to stderr.
+    notes: ""
+  func validateCommand:
+    what: Implements `apigw validate` to check config validity without starting the server.
+    why: Useful in CI and in deployment pipelines to fail fast before rollout.
+    how: Loads config via `gatewayconfig.Load` (optionally with `--config`) and prints a success message on completion.
+    notes: ""
+  func watchConfig:
+    what: Watches a config file for changes and emits reloaded `gatewayconfig.Config` values.
+    why: Enables `apigw run --watch` hot reloads without external tooling.
+    how: Creates an fsnotify watcher on the config directory, debounces write/create/rename events, reloads config via `gatewayconfig.Load`, and returns channels for configs and errors plus a cancel function.
+    notes: ""

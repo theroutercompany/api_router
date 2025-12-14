@@ -1,0 +1,21 @@
+---
+title: Webhooks
+---
+
+Example config:
+
+```yaml
+webhooks:
+  enabled: true
+  endpoints:
+    - name: trade-webhook
+      path: /webhooks/trade
+      targetURL: https://trade.example.com/webhooks
+      secret: ${TRADE_WEBHOOK_SECRET}
+      maxAttempts: 5
+      initialBackoff: 1s
+      timeout: 10s
+```
+
+The gateway validates HMAC signatures and forwards payloads with retry/backoff.
+

@@ -1,0 +1,39 @@
+file: pkg/gateway/server/request_metadata.go
+title: pkg/gateway/server/request_metadata.go
+overview:
+  what: Generates and propagates request and trace identifiers through headers and request context.
+  why: Stable IDs are required for correlating logs, metrics, and upstream calls across a distributed system.
+  how: Ensures `X-Request-Id` and `X-Trace-Id` are present on the request and stores them in `context.Context` for middleware/handlers to read.
+  notes: ""
+symbols:
+  const requestIDKey:
+    what: Context key used to store the request ID string.
+    why: Avoids collisions by using a private typed key.
+    how: Written by `ensureRequestIDs` and read by `requestIDFromContext`.
+    notes: ""
+  const traceIDKey:
+    what: Context key used to store the trace ID string.
+    why: Avoids collisions by using a private typed key.
+    how: Written by `ensureRequestIDs` and read by `traceIDFromContext`.
+    notes: ""
+  func ensureRequestIDs:
+    what: Ensures a request has both request and trace identifiers and returns a request with an updated context.
+    why: Callers and middleware should be able to assume IDs exist for logging and error responses.
+    how: Reads `X-Request-Id` and `X-Trace-Id`, generates a UUID when missing, defaults trace ID to request ID, sets headers, and stores both values in context.
+    notes: ""
+  func requestIDFromContext:
+    what: Extracts the request ID from context.
+    why: Allows middleware to log and emit IDs without re-parsing headers.
+    how: Looks up `requestIDKey` and type-asserts to string.
+    notes: ""
+  func traceIDFromContext:
+    what: Extracts the trace ID from context.
+    why: Allows middleware and error writers to correlate failures across systems.
+    how: Looks up `traceIDKey` and type-asserts to string.
+    notes: ""
+  type contextKey:
+    what: Private typed context key for request metadata.
+    why: Prevents collisions with other context values by not using raw strings.
+    how: Used to define `requestIDKey` and `traceIDKey`.
+    notes: ""
+

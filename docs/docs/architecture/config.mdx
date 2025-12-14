@@ -1,0 +1,12 @@
+---
+title: Configuration Model
+---
+
+The canonical configuration is YAML (with env overrides), represented by Go structs in `pkg/gateway/config/config.go`.
+
+Key themes:
+
+- Safe defaults for local dev.
+- Explicit validation (fail fast) for deploy-time errors.
+- Minimal exported surface (SDK-friendly).
+

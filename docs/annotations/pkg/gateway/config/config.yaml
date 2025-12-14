@@ -1,0 +1,397 @@
+file: pkg/gateway/config/config.go
+title: pkg/gateway/config/config.go
+overview:
+  what: |
+    Defines the gateway's configuration schema (Go structs + YAML tags), default values, YAML decoding, environment-variable overrides, normalization, and semantic validation.
+  why: |
+    The gateway needs one source of truth for configuration shared across:
+    - the CLI (`cmd/apigw`)
+    - the runtime (`pkg/gateway/runtime`)
+    - downstream SDK consumers (who reuse the config schema)
+
+    Centralizing defaults and validation here avoids "magic values" spread across the codebase and turns configuration mistakes into early, actionable errors.
+  how: |
+    `Load()` applies configuration layers in order:
+    1) `Default()` (baseline values)
+    2) optional YAML file(s)
+    3) environment overrides (secrets/platform knobs/legacy env config)
+    4) `normalize()` (fill missing defaults + canonicalize fields)
+    5) `Validate()` (semantic checks)
+  notes: |
+    Security: secrets (JWT/webhook/admin) typically come from env vars. Treat rendered configs as sensitive and avoid logging secrets.
+symbols:
+  const defaultAdminListen:
+    what: Default listen address for the admin control-plane server.
+    why: Binds to loopback by default to reduce accidental exposure of control endpoints.
+    how: Applied by `normalize()` when `admin.listen` is empty.
+    notes: ""
+  const defaultConfigEnvVar:
+    what: Environment variable name (`APIGW_CONFIG`) that points to a default YAML config file path.
+    why: Allows deployments to define a canonical config path without always passing CLI flags.
+    how: Reads `os.Getenv(defaultConfigEnvVar)` inside `Load()` and tries it as an additional YAML input (before `WithPath(...)` options).
+    notes: ""
+  const defaultHealthPath:
+    what: Default upstream health check path (`/health`) used for readiness probing.
+    why: Ensures upstream readiness checks have a predictable path if omitted.
+    how: Used in `Default()` and reinforced by `normalize()` (including leading-slash canonicalization).
+    notes: ""
+  const defaultMetricsEnabled:
+    what: Default toggle for metrics exposure.
+    why: Metrics are expected in most environments for debugging and alerting.
+    how: Set by `Default()`; overridden by YAML/env; consumed by runtime/server wiring.
+    notes: ""
+  const defaultPort:
+    what: Default public HTTP listen port (`8080`).
+    why: Common convention for services in local development and containers.
+    how: Used in `Default()` and by `normalize()` when `http.port` is `0`.
+    notes: ""
+  const defaultRateLimitMax:
+    what: Default maximum number of requests allowed per rate-limit window.
+    why: Provides a safe baseline throttle policy when operators enable rate limiting but omit tuning.
+    how: Used in `Default()` and by `normalize()` when `rateLimit.max` is unset/invalid.
+    notes: ""
+  const defaultRateLimitWindow:
+    what: Default duration of the rate-limit window.
+    why: Pairs with `defaultRateLimitMax` to define a complete baseline policy.
+    how: Used in `Default()` and by `normalize()` when `rateLimit.window` is unset/invalid.
+    notes: ""
+  const defaultReadinessTimeout:
+    what: Default timeout for readiness probe HTTP calls.
+    why: Prevents readiness checks from hanging indefinitely and stalling rollouts.
+    how: Used in `Default()` and by `normalize()` when `readiness.timeout` is unset/invalid.
+    notes: ""
+  const defaultReadinessUserAgent:
+    what: Default `User-Agent` header used for readiness probe requests.
+    why: Makes readiness traffic identifiable in upstream access logs.
+    how: Defaulted in `Default()`/`normalize()` and used by the readiness checker HTTP client.
+    notes: ""
+  const defaultShutdownTimeout:
+    what: Default graceful shutdown timeout for the HTTP server.
+    why: Avoids indefinite shutdown hangs while giving in-flight requests time to finish.
+    how: Used in `Default()` and by `normalize()` when `http.shutdownTimeout` is unset/invalid.
+    notes: ""
+  const defaultWebSocketIdleTimeout:
+    what: Default idle timeout for WebSocket connections (when idle enforcement is enabled).
+    why: Protects the gateway from leaked/abandoned upgraded connections consuming resources indefinitely.
+    how: Defaulted in `Default()`/`normalize()` and enforced by the server by wrapping hijacked `net.Conn` read/write deadlines.
+    notes: ""
+  const defaultWebSocketMaxConcurrent:
+    what: Default maximum number of concurrent WebSocket upgrades (`0` = unlimited).
+    why: Keeps default behavior backwards compatible while enabling operators to add capacity protection.
+    how: Defaulted in `Default()`/`normalize()` and enforced by server middleware prior to upgrade.
+    notes: ""
+  const defaultWebhookBackoff:
+    what: Default initial backoff duration between webhook delivery attempts.
+    why: Avoids immediate retry storms on transient upstream failures.
+    how: Applied by `normalize()` when `webhooks.endpoints[].initialBackoff` is unset/invalid.
+    notes: ""
+  const defaultWebhookMaxAttempts:
+    what: Default maximum number of webhook forwarding attempts.
+    why: Bounds work per incoming webhook request and limits tail latency.
+    how: Applied by `normalize()` when `webhooks.endpoints[].maxAttempts` is unset/invalid.
+    notes: ""
+  const defaultWebhookSignatureHeader:
+    what: Default header name that carries the webhook HMAC signature (`X-Webhook-Signature`).
+    why: Provides a consistent default while allowing per-endpoint override when upstreams differ.
+    how: Applied by `normalize()` when `webhooks.endpoints[].signatureHeader` is empty.
+    notes: ""
+  const defaultWebhookTimeout:
+    what: Default timeout for a single webhook forwarding attempt.
+    why: Prevents slow webhook targets from tying up gateway resources indefinitely.
+    how: Applied by `normalize()` when `webhooks.endpoints[].timeout` is unset/invalid.
+    notes: ""
+  const envAPIURL:
+    what: Env var suffix (`_API_URL`) appended to an upstream prefix to form the upstream base URL variable.
+    why: Keeps env naming consistent across upstream products (e.g. `TRADE_API_URL`, `TASK_API_URL`).
+    how: Read by `applyUpstreamOverrides()` as `prefix + envAPIURL`.
+    notes: ""
+  const envAdminAllow:
+    what: Env var (`ADMIN_ALLOW`) configuring an IP/CIDR allowlist for admin endpoints.
+    why: Allows locking down admin access without editing YAML.
+    how: Parsed by `applyEnvOverrides()` using `splitAndTrim` and validated in `Validate()`.
+    notes: ""
+  const envAdminEnabled:
+    what: Env var (`ADMIN_ENABLED`) toggling the admin server.
+    why: Enables turning on/off the admin plane per environment at deploy time.
+    how: Parsed by `applyEnvOverrides()` as a boolean into `admin.enabled`.
+    notes: ""
+  const envAdminListen:
+    what: Env var (`ADMIN_LISTEN`) overriding `admin.listen`.
+    why: Supports binding admin endpoints to a specific interface/port per environment.
+    how: Read by `applyEnvOverrides()`; defaulted by `normalize()` when missing.
+    notes: ""
+  const envAdminToken:
+    what: Env var (`ADMIN_TOKEN`) holding a bearer token for admin authentication.
+    why: Encourages keeping admin auth secrets in secret managers, not YAML.
+    how: Read by `applyEnvOverrides()` into `admin.token`.
+    notes: ""
+  const envCorsAllowedOrigins:
+    what: Env var (`CORS_ALLOWED_ORIGINS`) overriding `cors.allowedOrigins`.
+    why: CORS policy is commonly environment-specific and needs safe, deploy-time control.
+    how: Parsed by `applyEnvOverrides()` using `splitAndTrim`.
+    notes: ""
+  const envGitSHA:
+    what: Env var (`GIT_SHA`) used to stamp build/version metadata.
+    why: Build metadata is useful for debugging, rollouts, and health endpoints.
+    how: Read by `Default()` (and optionally overwritten by `applyEnvOverrides()`).
+    notes: ""
+  const envHealthPath:
+    what: Env var suffix (`_HEALTH_PATH`) appended to an upstream prefix to form the upstream health path variable.
+    why: Keeps env naming consistent across upstream products (e.g. `TRADE_HEALTH_PATH`, `TASK_HEALTH_PATH`).
+    how: Read by `applyUpstreamOverrides()` and canonicalized via `ensureLeadingSlash`.
+    notes: ""
+  const envJWTAudience:
+    what: Env var (`JWT_AUDIENCE`) configuring acceptable JWT audiences.
+    why: Audience sets often differ by environment and can evolve without code changes.
+    how: Parsed by `applyEnvOverrides()` using `splitAndTrim` into `auth.audiences`.
+    notes: ""
+  const envJWTIssuer:
+    what: Env var (`JWT_ISSUER`) configuring the expected JWT issuer.
+    why: Separates auth policy from code and supports multi-environment deployments.
+    how: Read by `applyEnvOverrides()` into `auth.issuer`.
+    notes: ""
+  const envJWTSecret:
+    what: Env var (`JWT_SECRET`) holding the symmetric key used for JWT verification.
+    why: Secrets should be injected at runtime via env/secret managers rather than embedded in YAML.
+    how: Read by `applyEnvOverrides()` into `auth.secret`; consumed by `pkg/gateway/auth`.
+    notes: ""
+  const envMetricsEnabled:
+    what: Env var (`METRICS_ENABLED`) controlling metrics exposure.
+    why: Some environments may forbid metrics endpoints or want them disabled.
+    how: Parsed by `applyEnvOverrides()` as a boolean into `metrics.enabled`.
+    notes: ""
+  const envPort:
+    what: Env var (`PORT`) overriding the public HTTP listen port.
+    why: Common convention on PaaS platforms where the platform assigns a port.
+    how: Parsed by `applyEnvOverrides()` as an integer into `http.port`.
+    notes: ""
+  const envRateLimitMax:
+    what: Env var (`RATE_LIMIT_MAX`) overriding `rateLimit.max`.
+    why: Allows rate limiting to be tuned per environment without YAML edits.
+    how: Parsed by `applyEnvOverrides()` as an integer.
+    notes: ""
+  const envRateLimitWindow:
+    what: Env var (`RATE_LIMIT_WINDOW_MS`) overriding `rateLimit.window` (milliseconds).
+    why: Allows deploy-time tuning of the rate-limit window without YAML edits.
+    how: Parsed by `applyEnvOverrides()` via `parsePositiveDurationMillis`.
+    notes: ""
+  const envReadinessTimeout:
+    what: Env var (`READINESS_TIMEOUT_MS`) overriding `readiness.timeout` (milliseconds).
+    why: Readiness sensitivity differs between local/dev and production.
+    how: Parsed by `applyEnvOverrides()` via `parsePositiveDurationMillis`.
+    notes: ""
+  const envReadinessUserAgent:
+    what: Env var (`READINESS_USER_AGENT`) overriding `readiness.userAgent`.
+    why: Lets operators ensure readiness requests are identifiable in upstream logs.
+    how: Read by `applyEnvOverrides()` as a string.
+    notes: ""
+  const envShutdownTimeout:
+    what: Env var (`SHUTDOWN_TIMEOUT_MS`) overriding `http.shutdownTimeout` (milliseconds).
+    why: Shutdown grace needs may vary by environment and traffic patterns.
+    how: Parsed by `applyEnvOverrides()` via `parsePositiveDurationMillis`.
+    notes: ""
+  const envTLSCAFile:
+    what: Env var suffix (`_TLS_CA_FILE`) providing a PEM CA bundle path for upstream TLS verification.
+    why: Supports internal PKI / custom root CAs via mounted secret files.
+    how: Read by `applyUpstreamOverrides()` and used by the runtime readiness TLS client configuration.
+    notes: ""
+  const envTLSCertFile:
+    what: Env var suffix (`_TLS_CERT_FILE`) providing a client certificate path for upstream mTLS.
+    why: Supports upstreams that require client authentication.
+    how: Read by `applyUpstreamOverrides()`; validated together with `_TLS_KEY_FILE`.
+    notes: ""
+  const envTLSEnabled:
+    what: Env var suffix (`_TLS_ENABLED`) toggling upstream TLS behavior.
+    why: Allows enabling TLS through env configuration without editing YAML.
+    how: Parsed by `applyUpstreamOverrides()` as a boolean.
+    notes: ""
+  const envTLSInsecureSkipVerify:
+    what: Env var suffix (`_TLS_INSECURE_SKIP_VERIFY`) disabling upstream TLS verification for readiness checks.
+    why: Useful for dev/test against self-signed certs; unsafe for production.
+    how: Parsed by `applyUpstreamOverrides()` and implicitly enables TLS when set.
+    notes: Avoid in production; disables server certificate verification.
+  const envTLSKeyFile:
+    what: Env var suffix (`_TLS_KEY_FILE`) providing a client private key path for upstream mTLS.
+    why: Completes the mTLS key pair alongside `_TLS_CERT_FILE`.
+    how: Read by `applyUpstreamOverrides()`; validated together with `_TLS_CERT_FILE`.
+    notes: ""
+  const envTaskPrefix:
+    what: Prefix (`TASK`) used to build task upstream env var names.
+    why: Keeps upstream env overrides consistent for supported products.
+    how: Used by `applyEnvOverrides()`/`applyUpstreamOverrides()` to locate task upstream overrides.
+    notes: ""
+  const envTradePrefix:
+    what: Prefix (`TRADE`) used to build trade upstream env var names.
+    why: Keeps upstream env overrides consistent for supported products.
+    how: Used by `applyEnvOverrides()`/`applyUpstreamOverrides()` to locate trade upstream overrides.
+    notes: ""
+  func Default:
+    what: Constructs a baseline `Config` with safe defaults.
+    why: Provides predictable behavior when YAML/env inputs are partial and gives `Load()` a stable base layer.
+    how: Initializes default timeouts/ports/limits, creates trade/task upstream stubs, and sets `Config.Version` from `GIT_SHA`.
+    notes: ""
+  func DurationFrom:
+    what: Converts `time.Duration` into the config `Duration` wrapper type.
+    why: Keeps default-setting code readable and consistent.
+    how: Used by `Default()` and `normalize()` when assigning durations.
+    notes: ""
+  func Load:
+    what: Loads configuration by merging defaults, YAML file(s), and environment overrides.
+    why: Supports both config-file-driven deployments and env-driven deployments (especially for secrets).
+    how: |
+      - Builds `loaderOptions` (paths + env lookup)
+      - Seeds paths from `APIGW_CONFIG`
+      - Applies any `Option`s (e.g. `WithPath`)
+      - Starts from `Default()`
+      - Reads and unmarshals YAML (skipping missing files)
+      - Applies env overrides (`applyEnvOverrides`)
+      - Normalizes (`normalize`) and validates (`Validate`)
+    notes: "Order matters: later layers override earlier layers."
+  func WithLookupEnv:
+    what: Option that overrides how environment variables are looked up.
+    why: Enables deterministic tests without mutating real process environment.
+    how: Sets `loaderOptions.lookupEnv`, which is passed into `applyEnvOverrides`.
+    notes: ""
+  func WithPath:
+    what: Option that adds a YAML config path to attempt loading.
+    why: Lets CLI/tests specify config file(s) without relying on global state.
+    how: Appends to `loaderOptions.paths` when the provided path is non-empty.
+    notes: ""
+  func applyEnvOverrides:
+    what: Applies environment-variable overrides to an existing `Config`.
+    why: Deployments frequently inject secrets and runtime knobs via env vars; this layer keeps overrides explicit and validated.
+    how: |
+      - Reads known gateway-level env vars (port, timeouts, auth, CORS, rate limiting, metrics, admin)
+      - Calls `applyUpstreamOverrides` for the trade/task upstream prefixes
+      - Leaves YAML/default values untouched when env vars are absent
+    notes: ""
+  func applyUpstreamOverrides:
+    what: Applies per-upstream env overrides for a given upstream prefix (e.g. `TRADE`, `TASK`).
+    why: Centralizes upstream override logic and keeps naming consistent across products.
+    how: Ensures the upstream exists (via `ensureUpstream`), then applies base URL, health path, and TLS-related env vars.
+    notes: ""
+  func ensureLeadingSlash:
+    what: Ensures a URL path begins with `/`.
+    why: Normalizes config inputs so downstream routing/probing code can assume canonical paths.
+    how: Returns `/` for empty input, preserves already-slashed paths, otherwise prefixes `/`.
+    notes: ""
+  func parsePositiveDurationMillis:
+    what: Parses a millisecond duration env var into a `time.Duration`.
+    why: Several env overrides use the `*_MS` convention for backwards compatibility and platform friendliness.
+    how: Parses an integer, rejects non-positive values, and multiplies by `time.Millisecond`.
+    notes: ""
+  func splitAndTrim:
+    what: Splits a delimited string into trimmed tokens (comma/space/semicolon separators).
+    why: Many env vars accept lists (audiences, CORS origins, allowlist); this makes parsing consistent.
+    how: Uses `strings.FieldsFunc` and filters empty tokens.
+    notes: ""
+  method (*Config).ensureUpstream:
+    what: Ensures an upstream entry exists for the provided prefix/name and returns it.
+    why: Env overrides must be able to target an upstream even if YAML omitted its entry.
+    how: Searches `cfg.Readiness.Upstreams` case-insensitively; if missing, appends a new `UpstreamConfig` with defaults.
+    notes: ""
+  method (*Config).normalize:
+    what: Fills in derived defaults and canonicalizes fields after YAML/env overrides.
+    why: Config inputs can be partial and inconsistent (missing slashes, empty defaults). Normalization makes downstream behavior predictable.
+    how: Defaults numeric/time fields, ensures required upstream entries exist, canonicalizes health paths, reconciles TLS flags, and normalizes webhook endpoint values.
+    notes: ""
+  method (*Duration).UnmarshalYAML:
+    what: Parses a YAML scalar into a `Duration`.
+    why: Supports both Go duration strings (`1s`) and numeric millisecond strings (`2000`) in config.
+    how: Treats integer-looking scalars as milliseconds; otherwise uses `time.ParseDuration`. Rejects negative values.
+    notes: ""
+  method (Config).Validate:
+    what: Performs semantic validation of configuration values.
+    why: Failing fast prevents partial startup and reduces runtime surprises.
+    how: Checks ports/timeouts, enforces required upstreams and unique names, validates URLs and TLS cert/key pairing, validates admin allowlist values, and validates websocket/webhook settings; returns `errors.Join` for multiple failures.
+    notes: ""
+  method (Duration).AsDuration:
+    what: Converts the wrapper to a `time.Duration`.
+    why: Makes transitions between config types and standard library types explicit.
+    how: Implemented as a simple type conversion.
+    notes: ""
+  method (Duration).MarshalYAML:
+    what: Encodes a `Duration` as a Go duration string for YAML output.
+    why: Produces human-readable YAML when configs are emitted/converted.
+    how: Returns `d.AsDuration().String()` to the YAML encoder.
+    notes: ""
+  type AdminConfig:
+    what: Configuration for the admin/control-plane HTTP server (enable, listen, token, allowlist).
+    why: Separates operational endpoints from the public gateway interface and supports tight access control.
+    how: Consumed by runtime/server when starting admin endpoints; validated when enabled.
+    notes: ""
+  type AuthConfig:
+    what: JWT verification configuration (secret, audiences, issuer).
+    why: Keeps auth policy configurable across environments without changing code.
+    how: Used by `pkg/gateway/auth` when building the authenticator and auth middleware.
+    notes: ""
+  type CORSConfig:
+    what: CORS configuration (allowed origins).
+    why: Browser-facing clients require explicit CORS policy control.
+    how: Applied by server middleware when handling cross-origin requests.
+    notes: ""
+  type Config:
+    what: Root configuration object for the gateway runtime and SDK.
+    why: Provides a stable schema for running the gateway via CLI and for embedding it as a library.
+    how: Created by `Load()` and then consumed by runtime/server packages to configure listeners, upstreams, auth, middleware, and feature flags.
+    notes: ""
+  type Duration:
+    what: A YAML-friendly wrapper around `time.Duration`.
+    why: Allows config fields to accept both `1s`-style strings and millisecond integers.
+    how: Implements YAML marshal/unmarshal methods and exposes `AsDuration()` for consumers.
+    notes: ""
+  type HTTPConfig:
+    what: Public HTTP server configuration (port and shutdown timeout).
+    why: Keeps listener behavior explicit and environment-configurable.
+    how: Used by the server runtime to bind and to configure graceful shutdown.
+    notes: ""
+  type MetricsConfig:
+    what: Metrics enablement configuration.
+    why: Allows disabling metrics in constrained or special environments.
+    how: Read by runtime/server to decide whether to register/expose Prometheus metrics.
+    notes: ""
+  type Option:
+    what: Functional option type used to customize how `Load()` behaves.
+    why: Keeps the `Load()` API stable while enabling targeted customization for CLI/tests.
+    how: Options mutate a private `loaderOptions` instance inside `Load()`.
+    notes: ""
+  type RateLimitConfig:
+    what: Rate limiting configuration (window and max requests).
+    why: Protects the gateway and upstreams from bursts and accidental abuse.
+    how: Consumed by rate limiting middleware; defaulted and validated by this package.
+    notes: ""
+  type ReadinessConfig:
+    what: Readiness probing configuration (timeout, user-agent, upstream list).
+    why: Readiness controls whether the gateway should receive traffic; it must reflect upstream reachability.
+    how: Used by the runtime to build the readiness checker; validated for required upstreams (trade/task).
+    notes: ""
+  type TLSConfig:
+    what: Upstream TLS/mTLS configuration for readiness checks (enable, CA file, client cert/key, skip verify).
+    why: Supports upstreams with internal PKI or client-auth requirements while keeping secrets/file paths out of code.
+    how: Applied to upstream configs and validated for cert/key pairing; used by runtime to build per-upstream TLS transports.
+    notes: ""
+  type UpstreamConfig:
+    what: Upstream service configuration (name, base URL, health path, TLS options).
+    why: The gateway proxies to multiple upstream products and needs per-upstream settings for probing and routing.
+    how: Loaded from defaults/YAML/env and used by readiness checks and proxy routing.
+    notes: ""
+  type WebSocketConfig:
+    what: WebSocket connection policy (max concurrent and idle timeout).
+    why: Upgraded connections are long-lived; limits protect against resource exhaustion and leaks.
+    how: Consumed by the server to reject upgrades at capacity and enforce idle timeouts.
+    notes: ""
+  type WebhookConfig:
+    what: Webhook ingestion configuration (enabled flag and endpoint list).
+    why: Enables secure ingestion of event callbacks and controlled forwarding to upstream targets.
+    how: When enabled, server registers per-endpoint webhook handlers using the endpoint configs.
+    notes: ""
+  type WebhookEndpointConfig:
+    what: Per-endpoint webhook configuration (path, target URL, secret, signature header, retry/backoff, timeout).
+    why: Different webhook senders may require different endpoints, secrets, and retry characteristics.
+    how: Normalized/validated here; used to construct `pkg/gateway/webhook` handlers and mount them in the server.
+    notes: ""
+  type loaderOptions:
+    what: Internal accumulator for config-loading options (YAML paths and env lookup function).
+    why: Keeps `Load()` testable and configurable without global state.
+    how: Mutated by `WithPath` and `WithLookupEnv`, then consumed by `Load()`.
+    notes: ""

@@ -1,0 +1,53 @@
+file: pkg/gateway/daemon/daemon.go
+title: pkg/gateway/daemon/daemon.go
+overview:
+  what: ""
+  why: ""
+  how: ""
+  notes: ""
+symbols:
+  func Run:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  func Status:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  func Stop:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  func WaitSignal:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  func readPIDFile:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  func setupLogFile:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  func writePIDFile:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  type Options:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""
+  type ProcessStatus:
+    what: ""
+    why: ""
+    how: ""
+    notes: ""

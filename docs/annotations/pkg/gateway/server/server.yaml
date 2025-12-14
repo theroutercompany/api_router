@@ -1,0 +1,184 @@
+file: pkg/gateway/server/server.go
+title: pkg/gateway/server/server.go
+overview:
+  what: |
+    Wires the public HTTP server for the gateway: routes, middleware, health/readiness handlers, OpenAPI endpoint, metrics, auth protection for upstream proxies, WebSocket limits, and webhook ingestion endpoints.
+  why: |
+    The gateway needs a single place where HTTP concerns are composed consistently:
+    - request metadata and structured logging
+    - security headers and body limits
+    - rate limiting and CORS
+    - protocol metrics (HTTP/gRPC/WebSockets/SSE)
+
+    Keeping this wiring in one package makes runtime composition simple and keeps behavior consistent across entrypoints.
+  how: |
+    `New()` constructs the router, initializes proxies/webhooks, mounts routes, then wraps everything in middleware.
+    `Start()` listens and serves until context cancellation or error, and `Shutdown()` triggers graceful stop.
+  notes: |
+    Auth is enforced per-product via `buildProtectedHandler` (JWT + scope checks). WebSocket limits are enforced before upgrade and tracked through hijack handling.
+symbols:
+  const maxRequestBodyBytes:
+    what: Maximum allowed HTTP request body size (1 MiB).
+    why: Prevents large payloads from exhausting memory and protects upstreams from oversized requests.
+    how: Enforced by the `gatewaymiddleware.BodyLimit` middleware early in the chain.
+    notes: ""
+  func New:
+    what: Constructs a `Server` and wires routes + middleware based on `gatewayconfig.Config`.
+    why: Provides a reusable server implementation for the runtime and for embedding.
+    how: Builds rate limiter/CORS/metrics/auth/OpenAPI provider, initializes proxies/webhooks, mounts routes, then wraps the mux in middleware (body limit, rate limit, CORS, logging, websocket limiting, security headers, request IDs, and h2c).
+    notes: ""
+  func WithLogger:
+    what: Server option that overrides the logger used by the server.
+    why: Allows embedding applications and CLIs to inject their own logger configuration.
+    how: Sets `Server.logger` when provided a non-nil logger.
+    notes: ""
+  func WithOpenAPIProvider:
+    what: Server option that overrides the OpenAPI document provider.
+    why: Allows swapping the OpenAPI source (e.g., prebuilt artifact vs dynamic merge service) without changing server code.
+    how: Sets `Server.openapiProvider`, which is used by the `/openapi.json` handler.
+    notes: ""
+  func buildCORS:
+    what: Constructs a CORS policy object from configured allowed origins.
+    why: Browser clients require explicit cross-origin policy; CORS needs to be environment-configurable.
+    how: Treats empty origins as allow-all, supports `*` to force allow-all, otherwise allows only exact origin matches and configures allowed methods/headers.
+    notes: ""
+  func clientAddress:
+    what: Resolves a best-effort client IP address string for logging and rate limiting.
+    why: Gateway deployments are commonly behind load balancers; `RemoteAddr` may reflect a proxy.
+    how: Uses the first value in `X-Forwarded-For` when present, otherwise parses `RemoteAddr` host.
+    notes: ""
+  func clientKey:
+    what: Derives the rate-limit key for a request.
+    why: Rate limiting needs a stable key; client IP is the default heuristic.
+    how: Uses `clientAddress`; falls back to `"global"` if no address can be resolved.
+    notes: ""
+  func isWebSocketRequest:
+    what: Detects whether an HTTP request is attempting to upgrade to a WebSocket connection.
+    why: WebSocket upgrades require special handling (capacity limiting, hijack tracking, idle timeouts).
+    how: Checks whether the request is attempting an upgrade to websocket via the `Upgrade` and `Connection` headers.
+    notes: ""
+  func newWebsocketLimiter:
+    what: Constructs a `websocketLimiter` for the configured max concurrency.
+    why: Encapsulates websocket capacity logic in a single component.
+    how: Returns a limiter with the provided limit; `0` or negative values are treated as unlimited by `Acquire()`.
+    notes: ""
+  func websocketContextFromRequest:
+    what: Extracts websocket limiter context from a request.
+    why: The websocket limiter must release capacity when the request completes or when the connection is hijacked/closed.
+    how: Reads a `websocketContext` value from the request context and ensures `release` is non-nil.
+    notes: ""
+  func websocketLimitMiddleware:
+    what: Middleware that enforces websocket concurrency limits and stores websocket bookkeeping in request context.
+    why: Upgraded connections are long-lived; limiting upgrades prevents resource exhaustion.
+    how: For websocket requests, acquires the limiter and rejects with 503 on exhaustion; otherwise stores a release func + idle timeout in context for downstream tracking.
+    notes: ""
+  method (*Server).Shutdown:
+    what: Gracefully stops the underlying HTTP server.
+    why: Provides a clean shutdown path for the runtime and embedding.
+    how: Delegates to `http.Server.Shutdown(ctx)` when initialized.
+    notes: ""
+  method (*Server).Start:
+    what: Starts listening and serving until context cancellation or server error.
+    why: Separates serving from construction so runtime code can control lifecycle.
+    how: Runs `ListenAndServe` in a goroutine, then either shuts down on context cancellation (using configured shutdown timeout) or returns on server error.
+    notes: ""
+  method (*Server).buildProtectedHandler:
+    what: Wraps an upstream proxy handler with authentication and scope enforcement.
+    why: Trade/task upstreams require JWT authentication with product-specific scopes.
+    how: Ensures request/trace IDs, authenticates via `gatewayauth.Authenticator`, checks for required scopes, then forwards the request with routing metadata headers to the proxy.
+    notes: ""
+  method (*Server).handleHealth:
+    what: Implements `GET /health` and returns basic process health + metadata.
+    why: Provides a lightweight liveness endpoint for load balancers and orchestration.
+    how: Returns JSON with status, uptime, timestamp, and optional version; always 200 unless encoding fails.
+    notes: ""
+  method (*Server).handleOpenAPI:
+    what: Implements `GET /openapi.json` using the configured OpenAPI provider.
+    why: Exposes the merged API contract for clients and tooling.
+    how: Calls `openapiProvider.Document(ctx)`, returns Problem+JSON on error, otherwise writes the raw JSON bytes.
+    notes: ""
+  method (*Server).handleReadiness:
+    what: Implements `GET /readyz` and `GET /readiness` by probing upstreams.
+    why: Readiness should reflect upstream reachability so rollouts don't send traffic to an unusable gateway.
+    how: Calls `healthChecker.Readiness`, returns 200 when ready and 503 otherwise, and includes upstream results plus request/trace IDs in JSON.
+    notes: ""
+  method (*Server).hijackedRequest:
+    what: Integrates hijack tracking for protocol metrics and websocket capacity release/idle timeout.
+    why: WebSockets and other upgraded connections bypass normal response completion; metrics and limits must be tracked via `Hijack()`.
+    how: Combines protocol-metrics closer (if enabled) with websocket limiter release, and provides an optional `net.Conn` wrapper that applies idle deadlines.
+    notes: ""
+  method (*Server).initProxies:
+    what: Builds upstream reverse proxy handlers from config and wires them into trade/task routes.
+    why: Proxy behavior is shared, but each product needs its own target base URL and auth scopes.
+    how: Iterates configured readiness upstreams, creates a `gatewayproxy` handler per upstream, then assigns protected handlers for `trade` and `task`.
+    notes: ""
+  method (*Server).initWebhooks:
+    what: Registers webhook ingestion endpoints when enabled in config.
+    why: Allows external systems to deliver event callbacks to the gateway, which then forwards them securely to target upstreams.
+    how: For each configured endpoint, constructs `gatewaywebhook.Options`, builds a handler, mounts it at the configured path, and logs registration.
+    notes: ""
+  method (*Server).mountRoutes:
+    what: Mounts the fixed gateway routes on the internal `http.ServeMux`.
+    why: Keeps route registration centralized and predictable.
+    how: Registers `/health`, readiness endpoints, `/openapi.json`, `/metrics`, and `/v1/{trade,task}` proxy prefixes when handlers are configured.
+    notes: ""
+  method (*Server).trackRequest:
+    what: Integrates request completion tracking for protocol metrics and websocket limiter release.
+    why: Normal HTTP requests complete with a status code, but websocket upgrades need limiter release when the request lifecycle ends.
+    how: Wraps `protocolMetrics.track` (if enabled) and releases websocket capacity (if the request carried websocket context) when the returned closure is invoked.
+    notes: ""
+  method (*Server).writeAuthProblem:
+    what: Converts authentication errors into consistent Problem+JSON responses.
+    why: Callers need stable error formatting and correct `WWW-Authenticate` semantics.
+    how: Special-cases `gatewayauth.Error` to use its status/title/detail and conditionally sets `WWW-Authenticate`; otherwise returns a generic 401.
+    notes: ""
+  method (*deadlineConn).Read:
+    what: Wraps `net.Conn.Read` with a per-operation read deadline.
+    why: Enforces websocket idle timeout by timing out reads on inactive connections.
+    how: Sets `SetReadDeadline(now + timeout)` before delegating to the underlying connection.
+    notes: ""
+  method (*deadlineConn).Write:
+    what: Wraps `net.Conn.Write` with a per-operation write deadline.
+    why: Prevents writes from blocking forever on idle or stalled websocket connections.
+    how: Sets `SetWriteDeadline(now + timeout)` before delegating to the underlying connection.
+    notes: ""
+  method (*websocketLimiter).Acquire:
+    what: Attempts to acquire a websocket slot and returns a release function when successful.
+    why: Provides bounded concurrency for upgrades and ensures capacity is returned exactly once.
+    how: If unlimited, returns an always-ok release; otherwise increments an internal counter under mutex and returns a `sync.Once`-guarded release that decrements.
+    notes: ""
+  type Option:
+    what: Functional option type for configuring the `Server` at construction time.
+    why: Keeps the `New()` signature stable while allowing optional dependencies to be injected.
+    how: Options mutate fields on the server during `New()`.
+    notes: ""
+  type Server:
+    what: The primary HTTP server wiring object for the gateway.
+    why: Encapsulates configuration, router/middleware setup, proxy handlers, and lifecycle methods.
+    how: Stores the configured handlers (trade/task/webhooks), shared middleware dependencies (auth, rate limit, CORS, metrics), and exposes `Start`/`Shutdown`.
+    notes: ""
+  type deadlineConn:
+    what: A `net.Conn` wrapper that applies read/write deadlines using a configured timeout.
+    why: WebSocket idle timeouts must be enforced at the connection level after hijack.
+    how: Overrides `Read` and `Write` to set deadlines before delegating to the embedded connection.
+    notes: ""
+  type readinessReporter:
+    what: Minimal interface the server needs for readiness reporting.
+    why: Decouples `Server` from a concrete readiness checker implementation and improves testability.
+    how: Implemented by `internal/platform/health.Checker`.
+    notes: ""
+  type websocketContext:
+    what: Bookkeeping stored in request context for websocket upgrades.
+    why: The limiter slot must be released and idle timeout must be applied even after hijack.
+    how: Carries a `release` callback and the configured idle timeout.
+    notes: ""
+  type websocketContextKey:
+    what: Context key type used to store websocket context.
+    why: Uses a private, unique type to avoid collisions with other context values.
+    how: Used as the key in `context.WithValue`.
+    notes: ""
+  type websocketLimiter:
+    what: Concurrency limiter for websocket upgrades.
+    why: Protects the gateway from unbounded upgraded connections exhausting file descriptors and memory.
+    how: Tracks active upgrades under a mutex and returns `Acquire`/release callbacks.
+    notes: ""

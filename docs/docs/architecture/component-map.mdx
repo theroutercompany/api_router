@@ -1,0 +1,13 @@
+---
+title: Component Map
+---
+
+## Runtime composition
+
+The gateway is assembled in layers:
+
+1. **Config**: `pkg/gateway/config` loads and validates YAML + environment overrides.
+2. **Runtime**: `pkg/gateway/runtime` builds the HTTP server, readiness checker, and metrics registry.
+3. **Server**: `pkg/gateway/server` mounts routes and middleware.
+4. **Proxy**: `pkg/gateway/proxy` implements upstream reverse proxying and streaming behavior.
+

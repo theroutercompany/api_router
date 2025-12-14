@@ -1,0 +1,83 @@
+file: pkg/gateway/webhook/handler.go
+title: pkg/gateway/webhook/handler.go
+overview:
+  what: Implements webhook ingestion handlers that validate HMAC signatures and forward payloads to a configured target with retries and backoff.
+  why: Webhooks provide an event-driven integration mechanism. The gateway needs a secure ingress that can verify authenticity and provide controlled forwarding behavior.
+  how: The `New()` constructor validates options and builds a handler. `ServeHTTP` reads and bounds the request body, verifies the signature, then forwards the payload to the target with retry/backoff rules.
+  notes: Webhook secrets should be injected via secret managers. Consider idempotency on the target side because retries may deliver duplicates.
+symbols:
+  const defaultMaxBodyBytes:
+    what: Default maximum request body size (1 MiB) for webhook payloads.
+    why: Prevents large payloads from exhausting memory and creating unbounded forwarding work.
+    how: Used when `Options.MaxBodyBytes` is unset or invalid.
+    notes: ""
+  func New:
+    what: Constructs a webhook `http.Handler` with signature verification and forwarding settings.
+    why: Validates required inputs and provides safe defaults for client, logger, and body size limits.
+    how: Checks required options (secret, target URL, signature header, retry/backoff/timeouts), sets defaults for optional fields, and returns a configured `webhookHandler`.
+    notes: ""
+  func computeHMAC:
+    what: Computes an HMAC-SHA256 digest for a request body using a secret key.
+    why: HMAC validation is the authenticity mechanism for incoming webhooks.
+    how: Uses `crypto/hmac` with `sha256.New` and returns the raw digest bytes.
+    notes: ""
+  func copyHeaders:
+    what: Copies HTTP headers from the incoming webhook request to the forwarded request.
+    why: Some webhook senders include metadata headers that the target may need.
+    how: Adds all header values and deletes `Host` to avoid forcing a host override on the outgoing request.
+    notes: ""
+  func increaseBackoff:
+    what: Computes the next backoff duration for a retry loop with an upper bound.
+    why: Exponential backoff reduces load on failing upstreams and avoids tight retry loops.
+    how: Doubles the current duration and clamps to the provided max duration.
+    notes: ""
+  func readRequestBody:
+    what: Reads the request body up to a maximum number of bytes.
+    why: Webhooks must be bounded in size for safety and predictability.
+    how: Uses `io.LimitReader` to read at most `maxBytes+1`, returning `errBodyTooLarge` when the limit is exceeded.
+    notes: ""
+  method (*errBodyTooLarge).Error:
+    what: Formats an error message describing how much the request exceeded the body size limit.
+    why: Useful for debugging and logging size-related rejections.
+    how: Returns a string with the actual size and configured limit.
+    notes: ""
+  method (*webhookHandler).ServeHTTP:
+    what: Main HTTP handler for webhook ingestion.
+    why: Orchestrates the end-to-end flow of method validation, body read, signature check, and forwarding.
+    how: Requires POST, reads and bounds the body, verifies signature, forwards with retry/backoff, and returns 202 Accepted on success.
+    notes: ""
+  method (*webhookHandler).forwardOnce:
+    what: Performs a single forwarding attempt to the configured target.
+    why: Separates one attempt from retry logic and keeps retry policy centralized.
+    how: Creates a POST request with the same body, copies headers, adds `X-Router-Webhook-*` headers, executes the request, and classifies status codes as success, non-retryable (4xx), or retryable (5xx/network).
+    notes: ""
+  method (*webhookHandler).forwardWithRetry:
+    what: Forwards the webhook payload with retry and backoff on retryable failures.
+    why: Webhook targets can experience transient failures; retries improve delivery reliability.
+    how: Runs up to `maxAttempts`, each with its own timeout context; retries only when errors are wrapped with `errUpstreamRetryable`, sleeping with exponential backoff between attempts.
+    notes: ""
+  method (*webhookHandler).verifySignature:
+    what: Verifies the incoming webhook signature header against the request body.
+    why: Prevents unauthenticated callers from injecting arbitrary webhook events.
+    how: Trims the header, strips an optional `sha256=` prefix, hex-decodes the signature, computes the expected HMAC, and compares using `hmac.Equal`.
+    notes: ""
+  type Options:
+    what: Configuration for the webhook handler (target, secret, signature header, retry/backoff/timeouts, client/logger, body size).
+    why: Makes webhook handler behavior explicit and configurable from server/config packages.
+    how: Passed to `New()` and converted into a private `webhookHandler`.
+    notes: ""
+  type errBodyTooLarge:
+    what: Error type returned when the request body exceeds the configured size limit.
+    why: Allows `ServeHTTP` to detect oversize payloads and map them to 413 responses.
+    how: Returned by `readRequestBody` when more than `maxBytes` are read.
+    notes: ""
+  type webhookHandler:
+    what: Internal handler implementation that holds immutable webhook configuration.
+    why: Keeps the public API small while allowing server/config to construct many handlers with different settings.
+    how: Stores secret bytes, target URL, retry parameters, client, logger, and body limits used by `ServeHTTP` and forwarding helpers.
+    notes: ""
+  var errUpstreamRetryable:
+    what: Sentinel error used to mark failures that should be retried.
+    why: Allows retry logic to distinguish between retryable and non-retryable errors using `errors.Is`.
+    how: Wrapped with `%w` by `forwardOnce` for network errors and non-4xx status codes.
+    notes: ""

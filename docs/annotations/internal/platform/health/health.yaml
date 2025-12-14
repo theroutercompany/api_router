@@ -1,0 +1,44 @@
+file: internal/platform/health/health.go
+title: internal/platform/health/health.go
+overview:
+  what: Implements readiness probing against configured upstream services and returns structured reports.
+  why: The gateway should only be considered ready when its upstream dependencies are reachable and responding successfully.
+  how: A `Checker` fans out HTTP GET probes to each configured upstream health endpoint, aggregates results, and returns a status of `ready` or `degraded`.
+  notes: ""
+symbols:
+  func NewChecker:
+    what: Constructs a `Checker` with an HTTP client, upstream list, per-probe timeout, and user-agent.
+    why: Centralizes defaults and keeps runtime wiring simple.
+    how: Applies defaults when inputs are missing and stores the fields used by `Readiness`.
+    notes: ""
+  method (*Checker).Readiness:
+    what: Probes all configured upstreams and returns an aggregated readiness report.
+    why: Readiness must reflect the combined health of dependencies, not just process liveness.
+    how: Runs probes concurrently, collects `UpstreamReport` entries, and marks the overall status as `degraded` if any upstream is unhealthy.
+    notes: ""
+  method (*Checker).probe:
+    what: Probes a single upstream health endpoint and returns an `UpstreamReport`.
+    why: Keeps per-upstream probing logic isolated and testable.
+    how: Builds the full URL from base + health path, creates a context with timeout, sends a GET request with a user-agent, and treats non-2xx responses as unhealthy with an error message.
+    notes: ""
+  type Checker:
+    what: Holds readiness probing dependencies and configuration.
+    why: Allows the runtime to reuse a single configured checker across requests.
+    how: Stores the HTTP client, list of upstreams, timeout, and user-agent used by probes.
+    notes: ""
+  type Report:
+    what: Aggregated readiness status plus per-upstream results.
+    why: Callers need a structured way to understand which upstream is failing and when checks ran.
+    how: Returned by `Readiness` with `status`, `checkedAt`, and a slice of `UpstreamReport`.
+    notes: ""
+  type Upstream:
+    what: Identifies an upstream dependency to probe.
+    why: Readiness needs at least a name, base URL, and health path per dependency.
+    how: Provided by configuration and consumed by the runtime and checker.
+    notes: ""
+  type UpstreamReport:
+    what: Outcome of probing a single upstream.
+    why: Enables debugging readiness failures by surfacing status codes and errors per dependency.
+    how: Populated by `probe` and included in the aggregated `Report`.
+    notes: ""
+

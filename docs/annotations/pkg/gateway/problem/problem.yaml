@@ -1,0 +1,19 @@
+file: pkg/gateway/problem/problem.go
+title: pkg/gateway/problem/problem.go
+overview:
+  what: Helpers for emitting RFC 7807 Problem+JSON responses with gateway-specific fields (notably `traceId`).
+  why: Standardizes error responses across handlers and middleware so clients see consistent shape and tracing metadata.
+  how: Defines a `Response` struct and a `Write` helper that encodes it as `application/problem+json`.
+  notes: ""
+symbols:
+  func Write:
+    what: Writes an RFC 7807 Problem+JSON response to an `http.ResponseWriter`.
+    why: Centralizes content-type, status, and JSON structure so call sites stay small and consistent.
+    how: Builds a `Response` with `type` set to `about:blank`, sets headers, writes status code, and JSON-encodes the body.
+    notes: ""
+  type Response:
+    what: JSON shape for the gateway's Problem+JSON responses.
+    why: Provides a typed, consistent error payload including trace correlation (`traceId`) and instance path (`instance`).
+    how: Used by `Write` and referenced by code that wants to emit RFC 7807 style responses.
+    notes: ""
+

@@ -1,0 +1,14 @@
+---
+title: Server
+---
+
+The server is responsible for:
+
+- routing (`/health`, `/readyz`, proxy prefixes, webhook paths)
+- middleware (IDs, logging, security headers, rate limiting)
+- upgraded connection behavior (WebSockets)
+
+Primary file:
+
+- `pkg/gateway/server/server.go`
+

@@ -1,0 +1,14 @@
+---
+title: WebSockets Limits
+---
+
+Example config:
+
+```yaml
+websocket:
+  maxConcurrent: 512
+  idleTimeout: 2m
+```
+
+When `maxConcurrent` is exceeded, new upgrades are rejected with `503`.
+

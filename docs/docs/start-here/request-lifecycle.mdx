@@ -1,0 +1,24 @@
+---
+title: Request Lifecycle
+---
+
+This page is a conceptual map. The line-by-line implementation lives under **Annotated Source**.
+
+## HTTP request (typical)
+
+1. Listener accepts the request (server).
+2. Request metadata middleware ensures request/trace IDs.
+3. Logging middleware records request details and duration.
+4. Security headers middleware applies response headers.
+5. Router dispatches:
+   - `/health` and `/readyz` (internal handlers), or
+   - `/v1/trade/*` and `/v1/task/*` (proxy handlers), or
+   - configured webhook paths (webhook handler).
+
+## WebSocket upgrade
+
+When the request is a WebSocket upgrade:
+
+- A concurrency limiter may reject requests at capacity.
+- The gateway tracks upgraded connections and enforces idle timeouts by wrapping the hijacked `net.Conn`.
+

@@ -1,0 +1,14 @@
+file: cmd/openapi/main.go
+title: cmd/openapi/main.go
+overview:
+  what: CLI entrypoint that regenerates the merged OpenAPI document.
+  why: Produces a single `dist/openapi.json` artifact from the OpenAPI fragments under `specs/` for publishing and tooling.
+  how: Builds an `internal/openapi` service with an output path, runs the merge via `Document(ctx)`, and exits non-zero on failure.
+  notes: ""
+symbols:
+  func main:
+    what: Parses `--out` and triggers OpenAPI merge generation.
+    why: Provides a minimal reproducible command for CI and local dev.
+    how: Instantiates the OpenAPI merge service, calls `Document(context.Background())`, and prints a success/failure message.
+    notes: ""
+

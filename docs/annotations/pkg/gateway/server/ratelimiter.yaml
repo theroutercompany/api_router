@@ -1,0 +1,34 @@
+file: pkg/gateway/server/ratelimiter.go
+title: pkg/gateway/server/ratelimiter.go
+overview:
+  what: In-memory per-client rate limiter used by the server middleware.
+  why: Provides basic protection against bursts and accidental abuse without requiring an external datastore.
+  how: Uses `golang.org/x/time/rate` per client key and periodically evicts inactive clients to bound memory usage.
+  notes: ""
+symbols:
+  func newRateLimiter:
+    what: Constructs a `rateLimiter` from a window duration and max requests per window.
+    why: Encapsulates rate math and creates a safe "disabled" limiter when config is invalid.
+    how: Converts window+max into a `rate.Limit`, initializes the per-client map, and returns a limiter that allows all requests when window/max are non-positive.
+    notes: ""
+  method (*rateLimiter).allow:
+    what: Returns whether a request should be allowed for a given client key at a given time.
+    why: This is the hot-path check used by the rate limit middleware.
+    how: Creates a per-key limiter on first sight, updates `lastSeen`, calls `Allow()`, and occasionally triggers cleanup of stale client entries.
+    notes: ""
+  method (*rateLimiter).cleanupLocked:
+    what: Removes client limiter entries that have not been seen recently.
+    why: Prevents unbounded growth of the `clients` map in long-running processes.
+    how: Deletes clients whose `lastSeen` is older than two windows, assuming they're no longer active.
+    notes: ""
+  type clientLimiter:
+    what: Per-client bucket holding a `rate.Limiter` and last-seen timestamp.
+    why: Tracks both rate state and usage recency for cleanup.
+    how: Stored in `rateLimiter.clients` keyed by client identifier.
+    notes: ""
+  type rateLimiter:
+    what: Tracks rate limiting configuration and per-client limiters.
+    why: Keeps rate limiting state isolated from request handlers and encapsulates concurrency control.
+    how: Uses a mutex to protect shared state, computes a per-second limit from window/max, and stores limiters in a map by client key.
+    notes: ""
+

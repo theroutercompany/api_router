@@ -1,0 +1,17 @@
+---
+title: Run the Gateway
+---
+
+## Local run
+
+```bash
+go run ./cmd/apigw init --path gateway.yaml
+go run ./cmd/apigw run --config gateway.yaml
+```
+
+## Hot reload config
+
+```bash
+go run ./cmd/apigw run --config gateway.yaml --watch
+```
+

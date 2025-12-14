@@ -1,0 +1,74 @@
+file: pkg/gateway/auth/authenticator.go
+title: pkg/gateway/auth/authenticator.go
+overview:
+  what: Implements JWT-based authentication for the gateway using bearer tokens.
+  why: Trade/task proxy routes require consistent authentication and scope enforcement that is reusable across the runtime and embedding scenarios.
+  how: Parses the Authorization header, validates an HS256 JWT using a shared secret, optionally enforces issuer/audience, and returns a `Principal` with extracted scopes.
+  notes: Do not log raw tokens or secrets. This authenticator is designed around symmetric HS256 verification.
+symbols:
+  func New:
+    what: Constructs an `Authenticator` from `gatewayconfig.AuthConfig`.
+    why: Centralizes validation of required auth inputs and converts config into runtime-ready fields.
+    how: Requires a non-empty secret and stores secret bytes, audiences, and issuer on the authenticator.
+    notes: ""
+  method (*Authenticator).Authenticate:
+    what: Validates the request's bearer token and returns a `Principal`.
+    why: Callers (server middleware/handlers) need a single function that handles header parsing plus token validation.
+    how: Reads the Authorization header, enforces the Bearer format, delegates JWT validation to `parseToken`, then attaches the raw token string to the returned principal.
+    notes: ""
+  method (*Authenticator).parseToken:
+    what: Parses and validates a JWT token string and extracts identity/scope information.
+    why: Keeps JWT library usage isolated and allows `Authenticate` to focus on HTTP concerns.
+    how: Creates a JWT parser with HS256-only, optional audience/issuer enforcement, parses into `gatewayClaims`, checks validity, and returns a `Principal` with subject and scopes.
+    notes: ""
+  method (*Principal).HasAnyScope:
+    what: Checks whether the principal has at least one of the required scopes.
+    why: Upstream products enforce scopes (e.g., read/write) and handlers need a simple predicate.
+    how: Performs a nested loop over required scopes and the principal's scopes.
+    notes: ""
+  method (*gatewayClaims).Scopes:
+    what: Returns scopes extracted from gateway JWT claims.
+    why: Tokens may encode scopes in different fields depending on issuer conventions.
+    how: Prefers `scp` (array) when present; otherwise splits the `scope` string on whitespace; returns nil when neither exists.
+    notes: ""
+  method (Error).Error:
+    what: Implements the `error` interface for auth errors.
+    why: Allows auth failures to carry HTTP status and user-facing titles/details while still behaving like errors.
+    how: Returns `Detail` when non-empty, otherwise returns `Title`.
+    notes: ""
+  type Authenticator:
+    what: Validates JWT bearer tokens and produces principals.
+    why: Encapsulates auth policy (secret, audiences, issuer) and avoids spreading JWT verification across handlers.
+    how: Stores the secret bytes and optional issuer/audience constraints and exposes `Authenticate`.
+    notes: ""
+  type Error:
+    what: Structured authentication error including HTTP status and error messaging.
+    why: Server code needs to map auth failures to correct HTTP responses (401 vs 403, etc.) with stable titles/details.
+    how: Returned by auth helpers and handled specially by server error writers.
+    notes: ""
+  type Principal:
+    what: Represents an authenticated caller (subject + scopes + token string).
+    why: Downstream authorization decisions need a normalized view of identity and permissions.
+    how: Constructed from validated JWT claims and then used for scope checks and request metadata.
+    notes: ""
+  type gatewayClaims:
+    what: JWT claims struct that supports both `scope` and `scp` scope encodings.
+    why: Different issuers encode scopes differently; the gateway supports both formats for compatibility.
+    how: Embeds `jwt.RegisteredClaims` and adds fields for scope extraction.
+    notes: ""
+  var errMalformedHeader:
+    what: Auth error returned when the Authorization header is not a valid Bearer token format.
+    why: Separates "no header" from "bad header" to aid debugging and consistent messaging.
+    how: Returned by `Authenticate` when the header does not split into `Bearer <token>`.
+    notes: ""
+  var errMissingAuthorization:
+    what: Auth error returned when the Authorization header is missing.
+    why: Provides a consistent 401 error for unauthenticated requests.
+    how: Returned by `Authenticate` when the header is empty.
+    notes: ""
+  var errTokenInvalid:
+    what: Auth error returned when the token cannot be validated or is not valid.
+    why: Avoids leaking low-level JWT parse errors while still returning a consistent 401 response.
+    how: Returned by `Authenticate` for invalid tokens and by `parseToken` when `token.Valid` is false.
+    notes: ""
+

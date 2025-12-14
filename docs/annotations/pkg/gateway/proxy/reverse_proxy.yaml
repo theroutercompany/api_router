@@ -1,0 +1,85 @@
+file: pkg/gateway/proxy/reverse_proxy.go
+title: pkg/gateway/proxy/reverse_proxy.go
+overview:
+  what: |
+    Builds reverse proxy handlers with gateway-specific defaults:
+    - optional TLS/mTLS to upstreams
+    - gRPC-aware HTTP/2 and h2c transport selection
+    - product header injection
+    - Problem+JSON error responses on upstream failures
+    - streaming-friendly flushing behavior
+  why: |
+    Reverse proxying is subtle and easy to get wrong (TLS, HTTP/2, streaming, error formatting).
+    Centralizing proxy construction ensures consistent behavior across trade/task upstreams and keeps the server wiring simple.
+  how: |
+    `New()` constructs an `httputil.ReverseProxy`, then:
+    - configures a base `http.Transport` with HTTP/2 support
+    - optionally applies TLS settings (CA bundle, client cert/key, insecure skip verify)
+    - adds an h2c transport for plaintext gRPC upstreams
+    - selects between base and h2c at request time using `grpcAwareTransport`
+    - injects `X-Router-Product` (when configured) and sets host/scheme
+    - writes Problem+JSON on upstream errors
+  notes: |
+    `InsecureSkipVerify` disables certificate verification and should be avoided in production.
+symbols:
+  func New:
+    what: Constructs an `http.Handler` reverse proxy for a configured upstream target.
+    why: Provides a single entry point for creating upstream proxies with consistent gateway defaults.
+    how: Parses the target URL, builds a reverse proxy, sets transports (TLS + optional h2c), injects product/host headers in the director, and sets a Problem+JSON error handler.
+    notes: ""
+  func buildH2CTransport:
+    what: Builds an `http2.Transport` configured for h2c (HTTP/2 over cleartext TCP).
+    why: Some upstreams (notably gRPC services) can speak HTTP/2 without TLS when running behind internal networks or sidecars.
+    how: Returns nil unless the target scheme is `http`, otherwise configures `AllowHTTP` and a `DialTLS` function that performs a plain dial.
+    notes: ""
+  func buildTLSConfig:
+    what: Builds a `tls.Config` for upstream requests based on the proxy `TLSConfig`.
+    why: Upstreams may require custom CA roots and/or mTLS client certificates.
+    how: Sets TLS 1.2+ defaults, optionally loads a CA bundle into `RootCAs`, optionally loads a client key pair, and errors for partial client cert config.
+    notes: ""
+  func cloneRequest:
+    what: Clones an incoming request into a form suitable for client-side RoundTrip.
+    why: The h2c transport requires a request shaped for `http.Client` semantics; `RequestURI` must be empty and headers/body must be preserved.
+    how: Uses `req.Clone(ctx)` then reattaches body-related fields and clears `RequestURI`.
+    notes: ""
+  func sanitizeH2CRequest:
+    what: Removes hop-by-hop headers and forces the request protocol fields to reflect HTTP/2.
+    why: Hop-by-hop headers are not valid for HTTP/2 and can cause protocol errors when forwarding gRPC over h2c.
+    how: Deletes a fixed list of hop-by-hop headers and sets `Proto`, `ProtoMajor`, and `ProtoMinor` to HTTP/2 values.
+    notes: ""
+  method (*grpcAwareTransport).CloseIdleConnections:
+    what: Closes idle connections on both the base transport and the h2c transport.
+    why: Prevents leaked keep-alives in long-running processes and during reloads.
+    how: Delegates to `CloseIdleConnections` on each transport when non-nil.
+    notes: ""
+  method (*grpcAwareTransport).RoundTrip:
+    what: Performs the request using either the base transport or the h2c transport.
+    why: gRPC-over-h2c requires HTTP/2 transport semantics even though the upstream scheme is `http`.
+    how: If `shouldUseH2C` is true, clones and sanitizes the request then calls `h2c.RoundTrip`; otherwise calls `base.RoundTrip`.
+    notes: ""
+  method (*grpcAwareTransport).shouldUseH2C:
+    what: Determines whether a request should be sent over the h2c transport.
+    why: Only plaintext gRPC requests need the special h2c path; normal HTTP should use the base transport.
+    how: Requires a non-nil h2c transport, an `http` URL scheme, and a `Content-Type` that contains `application/grpc`.
+    notes: ""
+  type Options:
+    what: Parameters for building a reverse proxy (target URL, product label, TLS settings).
+    why: Keeps proxy construction explicit and makes server wiring readable.
+    how: Passed into `New()` and used to configure the proxy director, error handler, and transports.
+    notes: ""
+  type TLSConfig:
+    what: TLS/mTLS settings applied to upstream requests made by the proxy.
+    why: Many upstreams use internal PKI or require client certificates; this keeps those settings configurable.
+    how: Consumed by `buildTLSConfig` and attached to the base `http.Transport` when enabled.
+    notes: ""
+  type grpcAwareTransport:
+    what: A transport wrapper that can switch between a normal HTTP transport and an h2c transport.
+    why: Enables gRPC upstream support over cleartext HTTP/2 without affecting normal HTTP traffic.
+    how: Implements `RoundTrip` and routes gRPC requests (by Content-Type + scheme) to the h2c transport.
+    notes: ""
+  var errInvalidPEM:
+    what: Sentinel error used when a provided CA bundle cannot be parsed as PEM.
+    why: Distinguishes "file read failed" from "file contents invalid" and allows wrapping with context.
+    how: Used by `buildTLSConfig` when `AppendCertsFromPEM` fails.
+    notes: ""
+

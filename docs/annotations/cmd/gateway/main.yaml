@@ -1,0 +1,19 @@
+file: cmd/gateway/main.go
+title: cmd/gateway/main.go
+overview:
+  what: Legacy/compatibility entrypoint that runs the gateway runtime using the default config loader.
+  why: Maintains backwards compatibility for environments or scripts that still invoke `go run ./cmd/gateway`.
+  how: Calls `gatewayconfig.Load()`, builds a `gatewayruntime.Runtime`, runs it, and flushes logs on exit.
+  notes: ""
+symbols:
+  func main:
+    what: Program entrypoint that calls `run(context.Background())` and exits on error.
+    why: Keeps `main` minimal while allowing the actual logic to be unit-testable in `run`.
+    how: Delegates to `run` and uses `log.Fatalf` on failure.
+    notes: ""
+  func run:
+    what: Loads config, builds the runtime, runs it, and handles shutdown/log flush semantics.
+    why: Centralizes the legacy run loop and normalizes cancellation to a clean exit.
+    how: Calls `gatewayconfig.Load()`, constructs `gatewayruntime.New(cfg)`, defers `pkglog.Sync()`, then calls `rt.Run(ctx)` and treats `context.Canceled` as nil.
+    notes: ""
+
