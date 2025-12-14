@@ -25,6 +25,7 @@ import (
 	gatewayproblem "github.com/theroutercompany/api_router/pkg/gateway/problem"
 	gatewayproxy "github.com/theroutercompany/api_router/pkg/gateway/proxy"
 	gatewaymiddleware "github.com/theroutercompany/api_router/pkg/gateway/server/middleware"
+	gatewaywebhook "github.com/theroutercompany/api_router/pkg/gateway/webhook"
 	pkglog "github.com/theroutercompany/api_router/pkg/log"
 
 	"golang.org/x/net/http2"
@@ -125,6 +126,7 @@ func New(cfg gatewayconfig.Config, checker readinessReporter, registry *gatewaym
 	}
 
 	s.initProxies()
+	s.initWebhooks()
 
 	s.mountRoutes()
 	handler := http.Handler(mux)
@@ -252,6 +254,38 @@ func (s *Server) initProxies() {
 		case "task":
 			s.taskHandler = s.buildProtectedHandler("task", []string{"task.read", "task.write"}, handler)
 		}
+	}
+}
+
+func (s *Server) initWebhooks() {
+	if !s.cfg.Webhooks.Enabled {
+		return
+	}
+	if len(s.cfg.Webhooks.Endpoints) == 0 {
+		return
+	}
+	for _, endpoint := range s.cfg.Webhooks.Endpoints {
+		opts := gatewaywebhook.Options{
+			Name:            endpoint.Name,
+			Path:            endpoint.Path,
+			TargetURL:       endpoint.TargetURL,
+			Secret:          endpoint.Secret,
+			SignatureHeader: endpoint.SignatureHeader,
+			MaxAttempts:     endpoint.MaxAttempts,
+			InitialBackoff:  endpoint.InitialBackoff.AsDuration(),
+			Timeout:         endpoint.Timeout.AsDuration(),
+			Client: &http.Client{
+				Timeout: endpoint.Timeout.AsDuration(),
+			},
+			Logger: s.logger,
+		}
+		handler, err := gatewaywebhook.New(opts)
+		if err != nil {
+			s.logger.Errorw("failed to initialise webhook handler", "error", err, "webhook", endpoint.Name)
+			continue
+		}
+		s.router.Handle(endpoint.Path, handler)
+		s.logger.Infow("registered webhook endpoint", "webhook", endpoint.Name, "path", endpoint.Path)
 	}
 }
 

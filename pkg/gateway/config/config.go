@@ -30,6 +30,10 @@ const (
 	defaultWebSocketMaxConcurrent = 0
 	defaultWebSocketIdleTimeout   = 5 * time.Minute
 	defaultConfigEnvVar           = "APIGW_CONFIG"
+	defaultWebhookSignatureHeader = "X-Webhook-Signature"
+	defaultWebhookMaxAttempts     = 3
+	defaultWebhookBackoff         = 2 * time.Second
+	defaultWebhookTimeout         = 10 * time.Second
 	envTradePrefix                = "TRADE"
 	envTaskPrefix                 = "TASK"
 	envPort                       = "PORT"
@@ -68,6 +72,7 @@ type Config struct {
 	Metrics   MetricsConfig   `yaml:"metrics"`
 	Admin     AdminConfig     `yaml:"admin"`
 	WebSocket WebSocketConfig `yaml:"websocket"`
+	Webhooks  WebhookConfig   `yaml:"webhooks"`
 }
 
 // HTTPConfig configures listener behaviour.
@@ -135,6 +140,24 @@ type AdminConfig struct {
 	Listen  string   `yaml:"listen"`
 	Token   string   `yaml:"token"`
 	Allow   []string `yaml:"allow"`
+}
+
+// WebhookConfig defines webhook ingestion behaviour.
+type WebhookConfig struct {
+	Enabled   bool                    `yaml:"enabled"`
+	Endpoints []WebhookEndpointConfig `yaml:"endpoints"`
+}
+
+// WebhookEndpointConfig captures individual webhook endpoint settings.
+type WebhookEndpointConfig struct {
+	Name            string   `yaml:"name"`
+	Path            string   `yaml:"path"`
+	TargetURL       string   `yaml:"targetURL"`
+	Secret          string   `yaml:"secret"`
+	SignatureHeader string   `yaml:"signatureHeader"`
+	MaxAttempts     int      `yaml:"maxAttempts"`
+	InitialBackoff  Duration `yaml:"initialBackoff"`
+	Timeout         Duration `yaml:"timeout"`
 }
 
 // Duration is a YAML-friendly wrapper over time.Duration supporting numeric millisecond inputs.
@@ -235,6 +258,10 @@ func Default() Config {
 		WebSocket: WebSocketConfig{
 			MaxConcurrent: defaultWebSocketMaxConcurrent,
 			IdleTimeout:   DurationFrom(defaultWebSocketIdleTimeout),
+		},
+		Webhooks: WebhookConfig{
+			Enabled:   false,
+			Endpoints: nil,
 		},
 	}
 }
@@ -508,6 +535,23 @@ func (cfg *Config) normalize() error {
 		}
 	}
 
+	for i := range cfg.Webhooks.Endpoints {
+		cfg.Webhooks.Endpoints[i].Name = strings.ToLower(strings.TrimSpace(cfg.Webhooks.Endpoints[i].Name))
+		cfg.Webhooks.Endpoints[i].Path = ensureLeadingSlash(strings.TrimSpace(cfg.Webhooks.Endpoints[i].Path))
+		if strings.TrimSpace(cfg.Webhooks.Endpoints[i].SignatureHeader) == "" {
+			cfg.Webhooks.Endpoints[i].SignatureHeader = defaultWebhookSignatureHeader
+		}
+		if cfg.Webhooks.Endpoints[i].MaxAttempts <= 0 {
+			cfg.Webhooks.Endpoints[i].MaxAttempts = defaultWebhookMaxAttempts
+		}
+		if cfg.Webhooks.Endpoints[i].InitialBackoff.AsDuration() <= 0 {
+			cfg.Webhooks.Endpoints[i].InitialBackoff = DurationFrom(defaultWebhookBackoff)
+		}
+		if cfg.Webhooks.Endpoints[i].Timeout.AsDuration() <= 0 {
+			cfg.Webhooks.Endpoints[i].Timeout = DurationFrom(defaultWebhookTimeout)
+		}
+	}
+
 	return nil
 }
 
@@ -594,6 +638,56 @@ func (cfg Config) Validate() error {
 	}
 	if cfg.WebSocket.IdleTimeout.AsDuration() < 0 {
 		errs = append(errs, fmt.Errorf("websocket.idleTimeout cannot be negative"))
+	}
+
+	if cfg.Webhooks.Enabled {
+		if len(cfg.Webhooks.Endpoints) == 0 {
+			errs = append(errs, fmt.Errorf("webhooks.enabled is true but no endpoints configured"))
+		}
+		seenWebhookNames := make(map[string]struct{})
+		seenWebhookPaths := make(map[string]struct{})
+		for _, endpoint := range cfg.Webhooks.Endpoints {
+			name := strings.TrimSpace(endpoint.Name)
+			if name == "" {
+				errs = append(errs, fmt.Errorf("webhook endpoint name must be provided"))
+			} else {
+				if _, exists := seenWebhookNames[name]; exists {
+					errs = append(errs, fmt.Errorf("duplicate webhook endpoint name: %s", name))
+				}
+				seenWebhookNames[name] = struct{}{}
+			}
+
+			path := strings.TrimSpace(endpoint.Path)
+			if path == "" || path == "/" {
+				errs = append(errs, fmt.Errorf("webhook endpoint %s must specify a path", name))
+			} else {
+				if _, exists := seenWebhookPaths[path]; exists {
+					errs = append(errs, fmt.Errorf("duplicate webhook endpoint path: %s", path))
+				}
+				seenWebhookPaths[path] = struct{}{}
+			}
+
+			if strings.TrimSpace(endpoint.TargetURL) == "" {
+				errs = append(errs, fmt.Errorf("webhook endpoint %s targetURL is required", name))
+			} else if _, err := url.ParseRequestURI(endpoint.TargetURL); err != nil {
+				errs = append(errs, fmt.Errorf("webhook endpoint %s targetURL invalid: %w", name, err))
+			}
+
+			if strings.TrimSpace(endpoint.Secret) == "" {
+				errs = append(errs, fmt.Errorf("webhook endpoint %s secret is required", name))
+			}
+
+			if endpoint.MaxAttempts <= 0 {
+				errs = append(errs, fmt.Errorf("webhook endpoint %s maxAttempts must be positive", name))
+			}
+
+			if endpoint.InitialBackoff.AsDuration() <= 0 {
+				errs = append(errs, fmt.Errorf("webhook endpoint %s initialBackoff must be positive", name))
+			}
+			if endpoint.Timeout.AsDuration() <= 0 {
+				errs = append(errs, fmt.Errorf("webhook endpoint %s timeout must be positive", name))
+			}
+		}
 	}
 
 	if len(errs) == 0 {
