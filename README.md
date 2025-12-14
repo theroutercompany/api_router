@@ -27,6 +27,11 @@ A lightweight Go gateway that forwards trade and task traffic, validates JWT tok
 - `scripts/shadowdiff-run.sh` – start mock upstreams, run the Go gateway, and optionally diff against a reference Node deployment by setting `NODE_BASE_URL`.
 - `scripts/smoke/smoke.sh` – run smoke checks against a running instance (set `SMOKE_JWT` to exercise proxy routes).
 
+## Documentation
+
+- Documentation site (Docusaurus): `cd docs && npm start`
+- Legacy docs (archived): `docs-archive/`
+
 ## Managing the Gateway
 
 - `apigw daemon start` writes a pid file and (optionally) a log file before booting the runtime. Add `--background` to detach; the parent prints the daemon pid so you can stash it in supervisors or scripts.
@@ -59,7 +64,7 @@ Additional deployment assets live in `deploy/`:
 
 ## Examples
 
-See `docs/examples.md` for runnable samples:
+See `docs-archive/examples.md` for runnable samples:
 
 - Programmatic runtime embedding (`examples/basic`).
 - CLI-driven multi-upstream config (`examples/multi-upstream`).
@@ -68,7 +73,7 @@ See `docs/examples.md` for runnable samples:
 ## Releases
 
 - CI (`.github/workflows/ci.yml`) runs formatting, linting, tests, and publishes the merged OpenAPI artifact.
-- Tagged releases (`v*`) trigger GoReleaser (`.github/workflows/release.yml`) to build cross-platform binaries—see `docs/releases.md` for the full workflow.
+- Tagged releases (`v*`) trigger GoReleaser (`.github/workflows/release.yml`) to build cross-platform binaries—see `docs-archive/releases.md` for the full workflow.
 
 ## Contributing
 

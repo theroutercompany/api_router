@@ -1,5 +1,6 @@
 dist/
 docs/openapi.html
+docs-archive/openapi.html
 coverage/
 *.log
 logs/
