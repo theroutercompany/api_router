@@ -1,143 +1,189 @@
 file: pkg/gateway/server/middleware/middleware.go
 title: pkg/gateway/server/middleware/middleware.go
 overview:
-  what: ""
-  why: ""
-  how: ""
-  notes: ""
+  what: |
+    A collection of HTTP middleware functions used by the gateway server.
+
+    The middleware in this file covers common cross-cutting concerns:
+    - request/trace ID propagation to responses
+    - baseline security headers
+    - request body size limits
+    - per-client rate limiting
+    - CORS enforcement
+    - structured request logging and protocol metrics integration (including upgraded connections)
+  why: |
+    Middleware is the "seam" where the gateway enforces platform policy consistently for every request.
+
+    This package keeps the middleware logic decoupled from specific implementations by expressing its
+    dependencies as small interfaces and function types (logger, problem writer, ID generators,
+    rate-limit allow/key functions, protocol metric callbacks).
+
+    That design makes it easier to:
+    - unit test the middleware in isolation
+    - swap implementations (e.g., different logging backend)
+    - compose a server pipeline without creating import cycles
+  how: |
+    Each exported middleware constructor returns a standard wrapper:
+    `func(http.Handler) http.Handler`.
+
+    Callers (typically `pkg/gateway/server`) build a chain by composing these wrappers.
+    Many middleware functions are intentionally nil-safe: if a required dependency is not provided,
+    they return an identity wrapper (or the next handler) to keep server wiring simple.
+
+    The `Logging` middleware uses a custom `ResponseWriter` wrapper to:
+    - capture status code and bytes written
+    - support `Flush`/`Push` passthrough
+    - intercept `Hijack()` so upgraded connections can be wrapped and tracked on close
+  notes: |
+    Be careful about logging sensitive data. This middleware logs request path and metadata, not bodies.
+    Body size limits use both `Content-Length` checks and `http.MaxBytesReader` for enforcement.
 symbols:
   func BodyLimit:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Enforces a maximum request body size.
+    why: Protects the gateway from accidental or malicious large payloads that can consume memory and upstream bandwidth.
+    how: Rejects requests with `Content-Length` above the limit with 413; otherwise wraps `r.Body` with `http.MaxBytesReader` so reads cannot exceed the limit.
+    notes: If `Content-Length` is unknown (`-1`), the MaxBytesReader path is the enforcement mechanism.
   func CORS:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Applies CORS policy using the provided `*cors.Cors` configuration.
+    why: Browsers enforce CORS, and the gateway needs to provide a centralized origin policy across all proxied endpoints.
+    how: Wraps the next handler with `handler.Handler(next)` and pre-checks `OriginAllowed` so disallowed origins can return a consistent 403 problem response.
+    notes: The explicit origin check exists so operators get clear feedback instead of relying on default cors library behaviour.
   func Logging:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: |
+      Emits structured logs for each HTTP request and optionally integrates protocol metrics tracking.
+    why: |
+      Request logs are the primary operational visibility mechanism for the gateway.
+      Integrating protocol metrics here keeps metrics emission aligned with request lifecycle and avoids duplicating timing logic.
+    how: |
+      - Records start time and builds a `trackFn` by calling `track(r)` (if provided).
+      - Wraps the `ResponseWriter` with `loggingResponseWriter` to capture status and bytes.
+      - Calls `next.ServeHTTP`.
+      - Computes elapsed duration and calls `trackFn(status, duration)`.
+      - Logs a message with standard fields (method, path, status, durationMs, bytesWritten) and optional requestId/traceId/remoteAddr.
+
+      When `hijacked` is provided, the response writer's `Hijack()` path calls it to obtain:
+      - an on-close callback (for metrics)
+      - an optional `net.Conn` wrapper (for deadline enforcement or additional tracking)
+    notes: |
+      Logging level is chosen by status code (5xx error, 4xx warn, otherwise info).
+      Avoid adding headers or bodies to logs unless they are explicitly scrubbed.
   func RateLimit:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Enforces per-client rate limiting.
+    why: Provides a safety valve against abusive clients and protects upstream services from burst load.
+    how: Uses a provided `AllowFunc` (rate-limit decision) and `ClientKey` (key derivation). OPTIONS requests bypass the limiter. Exceeded limits return 429 with a problem response when available.
+    notes: The middleware is deliberately generic; the actual limiter implementation lives elsewhere.
   func RequestMetadata:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Ensures every request has stable IDs and echoes them back in response headers.
+    why: Request/trace IDs are foundational for debugging, log correlation, and distributed tracing.
+    how: Calls the injected `EnsureIDs` function to obtain a possibly-updated request and IDs, then sets `X-Request-Id` and `X-Trace-Id` headers before calling the next handler.
+    notes: If `ensure` is nil, this middleware becomes a no-op wrapper.
   func SecurityHeaders:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Adds baseline security hardening headers to all responses.
+    why: Many responses are proxied, but the gateway still acts as the edge and should provide consistent browser hardening defaults.
+    how: Sets headers like `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Permissions-Policy` before calling the next handler.
+    notes: These headers are conservative defaults. If you need CSP/HSTS, add them at a higher layer with environment-specific configuration.
   func newLoggingResponseWriter:
-    what: ""
-    why: ""
-    how: ""
+    what: Constructs a `loggingResponseWriter` wrapper.
+    why: Centralizes the initialization defaults (status = 200) and dependency injection for hijack tracking.
+    how: Stores the underlying response writer and the optional hijack tracker function.
     notes: ""
   method (*loggingResponseWriter).Flush:
-    what: ""
-    why: ""
-    how: ""
+    what: Implements `http.Flusher` when the underlying writer supports it.
+    why: Some responses (streaming/SSE) require flush support; the wrapper should not break that behaviour.
+    how: Type-asserts to `http.Flusher` and delegates.
     notes: ""
   method (*loggingResponseWriter).Hijack:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Implements `http.Hijacker` and integrates upgraded-connection tracking.
+    why: Websockets and other upgrades require hijacking; the gateway also wants to track upgraded connection lifetime for metrics and limits.
+    how: Delegates to the underlying `http.Hijacker`, then (optionally) calls the configured hijack tracker once to obtain an on-close callback and a connection wrapper; wraps the returned `net.Conn` accordingly.
+    notes: If the underlying writer does not support hijacking, returns an explicit error.
   method (*loggingResponseWriter).Push:
-    what: ""
-    why: ""
-    how: ""
+    what: Implements `http.Pusher` when the underlying writer supports it.
+    why: Preserves HTTP/2 server push support when enabled by downstream handlers (rare for the gateway, but safe to support).
+    how: Delegates to `http.Pusher.Push` or returns `http.ErrNotSupported`.
     notes: ""
   method (*loggingResponseWriter).Write:
-    what: ""
-    why: ""
-    how: ""
+    what: Captures bytes written while delegating response writes.
+    why: Byte counts are useful for operational logs and for debugging unexpectedly large responses.
+    how: Ensures a default status exists, calls the underlying `Write`, and accumulates the byte count.
     notes: ""
   method (*loggingResponseWriter).WriteHeader:
-    what: ""
-    why: ""
-    how: ""
+    what: Captures the status code while delegating header writes.
+    why: Status code is needed for both logs and metrics.
+    how: Stores the status code then calls the underlying `WriteHeader`.
     notes: ""
   method (*trackingConn).Close:
-    what: ""
-    why: ""
-    how: ""
+    what: Closes the underlying connection and runs the on-close callback once.
+    why: Upgraded connections can outlive the HTTP request; metrics/accounting must decrement when the connection actually closes.
+    how: Delegates to `Conn.Close`, then uses `sync.Once` to invoke `onClose` a single time.
     notes: ""
   method (*trackingConn).Read:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Reads from the underlying connection with optional deadline enforcement.
+    why: Deadline enforcement can protect the gateway from idle upgraded connections when configured.
+    how: If `timeout` is non-zero, sets a read deadline before calling `Conn.Read`.
+    notes: This wrapper is currently constructed with a zero timeout in this package; provide a custom wrapper via `HijackedFunc` for idle enforcement.
   method (*trackingConn).Write:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Writes to the underlying connection with optional deadline enforcement.
+    why: Mirrors the read path for symmetry and supports enforcing write-side timeouts when configured.
+    how: If `timeout` is non-zero, sets a write deadline before calling `Conn.Write`.
+    notes: This wrapper is currently constructed with a zero timeout in this package; provide a custom wrapper via `HijackedFunc` for idle enforcement.
   type AllowFunc:
-    what: ""
-    why: ""
-    how: ""
+    what: Function type that decides whether a rate-limit key is allowed at a given time.
+    why: Decouples middleware from any specific rate limiter implementation.
+    how: Called by `RateLimit` with a derived key and a timestamp.
     notes: ""
   type ClientAddress:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Extractor that resolves a client address string from an HTTP request.
+    why: Logging should record a stable client identifier without hardcoding a specific proxy/header strategy.
+    how: Used by `Logging` to optionally append a `remoteAddr` field.
+    notes: Implementations typically consult `X-Forwarded-For` and `X-Real-IP` in addition to `RemoteAddr`.
   type ClientKey:
-    what: ""
-    why: ""
-    how: ""
+    what: Function type that derives a rate-limit key from a request.
+    why: Allows the rate limiting policy to choose between IP-based keys, API keys, JWT subjects, etc.
+    how: Used by `RateLimit` before calling `AllowFunc`.
     notes: ""
   type EnsureIDs:
-    what: ""
-    why: ""
-    how: ""
+    what: Function type that ensures a request has request/trace identifiers.
+    why: ID generation/extraction is owned by higher-level middleware or tracing systems, not by this package.
+    how: Returns an updated request (if needed) plus request ID and trace ID strings.
     notes: ""
   type HijackedFunc:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Callback used to integrate upgraded-connection tracking and wrapping into the logging middleware.
+    why: Upgraded connections need lifetime hooks (close callbacks) and sometimes need connection wrapping (timeouts, tracking, limits).
+    how: Called from `loggingResponseWriter.Hijack()` and returns an on-close callback plus an optional `net.Conn` wrapper.
+    notes: The wrapper is applied before the on-close tracking wrapper.
   type Logger:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Minimal logger interface required by middleware.
+    why: Avoids importing the full logging package and prevents dependency cycles.
+    how: Implemented by `pkg/log.Logger` adapters and passed into `Logging`.
+    notes: Uses Zap-style `*w` methods (message plus key/value fields).
   type ProblemWriter:
-    what: ""
-    why: ""
-    how: ""
+    what: Function that writes a problem+json response.
+    why: Centralizes error response formatting so middleware can emit consistent error bodies.
+    how: Called by `BodyLimit`, `RateLimit`, and `CORS` when provided; otherwise those middleware fall back to `http.Error`.
     notes: ""
   type RequestIDFromContext:
-    what: ""
-    why: ""
-    how: ""
+    what: Extractor that reads a request ID from a context.
+    why: Logging should not know how IDs are stored in context.
+    how: Called by `Logging` to add `requestId` field when non-empty.
     notes: ""
   type TraceIDFromContext:
-    what: ""
-    why: ""
-    how: ""
+    what: Extractor that reads a trace ID from a context.
+    why: Logging and problem responses often want trace IDs for correlation, but the storage mechanism is owned elsewhere.
+    how: Called by `Logging` and by error middleware to include trace IDs when available.
     notes: ""
   type TrackFunc:
-    what: ""
-    why: ""
-    how: ""
+    what: Callback that returns a per-request metric recording function.
+    why: Allows middleware to time requests and record metrics without importing Prometheus packages.
+    how: Called at request start; the returned function is called at request end with status and elapsed duration.
     notes: ""
   type loggingResponseWriter:
-    what: ""
-    why: ""
-    how: ""
+    what: An `http.ResponseWriter` wrapper that captures status/bytes and supports hijack tracking.
+    why: The standard interface does not expose status codes or byte counts, and upgraded connections need lifecycle hooks.
+    how: Embeds the underlying writer and intercepts `WriteHeader`, `Write`, and `Hijack`.
     notes: ""
   type trackingConn:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Connection wrapper used to invoke an on-close callback once.
+    why: Connection lifetime metrics and accounting require a reliable "closed" signal.
+    how: Wraps a `net.Conn`, delegates most operations, and calls `onClose` via `sync.Once` in `Close()`.
+    notes: Also includes optional read/write deadline enforcement when `timeout` is set.

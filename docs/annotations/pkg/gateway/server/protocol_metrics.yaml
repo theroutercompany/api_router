@@ -1,43 +1,67 @@
 file: pkg/gateway/server/protocol_metrics.go
 title: pkg/gateway/server/protocol_metrics.go
 overview:
-  what: ""
-  why: ""
-  how: ""
-  notes: ""
+  what: |
+    Defines Prometheus metrics that describe gateway traffic by "protocol" and "product".
+
+    In this context:
+    - protocol is a best-effort classification of the inbound request (http, websocket, sse, grpc)
+    - product is a high-level routing bucket (e.g. trade/task) derived from headers or URL prefixes
+  why: |
+    The gateway proxies multiple kinds of traffic (regular HTTP, streaming, upgrades).
+    For operations and capacity planning, it is useful to answer questions like:
+    - Are we seeing more websocket connections than expected?
+    - Is one product experiencing higher error rates or latency?
+    - Are we accumulating long-lived SSE/grpc requests?
+
+    These metrics are designed to be emitted from middleware without coupling the middleware to Prometheus directly.
+  how: |
+    `newProtocolMetrics()` constructs four collectors and registers them with the gateway registry:
+    - `gateway_protocol_requests_total` counter labelled by protocol, product, outcome
+    - `gateway_protocol_inflight` gauge labelled by protocol, product
+    - `gateway_protocol_request_duration_seconds` histogram labelled by protocol, product
+    - `gateway_protocol_active_connections` gauge labelled by protocol, product (for long-lived connections)
+
+    The middleware calls:
+    - `track(r)` at request start to increment inflight (and sometimes active connections)
+    - the returned closure at request end to record outcome, duration, and decrement gauges
+    - `hijacked(r)` to handle websocket lifetime tracking for hijacked connections
+  notes: |
+    Protocol classification is heuristic by design. It uses standard headers and request metadata,
+    but it is not a perfect protocol detector. Prefer stable "product" labels for long-term dashboards.
 symbols:
   func classifyProtocol:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Best-effort classification of a request into a protocol label string.
+    why: Enables segmenting metrics by traffic shape without requiring every caller to pass explicit protocol metadata.
+    how: Checks for SSE (`Accept`/`Content-Type`), websocket upgrades (`Upgrade`/`Connection`), and gRPC (`Content-Type`, `Grpc-Timeout`, HTTP/2+TE trailers), otherwise returns `http`.
+    notes: Returns `unknown` for a nil request.
   func newProtocolMetrics:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Constructs and registers the protocol/product collectors.
+    why: Centralizes metric names, help strings, label sets, and registration in one place.
+    how: Creates counters/gauges/histograms, registers them via `reg.Register`, and returns a `protocolMetrics` wrapper (or nil if the registry is nil).
+    notes: Metric names are currently hard-coded (not namespaced) to keep dashboards stable.
   func productFromRequest:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Derives the "product" label for a request.
+    why: Product-level segmentation is useful for SLOs and on-call triage when multiple upstreams share the same gateway.
+    how: Prefers `X-Router-Product` header; otherwise falls back to URL path prefix heuristics (`/v1/trade`, `/v1/task`); returns `unknown` if nothing matches.
+    notes: Header overrides allow callers (or upstream routers) to provide a more authoritative label than URL parsing.
   func trackConnectionForProtocol:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Indicates whether a protocol should be tracked as an "active connection".
+    why: Some protocols represent long-lived sessions where concurrency matters more than request count.
+    how: Returns true for `sse` and `grpc`; false for other protocols.
+    notes: Websockets are tracked via `(*protocolMetrics).hijacked` because their lifetime extends beyond `ServeHTTP`.
   method (*protocolMetrics).hijacked:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Returns a closure that decrements the websocket connection gauge when an upgraded connection closes.
+    why: Websocket lifetimes outlive the HTTP handler call, so connection tracking must hook into the `net.Conn` close path.
+    how: Increments `gateway_protocol_active_connections{protocol=\"websocket\"}` and returns a function that decrements it; returns nil when the request is not websocket-classified.
+    notes: The middleware is responsible for calling the returned closure exactly once on connection close.
   method (*protocolMetrics).track:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Produces a per-request tracking function for status/outcome/duration and inflight gauges.
+    why: Keeps request lifecycle accounting together and lets middleware defer metric updates to the end of request handling.
+    how: Classifies protocol/product, increments inflight gauge (and optionally active connection gauge for long-lived protocols), then returns a closure that records outcome/duration and decrements gauges.
+    notes: Non-positive status values are treated as 200 OK for metric labeling.
   type protocolMetrics:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Holds the Prometheus collectors used for protocol metrics.
+    why: Groups related collectors so middleware can be wired with a single value rather than many globals.
+    how: Constructed by `newProtocolMetrics` and used by server middleware to emit metrics.
+    notes: All fields are pointers to allow partial construction and nil-safety in the tracking functions.

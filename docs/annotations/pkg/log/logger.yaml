@@ -1,118 +1,134 @@
 file: pkg/log/logger.go
 title: pkg/log/logger.go
 overview:
-  what: ""
-  why: ""
-  how: ""
-  notes: ""
+  what: |
+    Defines the gateway's minimal logging interface and a process-wide shared logger implementation.
+
+    The package intentionally exposes a small `Logger` interface (Debugw/Infow/Warnw/Errorw),
+    and provides a Zap-backed default logger plus hooks to replace it in tests or embeddings.
+  why: |
+    Most of the gateway code uses structured logging, but does not want to:
+    - import Zap directly everywhere
+    - carry a concrete logger through every constructor
+    - leak a rich logging API surface into packages that only need "log with fields"
+
+    This package provides a narrow abstraction and a safe default so the rest of the codebase can log consistently.
+  how: |
+    - `Shared()` returns the global logger, initializing the default implementation once (`ensureDefault`).
+    - `Configure(...)` replaces the global logger and its sync function.
+    - `Sync()` flushes buffered logs via the configured sync function and suppresses a few known-benign errors.
+
+    The default logger is Zap production config, optionally writing to the path in `APIGW_LOG_PATH`.
+  notes: |
+    Security: log fields can accidentally include secrets. Prefer logging identifiers and metadata, not payloads or credentials.
 symbols:
   func Configure:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Replaces the global shared logger and its sync function.
+    why: Enables tests and downstream consumers to inject a logger consistent with their environment.
+    how: Panics if `logger` is nil, marks the default initializer as "used", then swaps `global` and `syncLogger` under a mutex; when `syncFn` is nil, `Sync()` becomes a no-op.
+    notes: Call this early during startup to avoid mixed loggers across packages.
   func NewNoop:
-    what: ""
-    why: ""
-    how: ""
+    what: Constructs a logger that discards all output.
+    why: Useful for tests and for environments that explicitly want silence.
+    how: Returns a `noopLogger` value that implements `Logger` with empty method bodies.
     notes: ""
   func NewZapLogger:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Adapts a `*zap.Logger` to the package's `Logger` interface.
+    why: Keeps Zap out of most call sites while still using Zap for production-quality logging.
+    how: If the base logger is nil, returns `NewNoop` and a no-op sync function; otherwise wraps `base.Sugar()` in a `zapLogger` and returns `base.Sync`.
+    notes: The returned sync function should typically be wired to `log.Configure(..., syncFn)` or called during shutdown.
   func NewZapSugaredLogger:
-    what: ""
-    why: ""
-    how: ""
+    what: Adapts a `*zap.SugaredLogger` to the package's `Logger` interface.
+    why: Some callers already work with sugared loggers; this avoids re-wrapping.
+    how: If the sugared logger is nil, returns `NewNoop` and a no-op sync function; otherwise wraps it in a `zapLogger` and returns `s.Sync`.
     notes: ""
   func Shared:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Returns the process-wide shared logger.
+    why: Provides a low-friction way for packages to log without threading a logger through every function signature.
+    how: Ensures the default logger is initialized once (`ensureDefault`), then returns `global` under an RW lock.
+    notes: For highly testable code paths, prefer dependency injection over calling `Shared()` directly.
   func Sync:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Flushes any buffered log entries for the current global logger.
+    why: Ensures logs are not lost on process exit, especially when writing to files.
+    how: Calls the configured `syncLogger` function; suppresses a couple of known benign OS errors; otherwise returns the sync error.
+    notes: Zap can return platform-specific errors when syncing stdout/stderr; this helper makes shutdown logic more robust.
   func ensureDefault:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Initializes the default Zap-backed global logger exactly once.
+    why: Avoids requiring explicit setup for common paths while keeping initialization thread-safe.
+    how: Uses `sync.Once` to build a Zap production config, optionally updates output paths from `APIGW_LOG_PATH`, sets encoder keys and ISO8601 timestamps, builds the logger, then stores the adapter and sync function under a mutex.
+    notes: Panics if the Zap logger cannot be built; treat this as a startup-time configuration error.
   method (*zapLogger).Debugw:
-    what: ""
-    why: ""
-    how: ""
+    what: Emits a debug-level structured log entry.
+    why: Allows call sites to use a consistent structured logging API independent of the backing implementation.
+    how: Delegates to the underlying `zap.SugaredLogger.Debugw`.
     notes: ""
   method (*zapLogger).Errorw:
-    what: ""
-    why: ""
-    how: ""
+    what: Emits an error-level structured log entry.
+    why: Error logs are used for failures that operators should notice and potentially alert on.
+    how: Delegates to the underlying `zap.SugaredLogger.Errorw`.
     notes: ""
   method (*zapLogger).Infow:
-    what: ""
-    why: ""
-    how: ""
+    what: Emits an info-level structured log entry.
+    why: Info logs capture normal operational events without being as noisy as debug.
+    how: Delegates to the underlying `zap.SugaredLogger.Infow`.
     notes: ""
   method (*zapLogger).Warnw:
-    what: ""
-    why: ""
-    how: ""
+    what: Emits a warning-level structured log entry.
+    why: Warnings represent unexpected or degraded situations that may not be fatal.
+    how: Delegates to the underlying `zap.SugaredLogger.Warnw`.
     notes: ""
   method (noopLogger).Debugw:
-    what: ""
-    why: ""
-    how: ""
+    what: Discards a debug-level log call.
+    why: Implements the `Logger` interface for the no-op logger.
+    how: Empty method body.
     notes: ""
   method (noopLogger).Errorw:
-    what: ""
-    why: ""
-    how: ""
+    what: Discards an error-level log call.
+    why: Implements the `Logger` interface for the no-op logger.
+    how: Empty method body.
     notes: ""
   method (noopLogger).Infow:
-    what: ""
-    why: ""
-    how: ""
+    what: Discards an info-level log call.
+    why: Implements the `Logger` interface for the no-op logger.
+    how: Empty method body.
     notes: ""
   method (noopLogger).Warnw:
-    what: ""
-    why: ""
-    how: ""
+    what: Discards a warning-level log call.
+    why: Implements the `Logger` interface for the no-op logger.
+    how: Empty method body.
     notes: ""
   type Logger:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Minimal structured logging interface used across the gateway.
+    why: Keeps package dependencies small and makes it easy to swap logging backends.
+    how: Implemented by `zapLogger` (Zap-backed) and `noopLogger`; consumed by most gateway packages.
+    notes: Methods follow the `*w` convention (message plus key/value pairs) for structured fields.
   type noopLogger:
-    what: ""
-    why: ""
-    how: ""
+    what: Implementation of `Logger` that discards all logs.
+    why: Provides a safe fallback when no logger is configured.
+    how: Methods are defined with empty bodies.
     notes: ""
   type zapLogger:
-    what: ""
-    why: ""
-    how: ""
+    what: Adapter that wraps a `*zap.SugaredLogger` to implement `Logger`.
+    why: Allows most of the codebase to depend only on this package's interface while still using Zap.
+    how: Each method delegates to the corresponding sugared logger method.
     notes: ""
   var global:
-    what: ""
-    why: ""
-    how: ""
+    what: Holds the current process-wide logger implementation.
+    why: Enables low-friction logging for packages that do not carry a logger dependency.
+    how: Set during `ensureDefault` or `Configure` and accessed under `mu`.
     notes: ""
   var mu:
-    what: ""
-    why: ""
-    how: ""
+    what: Synchronizes access to `global` and `syncLogger`.
+    why: Multiple goroutines may call `Shared()`, `Configure()`, and `Sync()` concurrently.
+    how: The `Shared` function uses `RLock`; `Configure` and `ensureDefault` use `Lock`.
     notes: ""
   var once:
-    what: ""
-    why: ""
-    how: ""
+    what: Ensures default logger initialization happens exactly once.
+    why: Avoids races and double-initialization while keeping `Shared()` cheap.
+    how: The `ensureDefault` function calls `once.Do(...)` with the initialization closure.
     notes: ""
   var syncLogger:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Function used by `Sync()` to flush the active logger backend.
+    why: Some loggers require explicit flush on shutdown (e.g., Zap), but not all implementations do.
+    how: Set by `ensureDefault` or `Configure`; called by `Sync()`.
+    notes: Defaults to a no-op until configured.

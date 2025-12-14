@@ -16,11 +16,25 @@ Edit commentary in `docs/annotations/pkg/log/logger.yaml`.
 
 ## Overview
 
-**What:** This page documents the declarations in this file.
+**What:** Defines the gateway's minimal logging interface and a process-wide shared logger implementation.
 
-**Why:** These docs exist to make onboarding and code review faster by explaining intent, not just mechanics.
+The package intentionally exposes a small `Logger` interface (Debugw/Infow/Warnw/Errorw),
+and provides a Zap-backed default logger plus hooks to replace it in tests or embeddings.
 
-**How:** Use the sections below to jump to the symbol you care about, then follow the links back to source.
+**Why:** Most of the gateway code uses structured logging, but does not want to:
+- import Zap directly everywhere
+- carry a concrete logger through every constructor
+- leak a rich logging API surface into packages that only need "log with fields"
+
+This package provides a narrow abstraction and a safe default so the rest of the codebase can log consistently.
+
+**How:** - `Shared()` returns the global logger, initializing the default implementation once (`ensureDefault`).
+- `Configure(...)` replaces the global logger and its sync function.
+- `Sync()` flushes buffered logs via the configured sync function and suppresses a few known-benign errors.
+
+The default logger is Zap production config, optionally writing to the path in `APIGW_LOG_PATH`.
+
+**Notes:** Security: log fields can accidentally include secrets. Prefer logging identifiers and metadata, not payloads or credentials.
 
 
 ## Imports
@@ -54,35 +68,37 @@ var (
 
 #### `once`
 
-**What:** Declare `var once`.
+**What:** Ensures default logger initialization happens exactly once.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Avoids races and double-initialization while keeping `Shared()` cheap.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** The `ensureDefault` function calls `once.Do(...)` with the initialization closure.
 
 #### `mu`
 
-**What:** Declare `var mu`.
+**What:** Synchronizes access to `global` and `syncLogger`.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Multiple goroutines may call `Shared()`, `Configure()`, and `Sync()` concurrently.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** The `Shared` function uses `RLock`; `Configure` and `ensureDefault` use `Lock`.
 
 #### `global`
 
-**What:** Declare `var global`.
+**What:** Holds the current process-wide logger implementation.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Enables low-friction logging for packages that do not carry a logger dependency.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Set during `ensureDefault` or `Configure` and accessed under `mu`.
 
 #### `syncLogger`
 
-**What:** Declare `var syncLogger`.
+**What:** Function used by `Sync()` to flush the active logger backend.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Some loggers require explicit flush on shutdown (e.g., Zap), but not all implementations do.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Set by `ensureDefault` or `Configure`; called by `Sync()`.
+
+**Notes:** Defaults to a no-op until configured.
 
 
 ## Types
@@ -100,11 +116,13 @@ type Logger interface {
 
 #### `Logger`
 
-**What:** Declare `type Logger`.
+**What:** Minimal structured logging interface used across the gateway.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Keeps package dependencies small and makes it easy to swap logging backends.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Implemented by `zapLogger` (Zap-backed) and `noopLogger`; consumed by most gateway packages.
+
+**Notes:** Methods follow the `*w` convention (message plus key/value pairs) for structured fields.
 
 ### `type` block 2
 
@@ -114,11 +132,11 @@ type noopLogger struct{}
 
 #### `noopLogger`
 
-**What:** Declare `type noopLogger`.
+**What:** Implementation of `Logger` that discards all logs.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Provides a safe fallback when no logger is configured.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Methods are defined with empty bodies.
 
 ### `type` block 3
 
@@ -130,22 +148,22 @@ type zapLogger struct {
 
 #### `zapLogger`
 
-**What:** Declare `type zapLogger`.
+**What:** Adapter that wraps a `*zap.SugaredLogger` to implement `Logger`.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows most of the codebase to depend only on this package's interface while still using Zap.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Each method delegates to the corresponding sugared logger method.
 
 
 ## Functions and Methods
 
 ### `(noopLogger).Debugw`
 
-**What:** Declare `method (noopLogger).Debugw`.
+**What:** Discards a debug-level log call.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Implements the `Logger` interface for the no-op logger.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Empty method body.
 
 ```go title="pkg/log/logger.go#L22" showLineNumbers
 func (noopLogger) Debugw(string, ...any) {}
@@ -153,11 +171,11 @@ func (noopLogger) Debugw(string, ...any) {}
 
 ### `(noopLogger).Infow`
 
-**What:** Declare `method (noopLogger).Infow`.
+**What:** Discards an info-level log call.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Implements the `Logger` interface for the no-op logger.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Empty method body.
 
 ```go title="pkg/log/logger.go#L23" showLineNumbers
 func (noopLogger) Infow(string, ...any)  {}
@@ -165,11 +183,11 @@ func (noopLogger) Infow(string, ...any)  {}
 
 ### `(noopLogger).Warnw`
 
-**What:** Declare `method (noopLogger).Warnw`.
+**What:** Discards a warning-level log call.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Implements the `Logger` interface for the no-op logger.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Empty method body.
 
 ```go title="pkg/log/logger.go#L24" showLineNumbers
 func (noopLogger) Warnw(string, ...any)  {}
@@ -177,11 +195,11 @@ func (noopLogger) Warnw(string, ...any)  {}
 
 ### `(noopLogger).Errorw`
 
-**What:** Declare `method (noopLogger).Errorw`.
+**What:** Discards an error-level log call.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Implements the `Logger` interface for the no-op logger.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Empty method body.
 
 ```go title="pkg/log/logger.go#L25" showLineNumbers
 func (noopLogger) Errorw(string, ...any) {}
@@ -189,11 +207,11 @@ func (noopLogger) Errorw(string, ...any) {}
 
 ### `(*zapLogger).Debugw`
 
-**What:** Declare `method (*zapLogger).Debugw`.
+**What:** Emits a debug-level structured log entry.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows call sites to use a consistent structured logging API independent of the backing implementation.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Delegates to the underlying `zap.SugaredLogger.Debugw`.
 
 ```go title="pkg/log/logger.go#L31" showLineNumbers
 func (z *zapLogger) Debugw(msg string, keysAndValues ...any) {
@@ -203,11 +221,11 @@ func (z *zapLogger) Debugw(msg string, keysAndValues ...any) {
 
 ### `(*zapLogger).Infow`
 
-**What:** Declare `method (*zapLogger).Infow`.
+**What:** Emits an info-level structured log entry.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Info logs capture normal operational events without being as noisy as debug.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Delegates to the underlying `zap.SugaredLogger.Infow`.
 
 ```go title="pkg/log/logger.go#L35" showLineNumbers
 func (z *zapLogger) Infow(msg string, keysAndValues ...any) {
@@ -217,11 +235,11 @@ func (z *zapLogger) Infow(msg string, keysAndValues ...any) {
 
 ### `(*zapLogger).Warnw`
 
-**What:** Declare `method (*zapLogger).Warnw`.
+**What:** Emits a warning-level structured log entry.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Warnings represent unexpected or degraded situations that may not be fatal.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Delegates to the underlying `zap.SugaredLogger.Warnw`.
 
 ```go title="pkg/log/logger.go#L39" showLineNumbers
 func (z *zapLogger) Warnw(msg string, keysAndValues ...any) {
@@ -231,11 +249,11 @@ func (z *zapLogger) Warnw(msg string, keysAndValues ...any) {
 
 ### `(*zapLogger).Errorw`
 
-**What:** Declare `method (*zapLogger).Errorw`.
+**What:** Emits an error-level structured log entry.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Error logs are used for failures that operators should notice and potentially alert on.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Delegates to the underlying `zap.SugaredLogger.Errorw`.
 
 ```go title="pkg/log/logger.go#L43" showLineNumbers
 func (z *zapLogger) Errorw(msg string, keysAndValues ...any) {
@@ -245,11 +263,13 @@ func (z *zapLogger) Errorw(msg string, keysAndValues ...any) {
 
 ### `Shared`
 
-**What:** Declare `func Shared`.
+**What:** Returns the process-wide shared logger.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Provides a low-friction way for packages to log without threading a logger through every function signature.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Ensures the default logger is initialized once (`ensureDefault`), then returns `global` under an RW lock.
+
+**Notes:** For highly testable code paths, prefer dependency injection over calling `Shared()` directly.
 
 ```go title="pkg/log/logger.go#L55" showLineNumbers
 func Shared() Logger {
@@ -263,11 +283,13 @@ func Shared() Logger {
 
 ### `Configure`
 
-**What:** Declare `func Configure`.
+**What:** Replaces the global shared logger and its sync function.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Enables tests and downstream consumers to inject a logger consistent with their environment.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Panics if `logger` is nil, marks the default initializer as "used", then swaps `global` and `syncLogger` under a mutex; when `syncFn` is nil, `Sync()` becomes a no-op.
+
+**Notes:** Call this early during startup to avoid mixed loggers across packages.
 
 ```go title="pkg/log/logger.go#L64" showLineNumbers
 func Configure(logger Logger, syncFn func() error) {
@@ -290,11 +312,13 @@ func Configure(logger Logger, syncFn func() error) {
 
 ### `NewZapLogger`
 
-**What:** Declare `func NewZapLogger`.
+**What:** Adapts a `*zap.Logger` to the package's `Logger` interface.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Keeps Zap out of most call sites while still using Zap for production-quality logging.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** If the base logger is nil, returns `NewNoop` and a no-op sync function; otherwise wraps `base.Sugar()` in a `zapLogger` and returns `base.Sync`.
+
+**Notes:** The returned sync function should typically be wired to `log.Configure(..., syncFn)` or called during shutdown.
 
 ```go title="pkg/log/logger.go#L82" showLineNumbers
 func NewZapLogger(base *zap.Logger) (Logger, func() error) {
@@ -307,11 +331,11 @@ func NewZapLogger(base *zap.Logger) (Logger, func() error) {
 
 ### `NewZapSugaredLogger`
 
-**What:** Declare `func NewZapSugaredLogger`.
+**What:** Adapts a `*zap.SugaredLogger` to the package's `Logger` interface.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Some callers already work with sugared loggers; this avoids re-wrapping.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** If the sugared logger is nil, returns `NewNoop` and a no-op sync function; otherwise wraps it in a `zapLogger` and returns `s.Sync`.
 
 ```go title="pkg/log/logger.go#L90" showLineNumbers
 func NewZapSugaredLogger(s *zap.SugaredLogger) (Logger, func() error) {
@@ -324,11 +348,11 @@ func NewZapSugaredLogger(s *zap.SugaredLogger) (Logger, func() error) {
 
 ### `NewNoop`
 
-**What:** Declare `func NewNoop`.
+**What:** Constructs a logger that discards all output.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Useful for tests and for environments that explicitly want silence.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Returns a `noopLogger` value that implements `Logger` with empty method bodies.
 
 ```go title="pkg/log/logger.go#L98" showLineNumbers
 func NewNoop() Logger {
@@ -338,11 +362,13 @@ func NewNoop() Logger {
 
 ### `Sync`
 
-**What:** Declare `func Sync`.
+**What:** Flushes any buffered log entries for the current global logger.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Ensures logs are not lost on process exit, especially when writing to files.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Calls the configured `syncLogger` function; suppresses a couple of known benign OS errors; otherwise returns the sync error.
+
+**Notes:** Zap can return platform-specific errors when syncing stdout/stderr; this helper makes shutdown logic more robust.
 
 ```go title="pkg/log/logger.go#L103" showLineNumbers
 func Sync() error {
@@ -359,11 +385,13 @@ func Sync() error {
 
 ### `ensureDefault`
 
-**What:** Declare `func ensureDefault`.
+**What:** Initializes the default Zap-backed global logger exactly once.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Avoids requiring explicit setup for common paths while keeping initialization thread-safe.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Uses `sync.Once` to build a Zap production config, optionally updates output paths from `APIGW_LOG_PATH`, sets encoder keys and ISO8601 timestamps, builds the logger, then stores the adapter and sync function under a mutex.
+
+**Notes:** Panics if the Zap logger cannot be built; treat this as a startup-time configuration error.
 
 ```go title="pkg/log/logger.go#L114" showLineNumbers
 func ensureDefault() {

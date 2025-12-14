@@ -1,58 +1,79 @@
 file: pkg/gateway/metrics/registry.go
 title: pkg/gateway/metrics/registry.go
 overview:
-  what: ""
-  why: ""
-  how: ""
-  notes: ""
+  what: |
+    Wraps a Prometheus registry with gateway-friendly defaults and small helper methods.
+
+    This package is intentionally tiny. It standardizes:
+    - how the gateway creates a Prometheus registry
+    - whether default Go/process collectors are registered
+    - how the `/metrics` HTTP handler is exposed
+  why: |
+    Metrics wiring shows up in multiple places (server startup, tests, local tools).
+
+    Having a single constructor avoids subtle issues like:
+    - registering default collectors multiple times (panic on duplicate registration)
+    - forgetting to expose a handler for the correct registry (accidentally using the global Prometheus registry)
+    - inconsistent naming conventions across packages
+  how: |
+    Call `NewRegistry(...)` early during runtime wiring. It constructs an isolated `prometheus.Registry`,
+    optionally registers the standard Go and process collectors, and returns a small wrapper.
+
+    Downstream code can then:
+    - use `Handler()` to mount `/metrics`
+    - use `Register()` to add custom collectors to the same registry
+    - use `Raw()` for advanced Prometheus APIs when needed
+  notes: |
+    The `namespace` field is advisory. This package does not automatically rewrite metric names.
+    If you want namespaced metrics, incorporate `Registry.Namespace()` when building collectors.
 symbols:
   func NewRegistry:
-    what: ""
-    why: ""
-    how: ""
+    what: Constructs a new gateway metrics registry.
+    why: Ensures each gateway runtime instance has an isolated Prometheus registry with consistent defaults.
+    how: Applies provided options, creates a new `prometheus.Registry`, optionally registers Go/process collectors, and returns a `Registry` wrapper.
     notes: ""
   func WithNamespace:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Sets an optional namespace string on the registry wrapper.
+    why: Provides a shared convention for metric naming across packages without forcing it on every call site.
+    how: Trims whitespace and stores the namespace in internal `options`; later exposed via `(*Registry).Namespace()`.
+    notes: This does not automatically prefix metric names; callers must incorporate it when constructing metrics.
   func WithoutDefaultCollectors:
-    what: ""
-    why: ""
-    how: ""
+    what: Disables automatic registration of Go/process collectors.
+    why: Useful in tests (avoid noisy metrics) and in embeddings where another component already registers collectors.
+    how: Sets `registerDefaultCollectors` to false in internal `options`.
     notes: ""
   method (*Registry).Handler:
-    what: ""
-    why: ""
-    how: ""
+    what: Returns an HTTP handler that serves Prometheus metrics for this registry.
+    why: Keeps `/metrics` wiring simple and avoids accidentally using the global Prometheus registry.
+    how: Uses `promhttp.HandlerFor(r.registry, ...)` and returns `http.NotFoundHandler()` when the receiver/registry is nil.
     notes: ""
   method (*Registry).Namespace:
-    what: ""
-    why: ""
-    how: ""
+    what: Returns the configured namespace string (or empty).
+    why: Allows metric constructors in other packages to follow a consistent naming convention.
+    how: Returns `r.namespace` with nil-safety.
     notes: ""
   method (*Registry).Raw:
-    what: ""
-    why: ""
-    how: ""
+    what: Exposes the underlying `*prometheus.Registry`.
+    why: Some integrations need Prometheus APIs not covered by this wrapper.
+    how: Returns `r.registry` with nil-safety.
     notes: ""
   method (*Registry).Register:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Registers a collector with this registry.
+    why: Central place to add custom gateway metrics while sharing the same registry instance.
+    how: Calls `MustRegister` on the underlying registry when the receiver and collector are non-nil.
+    notes: Prometheus `MustRegister` panics on registration errors (e.g., duplicate descriptors).
   type Option:
-    what: ""
-    why: ""
-    how: ""
+    what: Functional option used to configure `NewRegistry`.
+    why: Keeps the `NewRegistry` signature stable while allowing future tuning knobs.
+    how: Each option mutates an internal `options` struct.
     notes: ""
   type Registry:
-    what: ""
-    why: ""
-    how: ""
+    what: Wrapper that holds the namespace string and the underlying Prometheus registry.
+    why: Makes it easy to pass around "the gateway's registry" without exposing all Prometheus types everywhere.
+    how: Constructed by `NewRegistry` and consumed by server/runtime wiring and metrics producers.
     notes: ""
   type options:
-    what: ""
-    why: ""
-    how: ""
+    what: Internal settings used while constructing a `Registry`.
+    why: Separates construction-time configuration from the exported wrapper type.
+    how: Populated by `Option` functions and read by `NewRegistry`.
     notes: ""

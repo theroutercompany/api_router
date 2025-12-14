@@ -16,11 +16,41 @@ Edit commentary in `docs/annotations/pkg/gateway/server/middleware/middleware.ya
 
 ## Overview
 
-**What:** This page documents the declarations in this file.
+**What:** A collection of HTTP middleware functions used by the gateway server.
 
-**Why:** These docs exist to make onboarding and code review faster by explaining intent, not just mechanics.
+The middleware in this file covers common cross-cutting concerns:
+- request/trace ID propagation to responses
+- baseline security headers
+- request body size limits
+- per-client rate limiting
+- CORS enforcement
+- structured request logging and protocol metrics integration (including upgraded connections)
 
-**How:** Use the sections below to jump to the symbol you care about, then follow the links back to source.
+**Why:** Middleware is the "seam" where the gateway enforces platform policy consistently for every request.
+
+This package keeps the middleware logic decoupled from specific implementations by expressing its
+dependencies as small interfaces and function types (logger, problem writer, ID generators,
+rate-limit allow/key functions, protocol metric callbacks).
+
+That design makes it easier to:
+- unit test the middleware in isolation
+- swap implementations (e.g., different logging backend)
+- compose a server pipeline without creating import cycles
+
+**How:** Each exported middleware constructor returns a standard wrapper:
+`func(http.Handler) http.Handler`.
+
+Callers (typically `pkg/gateway/server`) build a chain by composing these wrappers.
+Many middleware functions are intentionally nil-safe: if a required dependency is not provided,
+they return an identity wrapper (or the next handler) to keep server wiring simple.
+
+The `Logging` middleware uses a custom `ResponseWriter` wrapper to:
+- capture status code and bytes written
+- support `Flush`/`Push` passthrough
+- intercept `Hijack()` so upgraded connections can be wrapped and tracked on close
+
+**Notes:** Be careful about logging sensitive data. This middleware logs request path and metadata, not bodies.
+Body size limits use both `Content-Length` checks and `http.MaxBytesReader` for enforcement.
 
 
 ## Imports
@@ -58,11 +88,13 @@ type Logger interface {
 
 #### `Logger`
 
-**What:** Declare `type Logger`.
+**What:** Minimal logger interface required by middleware.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Avoids importing the full logging package and prevents dependency cycles.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Implemented by `pkg/log.Logger` adapters and passed into `Logging`.
+
+**Notes:** Uses Zap-style `*w` methods (message plus key/value fields).
 
 ### `type` block 2
 
@@ -72,11 +104,11 @@ type ProblemWriter func(w http.ResponseWriter, status int, title, detail, traceI
 
 #### `ProblemWriter`
 
-**What:** Declare `type ProblemWriter`.
+**What:** Function that writes a problem+json response.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Centralizes error response formatting so middleware can emit consistent error bodies.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Called by `BodyLimit`, `RateLimit`, and `CORS` when provided; otherwise those middleware fall back to `http.Error`.
 
 ### `type` block 3
 
@@ -86,11 +118,11 @@ type EnsureIDs func(*http.Request) (*http.Request, string, string)
 
 #### `EnsureIDs`
 
-**What:** Declare `type EnsureIDs`.
+**What:** Function type that ensures a request has request/trace identifiers.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** ID generation/extraction is owned by higher-level middleware or tracing systems, not by this package.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Returns an updated request (if needed) plus request ID and trace ID strings.
 
 ### `type` block 4
 
@@ -100,11 +132,11 @@ type TraceIDFromContext func(context.Context) string
 
 #### `TraceIDFromContext`
 
-**What:** Declare `type TraceIDFromContext`.
+**What:** Extractor that reads a trace ID from a context.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Logging and problem responses often want trace IDs for correlation, but the storage mechanism is owned elsewhere.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Called by `Logging` and by error middleware to include trace IDs when available.
 
 ### `type` block 5
 
@@ -114,11 +146,11 @@ type RequestIDFromContext func(context.Context) string
 
 #### `RequestIDFromContext`
 
-**What:** Declare `type RequestIDFromContext`.
+**What:** Extractor that reads a request ID from a context.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Logging should not know how IDs are stored in context.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Called by `Logging` to add `requestId` field when non-empty.
 
 ### `type` block 6
 
@@ -128,11 +160,13 @@ type ClientAddress func(*http.Request) string
 
 #### `ClientAddress`
 
-**What:** Declare `type ClientAddress`.
+**What:** Extractor that resolves a client address string from an HTTP request.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Logging should record a stable client identifier without hardcoding a specific proxy/header strategy.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Used by `Logging` to optionally append a `remoteAddr` field.
+
+**Notes:** Implementations typically consult `X-Forwarded-For` and `X-Real-IP` in addition to `RemoteAddr`.
 
 ### `type` block 7
 
@@ -142,11 +176,11 @@ type TrackFunc func(*http.Request) func(status int, elapsed time.Duration)
 
 #### `TrackFunc`
 
-**What:** Declare `type TrackFunc`.
+**What:** Callback that returns a per-request metric recording function.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows middleware to time requests and record metrics without importing Prometheus packages.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Called at request start; the returned function is called at request end with status and elapsed duration.
 
 ### `type` block 8
 
@@ -156,11 +190,13 @@ type HijackedFunc func(*http.Request) (func(), func(net.Conn) net.Conn)
 
 #### `HijackedFunc`
 
-**What:** Declare `type HijackedFunc`.
+**What:** Callback used to integrate upgraded-connection tracking and wrapping into the logging middleware.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Upgraded connections need lifetime hooks (close callbacks) and sometimes need connection wrapping (timeouts, tracking, limits).
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Called from `loggingResponseWriter.Hijack()` and returns an on-close callback plus an optional `net.Conn` wrapper.
+
+**Notes:** The wrapper is applied before the on-close tracking wrapper.
 
 ### `type` block 9
 
@@ -170,11 +206,11 @@ type AllowFunc func(key string, now time.Time) bool
 
 #### `AllowFunc`
 
-**What:** Declare `type AllowFunc`.
+**What:** Function type that decides whether a rate-limit key is allowed at a given time.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Decouples middleware from any specific rate limiter implementation.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Called by `RateLimit` with a derived key and a timestamp.
 
 ### `type` block 10
 
@@ -184,11 +220,11 @@ type ClientKey func(*http.Request) string
 
 #### `ClientKey`
 
-**What:** Declare `type ClientKey`.
+**What:** Function type that derives a rate-limit key from a request.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows the rate limiting policy to choose between IP-based keys, API keys, JWT subjects, etc.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Used by `RateLimit` before calling `AllowFunc`.
 
 ### `type` block 11
 
@@ -204,11 +240,11 @@ type loggingResponseWriter struct {
 
 #### `loggingResponseWriter`
 
-**What:** Declare `type loggingResponseWriter`.
+**What:** An `http.ResponseWriter` wrapper that captures status/bytes and supports hijack tracking.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** The standard interface does not expose status codes or byte counts, and upgraded connections need lifecycle hooks.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Embeds the underlying writer and intercepts `WriteHeader`, `Write`, and `Hijack`.
 
 ### `type` block 12
 
@@ -223,22 +259,26 @@ type trackingConn struct {
 
 #### `trackingConn`
 
-**What:** Declare `type trackingConn`.
+**What:** Connection wrapper used to invoke an on-close callback once.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Connection lifetime metrics and accounting require a reliable "closed" signal.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Wraps a `net.Conn`, delegates most operations, and calls `onClose` via `sync.Once` in `Close()`.
+
+**Notes:** Also includes optional read/write deadline enforcement when `timeout` is set.
 
 
 ## Functions and Methods
 
 ### `RequestMetadata`
 
-**What:** Declare `func RequestMetadata`.
+**What:** Ensures every request has stable IDs and echoes them back in response headers.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Request/trace IDs are foundational for debugging, log correlation, and distributed tracing.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Calls the injected `EnsureIDs` function to obtain a possibly-updated request and IDs, then sets `X-Request-Id` and `X-Trace-Id` headers before calling the next handler.
+
+**Notes:** If `ensure` is nil, this middleware becomes a no-op wrapper.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L52" showLineNumbers
 func RequestMetadata(ensure EnsureIDs) func(http.Handler) http.Handler {
@@ -264,11 +304,13 @@ func RequestMetadata(ensure EnsureIDs) func(http.Handler) http.Handler {
 
 ### `SecurityHeaders`
 
-**What:** Declare `func SecurityHeaders`.
+**What:** Adds baseline security hardening headers to all responses.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Many responses are proxied, but the gateway still acts as the edge and should provide consistent browser hardening defaults.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Sets headers like `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Permissions-Policy` before calling the next handler.
+
+**Notes:** These headers are conservative defaults. If you need CSP/HSTS, add them at a higher layer with environment-specific configuration.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L73" showLineNumbers
 func SecurityHeaders() func(http.Handler) http.Handler {
@@ -290,11 +332,13 @@ func SecurityHeaders() func(http.Handler) http.Handler {
 
 ### `BodyLimit`
 
-**What:** Declare `func BodyLimit`.
+**What:** Enforces a maximum request body size.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Protects the gateway from accidental or malicious large payloads that can consume memory and upstream bandwidth.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Rejects requests with `Content-Length` above the limit with 413; otherwise wraps `r.Body` with `http.MaxBytesReader` so reads cannot exceed the limit.
+
+**Notes:** If `Content-Length` is unknown (`-1`), the MaxBytesReader path is the enforcement mechanism.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L90" showLineNumbers
 func BodyLimit(limit int64, trace TraceIDFromContext, write ProblemWriter) func(http.Handler) http.Handler {
@@ -326,11 +370,13 @@ func BodyLimit(limit int64, trace TraceIDFromContext, write ProblemWriter) func(
 
 ### `RateLimit`
 
-**What:** Declare `func RateLimit`.
+**What:** Enforces per-client rate limiting.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Provides a safety valve against abusive clients and protects upstream services from burst load.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Uses a provided `AllowFunc` (rate-limit decision) and `ClientKey` (key derivation). OPTIONS requests bypass the limiter. Exceeded limits return 429 with a problem response when available.
+
+**Notes:** The middleware is deliberately generic; the actual limiter implementation lives elsewhere.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L117" showLineNumbers
 func RateLimit(allow AllowFunc, key ClientKey, now func() time.Time, trace TraceIDFromContext, write ProblemWriter) func(http.Handler) http.Handler {
@@ -364,11 +410,13 @@ func RateLimit(allow AllowFunc, key ClientKey, now func() time.Time, trace Trace
 
 ### `CORS`
 
-**What:** Declare `func CORS`.
+**What:** Applies CORS policy using the provided `*cors.Cors` configuration.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Browsers enforce CORS, and the gateway needs to provide a centralized origin policy across all proxied endpoints.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Wraps the next handler with `handler.Handler(next)` and pre-checks `OriginAllowed` so disallowed origins can return a consistent 403 problem response.
+
+**Notes:** The explicit origin check exists so operators get clear feedback instead of relying on default cors library behaviour.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L146" showLineNumbers
 func CORS(handler *cors.Cors, trace TraceIDFromContext, write ProblemWriter) func(http.Handler) http.Handler {
@@ -399,11 +447,23 @@ func CORS(handler *cors.Cors, trace TraceIDFromContext, write ProblemWriter) fun
 
 ### `Logging`
 
-**What:** Declare `func Logging`.
+**What:** Emits structured logs for each HTTP request and optionally integrates protocol metrics tracking.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Request logs are the primary operational visibility mechanism for the gateway.
+Integrating protocol metrics here keeps metrics emission aligned with request lifecycle and avoids duplicating timing logic.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** - Records start time and builds a `trackFn` by calling `track(r)` (if provided).
+- Wraps the `ResponseWriter` with `loggingResponseWriter` to capture status and bytes.
+- Calls `next.ServeHTTP`.
+- Computes elapsed duration and calls `trackFn(status, duration)`.
+- Logs a message with standard fields (method, path, status, durationMs, bytesWritten) and optional requestId/traceId/remoteAddr.
+
+When `hijacked` is provided, the response writer's `Hijack()` path calls it to obtain:
+- an on-close callback (for metrics)
+- an optional `net.Conn` wrapper (for deadline enforcement or additional tracking)
+
+**Notes:** Logging level is chosen by status code (5xx error, 4xx warn, otherwise info).
+Avoid adding headers or bodies to logs unless they are explicitly scrubbed.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L172" showLineNumbers
 func Logging(
@@ -486,11 +546,11 @@ func Logging(
 
 ### `newLoggingResponseWriter`
 
-**What:** Declare `func newLoggingResponseWriter`.
+**What:** Constructs a `loggingResponseWriter` wrapper.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Centralizes the initialization defaults (status = 200) and dependency injection for hijack tracking.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Stores the underlying response writer and the optional hijack tracker function.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L257" showLineNumbers
 func newLoggingResponseWriter(w http.ResponseWriter, tracker func() (func(), func(net.Conn) net.Conn)) *loggingResponseWriter {
@@ -504,11 +564,11 @@ func newLoggingResponseWriter(w http.ResponseWriter, tracker func() (func(), fun
 
 ### `(*loggingResponseWriter).WriteHeader`
 
-**What:** Declare `method (*loggingResponseWriter).WriteHeader`.
+**What:** Captures the status code while delegating header writes.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Status code is needed for both logs and metrics.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Stores the status code then calls the underlying `WriteHeader`.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L265" showLineNumbers
 func (w *loggingResponseWriter) WriteHeader(status int) {
@@ -519,11 +579,11 @@ func (w *loggingResponseWriter) WriteHeader(status int) {
 
 ### `(*loggingResponseWriter).Write`
 
-**What:** Declare `method (*loggingResponseWriter).Write`.
+**What:** Captures bytes written while delegating response writes.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Byte counts are useful for operational logs and for debugging unexpectedly large responses.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Ensures a default status exists, calls the underlying `Write`, and accumulates the byte count.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L270" showLineNumbers
 func (w *loggingResponseWriter) Write(b []byte) (int, error) {
@@ -538,11 +598,11 @@ func (w *loggingResponseWriter) Write(b []byte) (int, error) {
 
 ### `(*loggingResponseWriter).Flush`
 
-**What:** Declare `method (*loggingResponseWriter).Flush`.
+**What:** Implements `http.Flusher` when the underlying writer supports it.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Some responses (streaming/SSE) require flush support; the wrapper should not break that behaviour.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Type-asserts to `http.Flusher` and delegates.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L279" showLineNumbers
 func (w *loggingResponseWriter) Flush() {
@@ -554,11 +614,13 @@ func (w *loggingResponseWriter) Flush() {
 
 ### `(*loggingResponseWriter).Hijack`
 
-**What:** Declare `method (*loggingResponseWriter).Hijack`.
+**What:** Implements `http.Hijacker` and integrates upgraded-connection tracking.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Websockets and other upgrades require hijacking; the gateway also wants to track upgraded connection lifetime for metrics and limits.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Delegates to the underlying `http.Hijacker`, then (optionally) calls the configured hijack tracker once to obtain an on-close callback and a connection wrapper; wraps the returned `net.Conn` accordingly.
+
+**Notes:** If the underlying writer does not support hijacking, returns an explicit error.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L285" showLineNumbers
 func (w *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
@@ -591,11 +653,11 @@ func (w *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 ### `(*loggingResponseWriter).Push`
 
-**What:** Declare `method (*loggingResponseWriter).Push`.
+**What:** Implements `http.Pusher` when the underlying writer supports it.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Preserves HTTP/2 server push support when enabled by downstream handlers (rare for the gateway, but safe to support).
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Delegates to `http.Pusher.Push` or returns `http.ErrNotSupported`.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L312" showLineNumbers
 func (w *loggingResponseWriter) Push(target string, opts *http.PushOptions) error {
@@ -608,11 +670,11 @@ func (w *loggingResponseWriter) Push(target string, opts *http.PushOptions) erro
 
 ### `(*trackingConn).Close`
 
-**What:** Declare `method (*trackingConn).Close`.
+**What:** Closes the underlying connection and runs the on-close callback once.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Upgraded connections can outlive the HTTP request; metrics/accounting must decrement when the connection actually closes.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Delegates to `Conn.Close`, then uses `sync.Once` to invoke `onClose` a single time.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L326" showLineNumbers
 func (c *trackingConn) Close() error {
@@ -628,11 +690,13 @@ func (c *trackingConn) Close() error {
 
 ### `(*trackingConn).Read`
 
-**What:** Declare `method (*trackingConn).Read`.
+**What:** Reads from the underlying connection with optional deadline enforcement.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Deadline enforcement can protect the gateway from idle upgraded connections when configured.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** If `timeout` is non-zero, sets a read deadline before calling `Conn.Read`.
+
+**Notes:** This wrapper is currently constructed with a zero timeout in this package; provide a custom wrapper via `HijackedFunc` for idle enforcement.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L336" showLineNumbers
 func (c *trackingConn) Read(b []byte) (int, error) {
@@ -645,11 +709,13 @@ func (c *trackingConn) Read(b []byte) (int, error) {
 
 ### `(*trackingConn).Write`
 
-**What:** Declare `method (*trackingConn).Write`.
+**What:** Writes to the underlying connection with optional deadline enforcement.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Mirrors the read path for symmetry and supports enforcing write-side timeouts when configured.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** If `timeout` is non-zero, sets a write deadline before calling `Conn.Write`.
+
+**Notes:** This wrapper is currently constructed with a zero timeout in this package; provide a custom wrapper via `HijackedFunc` for idle enforcement.
 
 ```go title="pkg/gateway/server/middleware/middleware.go#L343" showLineNumbers
 func (c *trackingConn) Write(b []byte) (int, error) {

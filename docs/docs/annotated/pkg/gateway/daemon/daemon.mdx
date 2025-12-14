@@ -16,11 +16,36 @@ Edit commentary in `docs/annotations/pkg/gateway/daemon/daemon.yaml`.
 
 ## Overview
 
-**What:** This page documents the declarations in this file.
+**What:** Implements the managed "daemon" lifecycle used by the `cmd/apigw daemon` subcommands.
 
-**Why:** These docs exist to make onboarding and code review faster by explaining intent, not just mechanics.
+This package provides:
+- helpers to write/read a PID file for the running process
+- optional redirection of logs to a file via `APIGW_LOG_PATH`
+- `Run/Status/Stop` entrypoints that the CLI can call
 
-**How:** Use the sections below to jump to the symbol you care about, then follow the links back to source.
+**Why:** The gateway supports both foreground execution and a "managed" mode that behaves like a lightweight daemon.
+Operators often want:
+- a deterministic PID file location for stop/status scripts
+- logs written to a file for background runs
+- basic safety checks (avoid overwriting an existing PID file)
+
+Keeping this logic in a dedicated package makes the CLI implementation thin and avoids duplicating OS/process logic.
+
+**How:** `Run()`:
+- optionally writes the PID file
+- optionally sets up log output by setting `APIGW_LOG_PATH`
+- loads config, builds runtime, starts it, then blocks in `Wait()`
+
+`Status()`:
+- reads the PID file (if present)
+- probes the process via `signal 0` to determine if it is running
+
+`Stop()`:
+- looks up the PID, sends a signal (default SIGTERM)
+- waits briefly for exit, then escalates to SIGKILL if needed
+- removes the PID file when the process is gone
+
+**Notes:** PID files are best-effort. If the process is killed abruptly, the PID file may remain and `Status()`/`Stop()` handle that case.
 
 
 ## Imports
@@ -60,11 +85,13 @@ type Options struct {
 
 #### `Options`
 
-**What:** Declare `type Options`.
+**What:** Configuration knobs for daemon lifecycle behaviour.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Makes daemon paths explicit and keeps `Run`/`Stop` free of global configuration.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Passed from the CLI layer into `Run` (and PID/log paths into `Status`/`Stop`).
+
+**Notes:** Empty PID/log paths disable PID/log file behaviour.
 
 ### `type` block 2
 
@@ -77,22 +104,26 @@ type ProcessStatus struct {
 
 #### `ProcessStatus`
 
-**What:** Declare `type ProcessStatus`.
+**What:** Result type representing the daemon PID and whether it is running.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Consolidates status checks into a single return value for the CLI and callers.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** The `Status` and `Stop` functions populate this struct based on PID file contents and process probing.
+
+**Notes:** PID can be non-zero even when `Running` is false if the PID file exists but the process is gone.
 
 
 ## Functions and Methods
 
 ### `Run`
 
-**What:** Declare `func Run`.
+**What:** Boots the gateway runtime in managed "daemon" mode.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Provides a CLI-friendly entrypoint that handles PID/log file setup and then runs the normal runtime.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Writes the PID file, sets up the log file (if configured), loads config from `opts.ConfigPath`, constructs the runtime, starts it, and blocks on `rt.Wait()`.
+
+**Notes:** The returned cleanup closures run only on graceful returns; hard kills can leave PID files behind.
 
 ```go title="pkg/gateway/daemon/daemon.go#L33" showLineNumbers
 func Run(ctx context.Context, opts Options) error {
@@ -132,11 +163,13 @@ func Run(ctx context.Context, opts Options) error {
 
 ### `Status`
 
-**What:** Declare `func Status`.
+**What:** Returns the current daemon PID and whether the process appears to be running.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Enables `apigw daemon status` and shell scripts to determine if the gateway is alive.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Reads the PID file and sends `signal 0` to the process to test for existence; missing PID file returns an empty status and nil error.
+
+**Notes:** A stale PID file (PID reused by another process) can produce false positives; this is a common PID-file limitation.
 
 ```go title="pkg/gateway/daemon/daemon.go#L68" showLineNumbers
 func Status(pidPath string) (ProcessStatus, error) {
@@ -164,11 +197,13 @@ func Status(pidPath string) (ProcessStatus, error) {
 
 ### `Stop`
 
-**What:** Declare `func Stop`.
+**What:** Stops the daemon process referenced by the PID file.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Enables `apigw daemon stop` and ensures PID cleanup occurs when the process is gone.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Resolves status, sends the configured signal (default SIGTERM), polls for up to ~5s, escalates to SIGKILL if still running, and removes the PID file.
+
+**Notes:** If the process is already dead, `Stop` removes the PID file and returns without error.
 
 ```go title="pkg/gateway/daemon/daemon.go#L91" showLineNumbers
 func Stop(pidPath string, sig syscall.Signal) (ProcessStatus, error) {
@@ -222,11 +257,13 @@ func Stop(pidPath string, sig syscall.Signal) (ProcessStatus, error) {
 
 ### `writePIDFile`
 
-**What:** Declare `func writePIDFile`.
+**What:** Writes the current process PID to a file and returns a cleanup function.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** PID files are the simplest interoperability mechanism for stop/status scripts and CLI subcommands.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Ensures the directory exists, errors if the PID file already exists, writes the current PID, and returns a cleanup function that removes the file.
+
+**Notes:** The existence check is a safety guard but cannot prevent all races across processes.
 
 ```go title="pkg/gateway/daemon/daemon.go#L139" showLineNumbers
 func writePIDFile(path string) (func(), error) {
@@ -256,11 +293,13 @@ func writePIDFile(path string) (func(), error) {
 
 ### `readPIDFile`
 
-**What:** Declare `func readPIDFile`.
+**What:** Reads and parses a PID file into an integer PID.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Centralizes PID parsing and validation so `Status` and `Stop` behave consistently.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Reads the file, trims whitespace, parses an integer, and validates the PID is positive.
+
+**Notes:** Returns `os.ErrNotExist` when the file is missing so callers can treat "not running" as non-fatal.
 
 ```go title="pkg/gateway/daemon/daemon.go#L163" showLineNumbers
 func readPIDFile(path string) (int, error) {
@@ -290,11 +329,13 @@ func readPIDFile(path string) (int, error) {
 
 ### `setupLogFile`
 
-**What:** Declare `func setupLogFile`.
+**What:** Prepares a log file path for the process and sets the `APIGW_LOG_PATH` environment variable.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** The default logger reads `APIGW_LOG_PATH` to decide where to write logs for daemon runs.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Ensures the directory exists, opens the file for append/create, sets `APIGW_LOG_PATH`, and returns a cleanup function that closes the file.
+
+**Notes:** Setting the env var must happen before the logger is initialised to take effect.
 
 ```go title="pkg/gateway/daemon/daemon.go#L187" showLineNumbers
 func setupLogFile(path string) (func(), error) {
@@ -325,11 +366,13 @@ func setupLogFile(path string) (func(), error) {
 
 ### `WaitSignal`
 
-**What:** Declare `func WaitSignal`.
+**What:** Blocks until a termination signal is received or the context is done.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows callers to coordinate graceful shutdown on SIGTERM/SIGINT while still supporting context cancellation.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Uses `signal.Notify` for SIGTERM and SIGINT and waits for either the signal channel or `ctx.Done()`.
+
+**Notes:** The process typically exits shortly after this returns by cancelling the runtime context.
 
 ```go title="pkg/gateway/daemon/daemon.go#L213" showLineNumbers
 func WaitSignal(ctx context.Context) {

@@ -1,53 +1,80 @@
 file: pkg/gateway/daemon/daemon.go
 title: pkg/gateway/daemon/daemon.go
 overview:
-  what: ""
-  why: ""
-  how: ""
-  notes: ""
+  what: |
+    Implements the managed "daemon" lifecycle used by the `cmd/apigw daemon` subcommands.
+
+    This package provides:
+    - helpers to write/read a PID file for the running process
+    - optional redirection of logs to a file via `APIGW_LOG_PATH`
+    - `Run/Status/Stop` entrypoints that the CLI can call
+  why: |
+    The gateway supports both foreground execution and a "managed" mode that behaves like a lightweight daemon.
+    Operators often want:
+    - a deterministic PID file location for stop/status scripts
+    - logs written to a file for background runs
+    - basic safety checks (avoid overwriting an existing PID file)
+
+    Keeping this logic in a dedicated package makes the CLI implementation thin and avoids duplicating OS/process logic.
+  how: |
+    `Run()`:
+    - optionally writes the PID file
+    - optionally sets up log output by setting `APIGW_LOG_PATH`
+    - loads config, builds runtime, starts it, then blocks in `Wait()`
+
+    `Status()`:
+    - reads the PID file (if present)
+    - probes the process via `signal 0` to determine if it is running
+
+    `Stop()`:
+    - looks up the PID, sends a signal (default SIGTERM)
+    - waits briefly for exit, then escalates to SIGKILL if needed
+    - removes the PID file when the process is gone
+  notes: |
+    PID files are best-effort. If the process is killed abruptly, the PID file may remain and `Status()`/`Stop()` handle that case.
 symbols:
   func Run:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Boots the gateway runtime in managed "daemon" mode.
+    why: Provides a CLI-friendly entrypoint that handles PID/log file setup and then runs the normal runtime.
+    how: Writes the PID file, sets up the log file (if configured), loads config from `opts.ConfigPath`, constructs the runtime, starts it, and blocks on `rt.Wait()`.
+    notes: The returned cleanup closures run only on graceful returns; hard kills can leave PID files behind.
   func Status:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Returns the current daemon PID and whether the process appears to be running.
+    why: Enables `apigw daemon status` and shell scripts to determine if the gateway is alive.
+    how: Reads the PID file and sends `signal 0` to the process to test for existence; missing PID file returns an empty status and nil error.
+    notes: A stale PID file (PID reused by another process) can produce false positives; this is a common PID-file limitation.
   func Stop:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Stops the daemon process referenced by the PID file.
+    why: Enables `apigw daemon stop` and ensures PID cleanup occurs when the process is gone.
+    how: Resolves status, sends the configured signal (default SIGTERM), polls for up to ~5s, escalates to SIGKILL if still running, and removes the PID file.
+    notes: If the process is already dead, `Stop` removes the PID file and returns without error.
   func WaitSignal:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Blocks until a termination signal is received or the context is done.
+    why: Allows callers to coordinate graceful shutdown on SIGTERM/SIGINT while still supporting context cancellation.
+    how: Uses `signal.Notify` for SIGTERM and SIGINT and waits for either the signal channel or `ctx.Done()`.
+    notes: The process typically exits shortly after this returns by cancelling the runtime context.
   func readPIDFile:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Reads and parses a PID file into an integer PID.
+    why: Centralizes PID parsing and validation so `Status` and `Stop` behave consistently.
+    how: Reads the file, trims whitespace, parses an integer, and validates the PID is positive.
+    notes: Returns `os.ErrNotExist` when the file is missing so callers can treat "not running" as non-fatal.
   func setupLogFile:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Prepares a log file path for the process and sets the `APIGW_LOG_PATH` environment variable.
+    why: The default logger reads `APIGW_LOG_PATH` to decide where to write logs for daemon runs.
+    how: Ensures the directory exists, opens the file for append/create, sets `APIGW_LOG_PATH`, and returns a cleanup function that closes the file.
+    notes: Setting the env var must happen before the logger is initialised to take effect.
   func writePIDFile:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Writes the current process PID to a file and returns a cleanup function.
+    why: PID files are the simplest interoperability mechanism for stop/status scripts and CLI subcommands.
+    how: Ensures the directory exists, errors if the PID file already exists, writes the current PID, and returns a cleanup function that removes the file.
+    notes: The existence check is a safety guard but cannot prevent all races across processes.
   type Options:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Configuration knobs for daemon lifecycle behaviour.
+    why: Makes daemon paths explicit and keeps `Run`/`Stop` free of global configuration.
+    how: Passed from the CLI layer into `Run` (and PID/log paths into `Status`/`Stop`).
+    notes: Empty PID/log paths disable PID/log file behaviour.
   type ProcessStatus:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Result type representing the daemon PID and whether it is running.
+    why: Consolidates status checks into a single return value for the CLI and callers.
+    how: The `Status` and `Stop` functions populate this struct based on PID file contents and process probing.
+    notes: PID can be non-zero even when `Running` is false if the PID file exists but the process is gone.

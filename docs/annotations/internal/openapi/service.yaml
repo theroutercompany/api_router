@@ -1,143 +1,165 @@
 file: internal/openapi/service.go
 title: internal/openapi/service.go
 overview:
-  what: ""
-  why: ""
-  how: ""
-  notes: ""
+  what: |
+    Merges multiple OpenAPI fragments into a single OpenAPI document and exposes it as JSON bytes.
+
+    The merge inputs are described by a small JSON config file (default `openapi-merge.config.json`).
+    The merged output is typically persisted to `dist/openapi.json` and also cached in memory for reuse.
+  why: |
+    The project keeps OpenAPI definitions in fragments under `specs/` and other locations to keep
+    the spec maintainable as the gateway grows.
+
+    This service provides a repeatable, deterministic merge step that:
+    - errors on duplicate paths/components (instead of silently overwriting)
+    - supports external references via kin-openapi's loader
+    - avoids repeated merge work via caching and persisted artifacts
+
+    The generated `dist/openapi.json` can be served by the gateway and used by tooling (clients, docs, validation).
+  how: |
+    - `NewService(...)` constructs a service with default config/dist paths (both overridable via options).
+    - `(*Service).Document(ctx)` is the main entrypoint:
+      1) returns an in-memory cached copy when the on-disk dist file is unchanged
+      2) otherwise tries to read the dist file and caches it
+      3) otherwise loads fragment files, merges them into one `openapi3.T`, marshals JSON, and persists it
+
+    Merge behaviour is implemented by `mergeDocuments` and helpers that merge paths, components, tags, servers, and security.
+  notes: |
+    `mergeDocuments` mutates the first document in the slice (it becomes the merge base).
+    Ensure your first input represents the canonical root document (info/servers) and treat it as owned by the merge.
 symbols:
   const defaultConfigFile:
-    what: ""
-    why: ""
-    how: ""
+    what: Default filename for the OpenAPI merge configuration.
+    why: Provides a convention so tooling can run without always specifying flags or env vars.
+    how: Used by `resolveConfigPath()` when `OPENAPI_MERGE_CONFIG_PATH` is unset.
     notes: ""
   const defaultDistFile:
-    what: ""
-    why: ""
-    how: ""
+    what: Default output path for the merged OpenAPI JSON.
+    why: The repo expects a stable artifact location for serving and tooling.
+    how: Used by `NewService()` (converted via `filepath.FromSlash` for OS portability).
     notes: ""
   func NewService:
-    what: ""
-    why: ""
-    how: ""
+    what: Constructs a new OpenAPI merge service.
+    why: Centralizes default path selection and allows callers to override config/dist paths via functional options.
+    how: Sets `configPath` to `resolveConfigPath()` and `distPath` to the default dist file, then applies any provided options.
     notes: ""
   func WithConfigPath:
-    what: ""
-    why: ""
-    how: ""
+    what: Option that overrides the merge configuration file path.
+    why: Allows tooling and deployments to point at a different merge config without changing code.
+    how: When the provided path is non-empty, stores it into `Service.configPath`.
     notes: ""
   func WithDistPath:
-    what: ""
-    why: ""
-    how: ""
+    what: Option that overrides where the merged OpenAPI JSON is persisted.
+    why: Some environments may want a different artifact location (e.g., writable temp dir).
+    how: When the provided path is non-empty, stores it into `Service.distPath`.
     notes: ""
   func clone:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Creates a defensive copy of a byte slice.
+    why: Prevents callers from mutating cached document bytes returned by `Document()`.
+    how: Allocates a new slice of the same length and copies the contents.
+    notes: Returns nil for a nil input slice.
   func fileModTime:
-    what: ""
-    why: ""
-    how: ""
+    what: Returns a file's modification time (or zero).
+    why: Used to associate cached bytes with the on-disk dist file for freshness checks.
+    how: Stats the path and returns `info.ModTime()`; returns `time.Time{}` on stat failure.
     notes: ""
   func mergeComponentMap:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Generic helper to merge OpenAPI component maps while rejecting duplicates.
+    why: Component maps share the same semantics across categories (schemas, responses, headers, etc).
+    how: Ensures the destination map is initialized, then copies entries from src into dst, returning an error when a key already exists.
+    notes: The `label` string is used only to make duplicate errors easier to interpret.
   func mergeComponents:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Merges OpenAPI Components blocks (schemas, responses, security schemes, and more).
+    why: Component definitions must be unique across fragments to avoid ambiguous references.
+    how: Calls `mergeComponentMap` for each supported component category and returns an error on the first duplicate.
+    notes: A nil source is treated as empty; a nil destination is treated as a programming error.
   func mergeDocuments:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Merges multiple `openapi3.T` documents into a single document.
+    why: Allows the OpenAPI spec to be maintained in smaller, focused fragments.
+    how: Uses the first document as the merge base, ensures base `Paths`/`Components` are initialized, then merges each subsequent document's paths/components and appends tags/servers/security.
+    notes: The base document is mutated in place and returned.
   func mergePaths:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Merges OpenAPI path items and path extensions from one document into another.
+    why: Duplicate paths are almost always accidental and should fail fast rather than silently overriding routes in the published spec.
+    how: Iterates source paths and inserts them into destination paths, returning an error if a path already exists; does the same for `Paths.Extensions`.
+    notes: A nil source is treated as empty; a nil destination is treated as a programming error.
   func mergeSecurity:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Merges OpenAPI security requirements slices.
+    why: Security requirements are additive across fragments.
+    how: Appends the source requirements to the destination slice when source is non-empty.
+    notes: This helper does not deduplicate requirements.
   func mergeServers:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Merges OpenAPI server entries while avoiding duplicates.
+    why: Servers may be defined in multiple fragments; duplicates are noise and can confuse readers.
+    how: Builds a set of existing server URLs and appends only new URLs from the source list.
+    notes: Nil server entries are ignored.
   func mergeTags:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Merges OpenAPI tag entries while avoiding duplicates.
+    why: Tags are used for grouping and documentation; duplicates reduce readability.
+    how: Builds a set of existing tag names and appends only new names from the source list.
+    notes: Nil tag entries are ignored.
   func resolveConfigPath:
-    what: ""
-    why: ""
-    how: ""
+    what: Resolves the merge configuration path from environment or default.
+    why: Lets operators override config location without rebuilding the binary.
+    how: Returns `OPENAPI_MERGE_CONFIG_PATH` when set; otherwise returns the default filename converted with `filepath.FromSlash`.
     notes: ""
   method (*Service).Document:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Returns the merged OpenAPI document as JSON bytes.
+    why: Provides a single API to obtain the current merged spec for serving and tooling.
+    how: Under a mutex, checks whether the cached bytes are still current (based on dist file modtime), otherwise reads the dist file, otherwise rebuilds by loading and merging fragments, marshals pretty JSON, persists, caches, and returns a defensive copy.
+    notes: When persisting fails, the service still returns the merged document but logs a warning and does not rely on modtime caching.
   method (*Service).buildDocument:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Loads OpenAPI fragment files and merges them into a single `openapi3.T`.
+    why: Separates "build" logic from caching/persistence concerns.
+    how: Loads merge config, creates an `openapi3.Loader` with external refs allowed, resolves input file paths relative to the config directory, loads each fragment, and passes them to `mergeDocuments`.
+    notes: The `ctx` is checked between loads so callers can cancel long merges.
   method (*Service).cachedIfCurrent:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Returns cached document bytes when the on-disk dist file is unchanged.
+    why: Avoids re-reading/re-merging when nothing has changed and supports external regeneration of the dist file.
+    how: Stats the dist path and compares `info.ModTime()` with the cached modtime; returns a defensive copy on match.
+    notes: If stat fails, this returns false and the caller falls back to reading or rebuilding.
   method (*Service).loadConfig:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Reads and parses the merge configuration JSON file.
+    why: The service needs an explicit input list to know which fragments to load.
+    how: Reads the config file, unmarshals into `mergeConfig`, validates that inputs are present, and returns the config plus the config directory for resolving relative paths.
+    notes: Returns a user-facing error when the configuration has no inputs.
   method (*Service).persist:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Persists merged JSON bytes to the configured dist path.
+    why: Creates a stable artifact (`dist/openapi.json`) that can be served and used by tooling without re-running merges.
+    how: Validates that `distPath` is set, ensures the parent directory exists, and writes the file with standard permissions.
+    notes: Failures are non-fatal to `Document()` (it will log and still return bytes).
   method (*Service).readDist:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Reads the dist file and returns its bytes plus modification time.
+    why: Allows `Document()` to reuse pre-generated artifacts and cache them in memory.
+    how: Stats the file for modtime, reads its contents, and returns both.
+    notes: When the file is missing, callers treat it as a cache miss and rebuild.
   type DocumentProvider:
-    what: ""
-    why: ""
-    how: ""
+    what: Interface that exposes the merged document bytes.
+    why: Lets other components depend on "document provider" without depending on the concrete service implementation.
+    how: Implemented by `*Service` via its `Document` method.
     notes: ""
   type Option:
-    what: ""
-    why: ""
-    how: ""
+    what: Functional option for customizing a `Service`.
+    why: Keeps the constructor stable while allowing overrides for paths and future settings.
+    how: Applied by `NewService` to mutate the constructed `Service`.
     notes: ""
   type Service:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: Service that merges OpenAPI fragments and caches/persists the result.
+    why: Provides a reusable component for both CLI tooling and runtime endpoints that need the merged OpenAPI.
+    how: Holds config/dist paths, a mutex, and an in-memory cache entry keyed by dist file modtime.
+    notes: All public access goes through `Document` to ensure concurrency safety.
   type cacheEntry:
-    what: ""
-    why: ""
-    how: ""
-    notes: ""
+    what: In-memory cache of merged document bytes plus the dist file modtime they correspond to.
+    why: Allows `cachedIfCurrent` to determine if the cached bytes are still valid.
+    how: Populated by reading the dist file or by building a new document.
+    notes: The `raw` bytes are copied on both write and read to avoid external mutation.
   type mergeConfig:
-    what: ""
-    why: ""
-    how: ""
+    what: JSON schema for the OpenAPI merge configuration file.
+    why: Provides a stable format for listing fragment inputs without hardcoding paths in code.
+    how: Contains an `inputs` array of `mergeInput` objects.
     notes: ""
   type mergeInput:
-    what: ""
-    why: ""
-    how: ""
+    what: Single merge input entry describing one OpenAPI fragment file.
+    why: Allows the config to evolve (additional fields) without changing the top-level structure.
+    how: The `InputFile` field is the path to a fragment; relative paths are resolved relative to the config file directory.
     notes: ""

@@ -16,11 +16,33 @@ Edit commentary in `docs/annotations/pkg/gateway/server/protocol_metrics.yaml`.
 
 ## Overview
 
-**What:** This page documents the declarations in this file.
+**What:** Defines Prometheus metrics that describe gateway traffic by "protocol" and "product".
 
-**Why:** These docs exist to make onboarding and code review faster by explaining intent, not just mechanics.
+In this context:
+- protocol is a best-effort classification of the inbound request (http, websocket, sse, grpc)
+- product is a high-level routing bucket (e.g. trade/task) derived from headers or URL prefixes
 
-**How:** Use the sections below to jump to the symbol you care about, then follow the links back to source.
+**Why:** The gateway proxies multiple kinds of traffic (regular HTTP, streaming, upgrades).
+For operations and capacity planning, it is useful to answer questions like:
+- Are we seeing more websocket connections than expected?
+- Is one product experiencing higher error rates or latency?
+- Are we accumulating long-lived SSE/grpc requests?
+
+These metrics are designed to be emitted from middleware without coupling the middleware to Prometheus directly.
+
+**How:** `newProtocolMetrics()` constructs four collectors and registers them with the gateway registry:
+- `gateway_protocol_requests_total` counter labelled by protocol, product, outcome
+- `gateway_protocol_inflight` gauge labelled by protocol, product
+- `gateway_protocol_request_duration_seconds` histogram labelled by protocol, product
+- `gateway_protocol_active_connections` gauge labelled by protocol, product (for long-lived connections)
+
+The middleware calls:
+- `track(r)` at request start to increment inflight (and sometimes active connections)
+- the returned closure at request end to record outcome, duration, and decrement gauges
+- `hijacked(r)` to handle websocket lifetime tracking for hijacked connections
+
+**Notes:** Protocol classification is heuristic by design. It uses standard headers and request metadata,
+but it is not a perfect protocol detector. Prefer stable "product" labels for long-term dashboards.
 
 
 ## Imports
@@ -55,22 +77,26 @@ type protocolMetrics struct {
 
 #### `protocolMetrics`
 
-**What:** Declare `type protocolMetrics`.
+**What:** Holds the Prometheus collectors used for protocol metrics.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Groups related collectors so middleware can be wired with a single value rather than many globals.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Constructed by `newProtocolMetrics` and used by server middleware to emit metrics.
+
+**Notes:** All fields are pointers to allow partial construction and nil-safety in the tracking functions.
 
 
 ## Functions and Methods
 
 ### `newProtocolMetrics`
 
-**What:** Declare `func newProtocolMetrics`.
+**What:** Constructs and registers the protocol/product collectors.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Centralizes metric names, help strings, label sets, and registration in one place.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Creates counters/gauges/histograms, registers them via `reg.Register`, and returns a `protocolMetrics` wrapper (or nil if the registry is nil).
+
+**Notes:** Metric names are currently hard-coded (not namespaced) to keep dashboards stable.
 
 ```go title="pkg/gateway/server/protocol_metrics.go#L20" showLineNumbers
 func newProtocolMetrics(reg *gatewaymetrics.Registry) *protocolMetrics {
@@ -115,11 +141,13 @@ func newProtocolMetrics(reg *gatewaymetrics.Registry) *protocolMetrics {
 
 ### `(*protocolMetrics).track`
 
-**What:** Declare `method (*protocolMetrics).track`.
+**What:** Produces a per-request tracking function for status/outcome/duration and inflight gauges.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Keeps request lifecycle accounting together and lets middleware defer metric updates to the end of request handling.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Classifies protocol/product, increments inflight gauge (and optionally active connection gauge for long-lived protocols), then returns a closure that records outcome/duration and decrements gauges.
+
+**Notes:** Non-positive status values are treated as 200 OK for metric labeling.
 
 ```go title="pkg/gateway/server/protocol_metrics.go#L59" showLineNumbers
 func (m *protocolMetrics) track(r *http.Request) func(status int, elapsed time.Duration) {
@@ -167,11 +195,13 @@ func (m *protocolMetrics) track(r *http.Request) func(status int, elapsed time.D
 
 ### `(*protocolMetrics).hijacked`
 
-**What:** Declare `method (*protocolMetrics).hijacked`.
+**What:** Returns a closure that decrements the websocket connection gauge when an upgraded connection closes.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Websocket lifetimes outlive the HTTP handler call, so connection tracking must hook into the `net.Conn` close path.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Increments `gateway_protocol_active_connections{protocol=\"websocket\"}` and returns a function that decrements it; returns nil when the request is not websocket-classified.
+
+**Notes:** The middleware is responsible for calling the returned closure exactly once on connection close.
 
 ```go title="pkg/gateway/server/protocol_metrics.go#L101" showLineNumbers
 func (m *protocolMetrics) hijacked(r *http.Request) func() {
@@ -194,11 +224,13 @@ func (m *protocolMetrics) hijacked(r *http.Request) func() {
 
 ### `trackConnectionForProtocol`
 
-**What:** Declare `func trackConnectionForProtocol`.
+**What:** Indicates whether a protocol should be tracked as an "active connection".
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Some protocols represent long-lived sessions where concurrency matters more than request count.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Returns true for `sse` and `grpc`; false for other protocols.
+
+**Notes:** Websockets are tracked via `(*protocolMetrics).hijacked` because their lifetime extends beyond `ServeHTTP`.
 
 ```go title="pkg/gateway/server/protocol_metrics.go#L118" showLineNumbers
 func trackConnectionForProtocol(protocol string) bool {
@@ -213,11 +245,13 @@ func trackConnectionForProtocol(protocol string) bool {
 
 ### `classifyProtocol`
 
-**What:** Declare `func classifyProtocol`.
+**What:** Best-effort classification of a request into a protocol label string.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Enables segmenting metrics by traffic shape without requiring every caller to pass explicit protocol metadata.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Checks for SSE (`Accept`/`Content-Type`), websocket upgrades (`Upgrade`/`Connection`), and gRPC (`Content-Type`, `Grpc-Timeout`, HTTP/2+TE trailers), otherwise returns `http`.
+
+**Notes:** Returns `unknown` for a nil request.
 
 ```go title="pkg/gateway/server/protocol_metrics.go#L127" showLineNumbers
 func classifyProtocol(r *http.Request) string {
@@ -260,11 +294,13 @@ func classifyProtocol(r *http.Request) string {
 
 ### `productFromRequest`
 
-**What:** Declare `func productFromRequest`.
+**What:** Derives the "product" label for a request.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Product-level segmentation is useful for SLOs and on-call triage when multiple upstreams share the same gateway.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Prefers `X-Router-Product` header; otherwise falls back to URL path prefix heuristics (`/v1/trade`, `/v1/task`); returns `unknown` if nothing matches.
+
+**Notes:** Header overrides allow callers (or upstream routers) to provide a more authoritative label than URL parsing.
 
 ```go title="pkg/gateway/server/protocol_metrics.go#L164" showLineNumbers
 func productFromRequest(r *http.Request) string {

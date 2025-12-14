@@ -16,11 +16,31 @@ Edit commentary in `docs/annotations/internal/openapi/service.yaml`.
 
 ## Overview
 
-**What:** This page documents the declarations in this file.
+**What:** Merges multiple OpenAPI fragments into a single OpenAPI document and exposes it as JSON bytes.
 
-**Why:** These docs exist to make onboarding and code review faster by explaining intent, not just mechanics.
+The merge inputs are described by a small JSON config file (default `openapi-merge.config.json`).
+The merged output is typically persisted to `dist/openapi.json` and also cached in memory for reuse.
 
-**How:** Use the sections below to jump to the symbol you care about, then follow the links back to source.
+**Why:** The project keeps OpenAPI definitions in fragments under `specs/` and other locations to keep
+the spec maintainable as the gateway grows.
+
+This service provides a repeatable, deterministic merge step that:
+- errors on duplicate paths/components (instead of silently overwriting)
+- supports external references via kin-openapi's loader
+- avoids repeated merge work via caching and persisted artifacts
+
+The generated `dist/openapi.json` can be served by the gateway and used by tooling (clients, docs, validation).
+
+**How:** - `NewService(...)` constructs a service with default config/dist paths (both overridable via options).
+- `(*Service).Document(ctx)` is the main entrypoint:
+  1) returns an in-memory cached copy when the on-disk dist file is unchanged
+  2) otherwise tries to read the dist file and caches it
+  3) otherwise loads fragment files, merges them into one `openapi3.T`, marshals JSON, and persists it
+
+Merge behaviour is implemented by `mergeDocuments` and helpers that merge paths, components, tags, servers, and security.
+
+**Notes:** `mergeDocuments` mutates the first document in the slice (it becomes the merge base).
+Ensure your first input represents the canonical root document (info/servers) and treat it as owned by the merge.
 
 
 ## Imports
@@ -58,19 +78,19 @@ const (
 
 #### `defaultConfigFile`
 
-**What:** Declare `const defaultConfigFile`.
+**What:** Default filename for the OpenAPI merge configuration.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Provides a convention so tooling can run without always specifying flags or env vars.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Used by `resolveConfigPath()` when `OPENAPI_MERGE_CONFIG_PATH` is unset.
 
 #### `defaultDistFile`
 
-**What:** Declare `const defaultDistFile`.
+**What:** Default output path for the merged OpenAPI JSON.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** The repo expects a stable artifact location for serving and tooling.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Used by `NewService()` (converted via `filepath.FromSlash` for OS portability).
 
 
 ## Types
@@ -85,11 +105,11 @@ type DocumentProvider interface {
 
 #### `DocumentProvider`
 
-**What:** Declare `type DocumentProvider`.
+**What:** Interface that exposes the merged document bytes.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Lets other components depend on "document provider" without depending on the concrete service implementation.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Implemented by `*Service` via its `Document` method.
 
 ### `type` block 2
 
@@ -105,11 +125,13 @@ type Service struct {
 
 #### `Service`
 
-**What:** Declare `type Service`.
+**What:** Service that merges OpenAPI fragments and caches/persists the result.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Provides a reusable component for both CLI tooling and runtime endpoints that need the merged OpenAPI.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Holds config/dist paths, a mutex, and an in-memory cache entry keyed by dist file modtime.
+
+**Notes:** All public access goes through `Document` to ensure concurrency safety.
 
 ### `type` block 3
 
@@ -122,11 +144,13 @@ type cacheEntry struct {
 
 #### `cacheEntry`
 
-**What:** Declare `type cacheEntry`.
+**What:** In-memory cache of merged document bytes plus the dist file modtime they correspond to.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows `cachedIfCurrent` to determine if the cached bytes are still valid.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Populated by reading the dist file or by building a new document.
+
+**Notes:** The `raw` bytes are copied on both write and read to avoid external mutation.
 
 ### `type` block 4
 
@@ -136,11 +160,11 @@ type Option func(*Service)
 
 #### `Option`
 
-**What:** Declare `type Option`.
+**What:** Functional option for customizing a `Service`.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Keeps the constructor stable while allowing overrides for paths and future settings.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Applied by `NewService` to mutate the constructed `Service`.
 
 ### `type` block 5
 
@@ -152,11 +176,11 @@ type mergeConfig struct {
 
 #### `mergeConfig`
 
-**What:** Declare `type mergeConfig`.
+**What:** JSON schema for the OpenAPI merge configuration file.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Provides a stable format for listing fragment inputs without hardcoding paths in code.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Contains an `inputs` array of `mergeInput` objects.
 
 ### `type` block 6
 
@@ -168,22 +192,22 @@ type mergeInput struct {
 
 #### `mergeInput`
 
-**What:** Declare `type mergeInput`.
+**What:** Single merge input entry describing one OpenAPI fragment file.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows the config to evolve (additional fields) without changing the top-level structure.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** The `InputFile` field is the path to a fragment; relative paths are resolved relative to the config file directory.
 
 
 ## Functions and Methods
 
 ### `WithConfigPath`
 
-**What:** Declare `func WithConfigPath`.
+**What:** Option that overrides the merge configuration file path.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows tooling and deployments to point at a different merge config without changing code.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** When the provided path is non-empty, stores it into `Service.configPath`.
 
 ```go title="internal/openapi/service.go#L46" showLineNumbers
 func WithConfigPath(path string) Option {
@@ -197,11 +221,11 @@ func WithConfigPath(path string) Option {
 
 ### `WithDistPath`
 
-**What:** Declare `func WithDistPath`.
+**What:** Option that overrides where the merged OpenAPI JSON is persisted.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Some environments may want a different artifact location (e.g., writable temp dir).
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** When the provided path is non-empty, stores it into `Service.distPath`.
 
 ```go title="internal/openapi/service.go#L55" showLineNumbers
 func WithDistPath(path string) Option {
@@ -215,11 +239,11 @@ func WithDistPath(path string) Option {
 
 ### `NewService`
 
-**What:** Declare `func NewService`.
+**What:** Constructs a new OpenAPI merge service.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Centralizes default path selection and allows callers to override config/dist paths via functional options.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Sets `configPath` to `resolveConfigPath()` and `distPath` to the default dist file, then applies any provided options.
 
 ```go title="internal/openapi/service.go#L64" showLineNumbers
 func NewService(opts ...Option) *Service {
@@ -238,11 +262,13 @@ func NewService(opts ...Option) *Service {
 
 ### `(*Service).Document`
 
-**What:** Declare `method (*Service).Document`.
+**What:** Returns the merged OpenAPI document as JSON bytes.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Provides a single API to obtain the current merged spec for serving and tooling.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Under a mutex, checks whether the cached bytes are still current (based on dist file modtime), otherwise reads the dist file, otherwise rebuilds by loading and merging fragments, marshals pretty JSON, persists, caches, and returns a defensive copy.
+
+**Notes:** When persisting fails, the service still returns the merged document but logs a warning and does not rely on modtime caching.
 
 ```go title="internal/openapi/service.go#L78" showLineNumbers
 func (s *Service) Document(ctx context.Context) ([]byte, error) {
@@ -285,11 +311,13 @@ func (s *Service) Document(ctx context.Context) ([]byte, error) {
 
 ### `(*Service).cachedIfCurrent`
 
-**What:** Declare `method (*Service).cachedIfCurrent`.
+**What:** Returns cached document bytes when the on-disk dist file is unchanged.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Avoids re-reading/re-merging when nothing has changed and supports external regeneration of the dist file.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Stats the dist path and compares `info.ModTime()` with the cached modtime; returns a defensive copy on match.
+
+**Notes:** If stat fails, this returns false and the caller falls back to reading or rebuilding.
 
 ```go title="internal/openapi/service.go#L115" showLineNumbers
 func (s *Service) cachedIfCurrent() ([]byte, bool) {
@@ -309,11 +337,13 @@ func (s *Service) cachedIfCurrent() ([]byte, bool) {
 
 ### `(*Service).readDist`
 
-**What:** Declare `method (*Service).readDist`.
+**What:** Reads the dist file and returns its bytes plus modification time.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows `Document()` to reuse pre-generated artifacts and cache them in memory.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Stats the file for modtime, reads its contents, and returns both.
+
+**Notes:** When the file is missing, callers treat it as a cache miss and rebuild.
 
 ```go title="internal/openapi/service.go#L129" showLineNumbers
 func (s *Service) readDist() ([]byte, time.Time, error) {
@@ -333,11 +363,13 @@ func (s *Service) readDist() ([]byte, time.Time, error) {
 
 ### `(*Service).buildDocument`
 
-**What:** Declare `method (*Service).buildDocument`.
+**What:** Loads OpenAPI fragment files and merges them into a single `openapi3.T`.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Separates "build" logic from caching/persistence concerns.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Loads merge config, creates an `openapi3.Loader` with external refs allowed, resolves input file paths relative to the config directory, loads each fragment, and passes them to `mergeDocuments`.
+
+**Notes:** The `ctx` is checked between loads so callers can cancel long merges.
 
 ```go title="internal/openapi/service.go#L143" showLineNumbers
 func (s *Service) buildDocument(ctx context.Context) (*openapi3.T, error) {
@@ -380,11 +412,13 @@ func (s *Service) buildDocument(ctx context.Context) (*openapi3.T, error) {
 
 ### `(*Service).persist`
 
-**What:** Declare `method (*Service).persist`.
+**What:** Persists merged JSON bytes to the configured dist path.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Creates a stable artifact (`dist/openapi.json`) that can be served and used by tooling without re-running merges.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Validates that `distPath` is set, ensures the parent directory exists, and writes the file with standard permissions.
+
+**Notes:** Failures are non-fatal to `Document()` (it will log and still return bytes).
 
 ```go title="internal/openapi/service.go#L180" showLineNumbers
 func (s *Service) persist(raw []byte) error {
@@ -404,11 +438,13 @@ func (s *Service) persist(raw []byte) error {
 
 ### `(*Service).loadConfig`
 
-**What:** Declare `method (*Service).loadConfig`.
+**What:** Reads and parses the merge configuration JSON file.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** The service needs an explicit input list to know which fragments to load.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Reads the config file, unmarshals into `mergeConfig`, validates that inputs are present, and returns the config plus the config directory for resolving relative paths.
+
+**Notes:** Returns a user-facing error when the configuration has no inputs.
 
 ```go title="internal/openapi/service.go#L194" showLineNumbers
 func (s *Service) loadConfig() (*mergeConfig, string, error) {
@@ -436,11 +472,13 @@ func (s *Service) loadConfig() (*mergeConfig, string, error) {
 
 ### `mergeDocuments`
 
-**What:** Declare `func mergeDocuments`.
+**What:** Merges multiple `openapi3.T` documents into a single document.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Allows the OpenAPI spec to be maintained in smaller, focused fragments.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Uses the first document as the merge base, ensures base `Paths`/`Components` are initialized, then merges each subsequent document's paths/components and appends tags/servers/security.
+
+**Notes:** The base document is mutated in place and returned.
 
 ```go title="internal/openapi/service.go#L224" showLineNumbers
 func mergeDocuments(docs []*openapi3.T) (*openapi3.T, error) {
@@ -476,11 +514,13 @@ func mergeDocuments(docs []*openapi3.T) (*openapi3.T, error) {
 
 ### `mergePaths`
 
-**What:** Declare `func mergePaths`.
+**What:** Merges OpenAPI path items and path extensions from one document into another.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Duplicate paths are almost always accidental and should fail fast rather than silently overriding routes in the published spec.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Iterates source paths and inserts them into destination paths, returning an error if a path already exists; does the same for `Paths.Extensions`.
+
+**Notes:** A nil source is treated as empty; a nil destination is treated as a programming error.
 
 ```go title="internal/openapi/service.go#L254" showLineNumbers
 func mergePaths(dst, src *openapi3.Paths) error {
@@ -517,11 +557,13 @@ func mergePaths(dst, src *openapi3.Paths) error {
 
 ### `mergeComponents`
 
-**What:** Declare `func mergeComponents`.
+**What:** Merges OpenAPI Components blocks (schemas, responses, security schemes, and more).
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Component definitions must be unique across fragments to avoid ambiguous references.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Calls `mergeComponentMap` for each supported component category and returns an error on the first duplicate.
+
+**Notes:** A nil source is treated as empty; a nil destination is treated as a programming error.
 
 ```go title="internal/openapi/service.go#L285" showLineNumbers
 func mergeComponents(dst, src *openapi3.Components) error {
@@ -569,11 +611,13 @@ func mergeComponents(dst, src *openapi3.Components) error {
 
 ### `mergeComponentMap`
 
-**What:** Declare `func mergeComponentMap`.
+**What:** Generic helper to merge OpenAPI component maps while rejecting duplicates.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Component maps share the same semantics across categories (schemas, responses, headers, etc).
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Ensures the destination map is initialized, then copies entries from src into dst, returning an error when a key already exists.
+
+**Notes:** The `label` string is used only to make duplicate errors easier to interpret.
 
 ```go title="internal/openapi/service.go#L327" showLineNumbers
 func mergeComponentMap[M ~map[string]V, V any](dst *M, src M, label string) error {
@@ -595,11 +639,13 @@ func mergeComponentMap[M ~map[string]V, V any](dst *M, src M, label string) erro
 
 ### `mergeTags`
 
-**What:** Declare `func mergeTags`.
+**What:** Merges OpenAPI tag entries while avoiding duplicates.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Tags are used for grouping and documentation; duplicates reduce readability.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Builds a set of existing tag names and appends only new names from the source list.
+
+**Notes:** Nil tag entries are ignored.
 
 ```go title="internal/openapi/service.go#L343" showLineNumbers
 func mergeTags(dst, src openapi3.Tags) openapi3.Tags {
@@ -630,11 +676,13 @@ func mergeTags(dst, src openapi3.Tags) openapi3.Tags {
 
 ### `mergeServers`
 
-**What:** Declare `func mergeServers`.
+**What:** Merges OpenAPI server entries while avoiding duplicates.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Servers may be defined in multiple fragments; duplicates are noise and can confuse readers.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Builds a set of existing server URLs and appends only new URLs from the source list.
+
+**Notes:** Nil server entries are ignored.
 
 ```go title="internal/openapi/service.go#L368" showLineNumbers
 func mergeServers(dst, src openapi3.Servers) openapi3.Servers {
@@ -665,11 +713,13 @@ func mergeServers(dst, src openapi3.Servers) openapi3.Servers {
 
 ### `mergeSecurity`
 
-**What:** Declare `func mergeSecurity`.
+**What:** Merges OpenAPI security requirements slices.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Security requirements are additive across fragments.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Appends the source requirements to the destination slice when source is non-empty.
+
+**Notes:** This helper does not deduplicate requirements.
 
 ```go title="internal/openapi/service.go#L393" showLineNumbers
 func mergeSecurity(dst, src openapi3.SecurityRequirements) openapi3.SecurityRequirements {
@@ -682,11 +732,11 @@ func mergeSecurity(dst, src openapi3.SecurityRequirements) openapi3.SecurityRequ
 
 ### `resolveConfigPath`
 
-**What:** Declare `func resolveConfigPath`.
+**What:** Resolves the merge configuration path from environment or default.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Lets operators override config location without rebuilding the binary.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Returns `OPENAPI_MERGE_CONFIG_PATH` when set; otherwise returns the default filename converted with `filepath.FromSlash`.
 
 ```go title="internal/openapi/service.go#L400" showLineNumbers
 func resolveConfigPath() string {
@@ -699,11 +749,11 @@ func resolveConfigPath() string {
 
 ### `fileModTime`
 
-**What:** Declare `func fileModTime`.
+**What:** Returns a file's modification time (or zero).
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Used to associate cached bytes with the on-disk dist file for freshness checks.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Stats the path and returns `info.ModTime()`; returns `time.Time{}` on stat failure.
 
 ```go title="internal/openapi/service.go#L407" showLineNumbers
 func fileModTime(path string) time.Time {
@@ -717,11 +767,13 @@ func fileModTime(path string) time.Time {
 
 ### `clone`
 
-**What:** Declare `func clone`.
+**What:** Creates a defensive copy of a byte slice.
 
-**Why:** Centralizes behavior and avoids duplication in call sites.
+**Why:** Prevents callers from mutating cached document bytes returned by `Document()`.
 
-**How:** See the Go snippet and the source link for behavior and usage.
+**How:** Allocates a new slice of the same length and copies the contents.
+
+**Notes:** Returns nil for a nil input slice.
 
 ```go title="internal/openapi/service.go#L415" showLineNumbers
 func clone(src []byte) []byte {
