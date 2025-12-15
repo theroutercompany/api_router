@@ -59,6 +59,13 @@ type walkStep struct {
 	What      string
 	Why       string
 	How       string
+	Children  []walkStep
+}
+
+type walkthroughConfig struct {
+	Enabled  bool
+	MaxDepth int
+	MaxSteps int
 }
 
 type fileDoc struct {
@@ -80,6 +87,8 @@ func main() {
 		githubBase    = flag.String("github-base", "https://github.com/theroutercompany/api_router/blob/main/", "base URL for source links")
 		initAnn       = flag.Bool("init-annotations", false, "create/update annotation yaml stubs for the generated files")
 		walkthrough   = flag.Bool("walkthrough", true, "include statement-by-statement walkthroughs for functions/methods")
+		walkMaxDepth  = flag.Int("walkthrough-max-depth", 6, "maximum nesting depth for walkthrough output")
+		walkMaxSteps  = flag.Int("walkthrough-max-steps", 500, "maximum number of walkthrough steps per function/method")
 	)
 	flag.Parse()
 
@@ -89,8 +98,13 @@ func main() {
 	}
 
 	var errs []error
+	walkCfg := walkthroughConfig{
+		Enabled:  *walkthrough,
+		MaxDepth: *walkMaxDepth,
+		MaxSteps: *walkMaxSteps,
+	}
 	for _, rel := range files {
-		if err := generateFile(*repoRoot, *outDir, *annotationDir, *githubBase, rel, *initAnn, *walkthrough); err != nil {
+		if err := generateFile(*repoRoot, *outDir, *annotationDir, *githubBase, rel, *initAnn, walkCfg); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -112,10 +126,13 @@ func coreFiles() []string {
 
 		"internal/openapi/service.go",
 		"internal/platform/health/health.go",
+		"internal/service/placeholder.go",
 		"internal/shadowdiff/config.go",
 		"internal/shadowdiff/diff.go",
 		"internal/shadowdiff/fixture.go",
 		"internal/shadowdiff/normalize.go",
+
+		"examples/basic/main.go",
 
 		"pkg/gateway/auth/authenticator.go",
 		"pkg/gateway/config/config.go",
@@ -123,6 +140,8 @@ func coreFiles() []string {
 		"pkg/gateway/metrics/registry.go",
 		"pkg/gateway/problem/problem.go",
 		"pkg/gateway/proxy/reverse_proxy.go",
+		"pkg/gateway/proxy/testdata/graphql_stream_server.go",
+		"pkg/gateway/proxy/testdata/sse_server.go",
 		"pkg/gateway/runtime/runtime.go",
 		"pkg/gateway/server/middleware/middleware.go",
 		"pkg/gateway/server/protocol_metrics.go",
@@ -135,7 +154,7 @@ func coreFiles() []string {
 	}
 }
 
-func generateFile(repoRoot, outDir, annotationDir, githubBase, relSrcPath string, initAnnotations bool, includeWalkthrough bool) error {
+func generateFile(repoRoot, outDir, annotationDir, githubBase, relSrcPath string, initAnnotations bool, walkCfg walkthroughConfig) error {
 	srcPath := filepath.Join(repoRoot, filepath.Clean(relSrcPath))
 	srcBytes, err := os.ReadFile(srcPath)
 	if err != nil {
@@ -150,7 +169,7 @@ func generateFile(repoRoot, outDir, annotationDir, githubBase, relSrcPath string
 
 	annPath := filepath.Join(repoRoot, annotationDir, replaceExt(relSrcPath, ".yaml"))
 	blocks := extractBlocks(fset, parsed, srcBytes)
-	funcs := extractFuncs(fset, parsed, srcBytes, includeWalkthrough)
+	funcs := extractFuncs(fset, parsed, srcBytes, walkCfg)
 	if initAnnotations {
 		if err := ensureAnnotationFile(annPath, relSrcPath, blocks, funcs); err != nil {
 			return fmt.Errorf("init annotations %s: %w", annPath, err)
@@ -270,7 +289,7 @@ func buildGenDeclBlock(fset *token.FileSet, gen *ast.GenDecl, src []byte, sectio
 	}
 }
 
-func extractFuncs(fset *token.FileSet, file *ast.File, src []byte, includeWalkthrough bool) []funcEntry {
+func extractFuncs(fset *token.FileSet, file *ast.File, src []byte, walkCfg walkthroughConfig) []funcEntry {
 	var entries []funcEntry
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
@@ -281,8 +300,8 @@ func extractFuncs(fset *token.FileSet, file *ast.File, src []byte, includeWalkth
 		startLine := fset.Position(fn.Pos()).Line
 		snippet := sliceSource(fset, src, fn.Pos(), fn.End())
 		steps := []walkStep(nil)
-		if includeWalkthrough {
-			steps = extractWalkthroughSteps(fset, src, fn)
+		if walkCfg.Enabled {
+			steps = extractWalkthroughSteps(fset, src, fn, walkCfg)
 		}
 
 		id := fmt.Sprintf("func %s", fn.Name.Name)
@@ -304,28 +323,344 @@ func extractFuncs(fset *token.FileSet, file *ast.File, src []byte, includeWalkth
 	return entries
 }
 
-func extractWalkthroughSteps(fset *token.FileSet, src []byte, fn *ast.FuncDecl) []walkStep {
-	if fn == nil || fn.Body == nil || len(fn.Body.List) == 0 {
+func extractWalkthroughSteps(fset *token.FileSet, src []byte, fn *ast.FuncDecl, cfg walkthroughConfig) []walkStep {
+	if fn == nil || fn.Body == nil || len(fn.Body.List) == 0 || cfg.MaxSteps <= 0 {
 		return nil
 	}
 
 	steps := make([]walkStep, 0, len(fn.Body.List))
+	count := 0
 	for _, stmt := range fn.Body.List {
-		if stmt == nil {
-			continue
+		if stmt == nil || count >= cfg.MaxSteps {
+			break
 		}
-		startLine := fset.Position(stmt.Pos()).Line
-		code := condenseSnippet(sliceSource(fset, src, stmt.Pos(), stmt.End()))
-		what, why, how := describeStmt(fset, stmt)
+		step, ok := walkStmt(fset, src, stmt, 0, cfg, &count)
+		if ok {
+			steps = append(steps, step)
+		}
+	}
+	if count >= cfg.MaxSteps {
 		steps = append(steps, walkStep{
-			StartLine: startLine,
-			Code:      code,
-			What:      what,
-			Why:       why,
-			How:       how,
+			StartLine: fset.Position(fn.End()).Line,
+			Code:      "(walkthrough truncated)",
+			What:      "Walkthrough output was truncated.",
+			Why:       "Keeps pages readable and avoids generating excessively large MDX output by default.",
+			How:       "Re-run docsgen with a higher `-walkthrough-max-steps` value to include more steps.",
 		})
 	}
 	return steps
+}
+
+func walkStmt(fset *token.FileSet, src []byte, stmt ast.Stmt, depth int, cfg walkthroughConfig, count *int) (walkStep, bool) {
+	if stmt == nil || count == nil || *count >= cfg.MaxSteps {
+		return walkStep{}, false
+	}
+
+	startLine := fset.Position(stmt.Pos()).Line
+	code := condenseSnippet(sliceSource(fset, src, stmt.Pos(), stmt.End()))
+	what, why, how := describeStmt(fset, stmt)
+	step := walkStep{
+		StartLine: startLine,
+		Code:      code,
+		What:      what,
+		Why:       why,
+		How:       how,
+	}
+	*count++
+	if *count >= cfg.MaxSteps || depth >= cfg.MaxDepth {
+		return step, true
+	}
+
+	appendChild := func(child walkStep) {
+		if *count >= cfg.MaxSteps {
+			return
+		}
+		step.Children = append(step.Children, child)
+	}
+	appendChildren := func(children []walkStep) {
+		for _, child := range children {
+			if *count >= cfg.MaxSteps {
+				return
+			}
+			step.Children = append(step.Children, child)
+		}
+	}
+
+	switch s := stmt.(type) {
+	case *ast.BlockStmt:
+		appendChildren(walkStmtList(fset, src, s.List, depth+1, cfg, count))
+		return step, true
+
+	case *ast.LabeledStmt:
+		if s.Stmt != nil {
+			if child, ok := walkStmt(fset, src, s.Stmt, depth+1, cfg, count); ok {
+				appendChild(child)
+			}
+		}
+		return step, true
+
+	case *ast.IfStmt:
+		if s.Init != nil {
+			if child, ok := walkStmt(fset, src, s.Init, depth+1, cfg, count); ok {
+				appendChild(child)
+			}
+		}
+		appendChildren(walkStmtList(fset, src, s.Body.List, depth+1, cfg, count))
+		switch elseNode := s.Else.(type) {
+		case *ast.BlockStmt:
+			appendChildren(walkStmtList(fset, src, elseNode.List, depth+1, cfg, count))
+		case ast.Stmt:
+			if child, ok := walkStmt(fset, src, elseNode, depth+1, cfg, count); ok {
+				appendChild(child)
+			}
+		}
+		appendChildren(walkFuncLitsFromExpr(fset, src, s.Cond, depth+1, cfg, count))
+		return step, true
+
+	case *ast.ForStmt:
+		if s.Init != nil {
+			if child, ok := walkStmt(fset, src, s.Init, depth+1, cfg, count); ok {
+				appendChild(child)
+			}
+		}
+		if s.Post != nil {
+			if child, ok := walkStmt(fset, src, s.Post, depth+1, cfg, count); ok {
+				appendChild(child)
+			}
+		}
+		appendChildren(walkStmtList(fset, src, s.Body.List, depth+1, cfg, count))
+		appendChildren(walkFuncLitsFromExpr(fset, src, s.Cond, depth+1, cfg, count))
+		return step, true
+
+	case *ast.RangeStmt:
+		appendChildren(walkStmtList(fset, src, s.Body.List, depth+1, cfg, count))
+		appendChildren(walkFuncLitsFromExpr(fset, src, s.X, depth+1, cfg, count))
+		return step, true
+
+	case *ast.SwitchStmt:
+		if s.Init != nil {
+			if child, ok := walkStmt(fset, src, s.Init, depth+1, cfg, count); ok {
+				appendChild(child)
+			}
+		}
+		appendChildren(walkFuncLitsFromExpr(fset, src, s.Tag, depth+1, cfg, count))
+		for _, raw := range s.Body.List {
+			cc, ok := raw.(*ast.CaseClause)
+			if !ok || *count >= cfg.MaxSteps {
+				break
+			}
+			caseStep, ok := walkCaseClause(fset, src, cc, depth+1, cfg, count)
+			if ok {
+				appendChild(caseStep)
+			}
+		}
+		return step, true
+
+	case *ast.TypeSwitchStmt:
+		if s.Init != nil {
+			if child, ok := walkStmt(fset, src, s.Init, depth+1, cfg, count); ok {
+				appendChild(child)
+			}
+		}
+		if s.Assign != nil {
+			if child, ok := walkStmt(fset, src, s.Assign, depth+1, cfg, count); ok {
+				appendChild(child)
+			}
+		}
+		for _, raw := range s.Body.List {
+			cc, ok := raw.(*ast.CaseClause)
+			if !ok || *count >= cfg.MaxSteps {
+				break
+			}
+			caseStep, ok := walkCaseClause(fset, src, cc, depth+1, cfg, count)
+			if ok {
+				appendChild(caseStep)
+			}
+		}
+		return step, true
+
+	case *ast.SelectStmt:
+		for _, raw := range s.Body.List {
+			cl, ok := raw.(*ast.CommClause)
+			if !ok || *count >= cfg.MaxSteps {
+				break
+			}
+			caseStep, ok := walkCommClause(fset, src, cl, depth+1, cfg, count)
+			if ok {
+				appendChild(caseStep)
+			}
+		}
+		return step, true
+
+	case *ast.AssignStmt:
+		for _, expr := range s.Rhs {
+			appendChildren(walkFuncLitsFromExpr(fset, src, expr, depth+1, cfg, count))
+		}
+		return step, true
+
+	case *ast.ReturnStmt:
+		for _, expr := range s.Results {
+			appendChildren(walkFuncLitsFromExpr(fset, src, expr, depth+1, cfg, count))
+		}
+		return step, true
+
+	case *ast.ExprStmt:
+		appendChildren(walkFuncLitsFromExpr(fset, src, s.X, depth+1, cfg, count))
+		return step, true
+
+	case *ast.GoStmt:
+		if s.Call != nil {
+			appendChildren(walkFuncLitsFromExpr(fset, src, s.Call, depth+1, cfg, count))
+		}
+		return step, true
+
+	case *ast.DeferStmt:
+		if s.Call != nil {
+			appendChildren(walkFuncLitsFromExpr(fset, src, s.Call, depth+1, cfg, count))
+		}
+		return step, true
+
+	default:
+		return step, true
+	}
+}
+
+func walkStmtList(fset *token.FileSet, src []byte, list []ast.Stmt, depth int, cfg walkthroughConfig, count *int) []walkStep {
+	if len(list) == 0 || count == nil || *count >= cfg.MaxSteps {
+		return nil
+	}
+	out := make([]walkStep, 0, len(list))
+	for _, stmt := range list {
+		if stmt == nil || *count >= cfg.MaxSteps {
+			break
+		}
+		step, ok := walkStmt(fset, src, stmt, depth, cfg, count)
+		if ok {
+			out = append(out, step)
+		}
+	}
+	return out
+}
+
+func walkFuncLitsFromExpr(fset *token.FileSet, src []byte, expr ast.Expr, depth int, cfg walkthroughConfig, count *int) []walkStep {
+	if expr == nil || count == nil || *count >= cfg.MaxSteps {
+		return nil
+	}
+	lits := funcLitsInExpr(expr)
+	if len(lits) == 0 {
+		return nil
+	}
+	out := make([]walkStep, 0, len(lits))
+	for _, lit := range lits {
+		if lit == nil || *count >= cfg.MaxSteps {
+			break
+		}
+		step, ok := walkFuncLit(fset, src, lit, depth, cfg, count)
+		if ok {
+			out = append(out, step)
+		}
+	}
+	return out
+}
+
+func walkFuncLit(fset *token.FileSet, src []byte, lit *ast.FuncLit, depth int, cfg walkthroughConfig, count *int) (walkStep, bool) {
+	if lit == nil || count == nil || *count >= cfg.MaxSteps {
+		return walkStep{}, false
+	}
+
+	startLine := fset.Position(lit.Pos()).Line
+	code := condenseSnippet(sliceSource(fset, src, lit.Pos(), lit.End()))
+	step := walkStep{
+		StartLine: startLine,
+		Code:      code,
+		What:      "Defines an inline function (closure).",
+		Why:       "Encapsulates callback logic and may capture variables from the surrounding scope.",
+		How:       "Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).",
+	}
+	*count++
+	if *count >= cfg.MaxSteps || depth >= cfg.MaxDepth || lit.Body == nil || len(lit.Body.List) == 0 {
+		return step, true
+	}
+
+	step.Children = append(step.Children, walkStmtList(fset, src, lit.Body.List, depth+1, cfg, count)...)
+	return step, true
+}
+
+func walkCaseClause(fset *token.FileSet, src []byte, clause *ast.CaseClause, depth int, cfg walkthroughConfig, count *int) (walkStep, bool) {
+	if clause == nil || count == nil || *count >= cfg.MaxSteps {
+		return walkStep{}, false
+	}
+
+	startLine := fset.Position(clause.Pos()).Line
+	var head string
+	if len(clause.List) == 0 {
+		head = "default:"
+	} else {
+		var parts []string
+		for _, expr := range clause.List {
+			parts = append(parts, strings.TrimSpace(nodeString(fset, expr)))
+		}
+		head = "case " + strings.Join(parts, ", ") + ":"
+	}
+
+	step := walkStep{
+		StartLine: startLine,
+		Code:      condenseSnippet(head),
+		What:      "Selects a switch case.",
+		Why:       "Makes multi-branch control flow explicit and readable.",
+		How:       "Runs this case body when the switch value matches (or when default is selected).",
+	}
+	*count++
+	if *count >= cfg.MaxSteps || depth >= cfg.MaxDepth || len(clause.Body) == 0 {
+		return step, true
+	}
+	step.Children = append(step.Children, walkStmtList(fset, src, clause.Body, depth+1, cfg, count)...)
+	return step, true
+}
+
+func walkCommClause(fset *token.FileSet, src []byte, clause *ast.CommClause, depth int, cfg walkthroughConfig, count *int) (walkStep, bool) {
+	if clause == nil || count == nil || *count >= cfg.MaxSteps {
+		return walkStep{}, false
+	}
+
+	startLine := fset.Position(clause.Pos()).Line
+	head := "default:"
+	if clause.Comm != nil {
+		head = "case " + strings.TrimSpace(nodeString(fset, clause.Comm)) + ":"
+	}
+
+	step := walkStep{
+		StartLine: startLine,
+		Code:      condenseSnippet(head),
+		What:      "Selects a select-case branch.",
+		Why:       "Coordinates concurrent operations without blocking incorrectly.",
+		How:       "Runs this case body when its channel operation is ready (or runs default immediately).",
+	}
+	*count++
+	if *count >= cfg.MaxSteps || depth >= cfg.MaxDepth || len(clause.Body) == 0 {
+		return step, true
+	}
+	step.Children = append(step.Children, walkStmtList(fset, src, clause.Body, depth+1, cfg, count)...)
+	return step, true
+}
+
+func funcLitsInExpr(expr ast.Expr) []*ast.FuncLit {
+	if expr == nil {
+		return nil
+	}
+	var lits []*ast.FuncLit
+	ast.Inspect(expr, func(n ast.Node) bool {
+		if n == nil {
+			return false
+		}
+		lit, ok := n.(*ast.FuncLit)
+		if !ok {
+			return true
+		}
+		lits = append(lits, lit)
+		return false
+	})
+	return lits
 }
 
 func describeStmt(fset *token.FileSet, stmt ast.Stmt) (what, why, how string) {
@@ -447,8 +782,12 @@ func isGuardIf(stmt *ast.IfStmt) bool {
 	if stmt == nil || stmt.Else != nil || stmt.Body == nil || len(stmt.Body.List) == 0 {
 		return false
 	}
-	_, ok := stmt.Body.List[0].(*ast.ReturnStmt)
-	return ok
+	for _, s := range stmt.Body.List {
+		if _, ok := s.(*ast.ReturnStmt); ok {
+			return true
+		}
+	}
+	return false
 }
 
 func ensureAnnotationFile(path string, relSrcPath string, blocks []declBlock, funcs []funcEntry) error {
@@ -715,18 +1054,28 @@ func writeWalkthrough(buf *bytes.Buffer, steps []walkStep) {
 	}
 
 	fmt.Fprintf(buf, "#### Walkthrough\n\n")
-	fmt.Fprintf(buf, "The list below documents the top-level statements inside the function body.\n\n")
+	fmt.Fprintf(buf, "The list below documents the statements inside the function body, including nested blocks and inline closures.\n\n")
+	writeWalkthroughSteps(buf, steps, 0)
+	fmt.Fprintf(buf, "\n")
+}
+
+func writeWalkthroughSteps(buf *bytes.Buffer, steps []walkStep, depth int) {
+	indent := strings.Repeat("  ", depth)
 	for _, step := range steps {
 		code := strings.TrimSpace(step.Code)
 		if code == "" {
 			code = "(unavailable)"
 		}
-		fmt.Fprintf(buf, "- **L%d**: %s\n", step.StartLine, markdownInlineCode(code))
-		fmt.Fprintf(buf, "  - **What:** %s\n", strings.TrimSpace(step.What))
-		fmt.Fprintf(buf, "  - **Why:** %s\n", strings.TrimSpace(step.Why))
-		fmt.Fprintf(buf, "  - **How:** %s\n", strings.TrimSpace(step.How))
+
+		fmt.Fprintf(buf, "%s- **L%d**: %s\n", indent, step.StartLine, markdownInlineCode(code))
+		fmt.Fprintf(buf, "%s  - **What:** %s\n", indent, strings.TrimSpace(step.What))
+		fmt.Fprintf(buf, "%s  - **Why:** %s\n", indent, strings.TrimSpace(step.Why))
+		fmt.Fprintf(buf, "%s  - **How:** %s\n", indent, strings.TrimSpace(step.How))
+		if len(step.Children) > 0 {
+			fmt.Fprintf(buf, "%s  - **Nested steps:**\n", indent)
+			writeWalkthroughSteps(buf, step.Children, depth+2)
+		}
 	}
-	fmt.Fprintf(buf, "\n")
 }
 
 func resolveSymbol(anns fileAnnotations, id string) annotationText {

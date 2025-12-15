@@ -175,12 +175,17 @@ func (e Error) Error() string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L33**: `if e.Detail != "" { return e.Detail }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L34**: `return e.Detail`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L36**: `return e.Title`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -210,12 +215,17 @@ func New(cfg gatewayconfig.AuthConfig) (*Authenticator, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L54**: `if cfg.Secret == "" { return nil, errors.New("jwt secret not configured") }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L55**: `return nil, errors.New("jwt secret not configured")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L58**: `return &Authenticator{ secret: []byte(cfg.Secret), audiences: cfg.Audiences, issuer: cfg.Issuer, }, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -262,7 +272,7 @@ func (a *Authenticator) Authenticate(r *http.Request) (*Principal, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L67**: `header := r.Header.Get("Authorization")`
   - **What:** Defines header.
@@ -272,6 +282,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L69**: `return nil, errMissingAuthorization`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L72**: `parts := strings.SplitN(header, " ", 2)`
   - **What:** Defines parts.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -280,6 +295,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L74**: `return nil, errMalformedHeader`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L77**: `tokenString := strings.TrimSpace(parts[1])`
   - **What:** Defines tokenString.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -288,14 +308,37 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L79**: `return nil, errMalformedHeader`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L82**: `principal, err := a.parseToken(tokenString)`
   - **What:** Defines principal, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L83**: `if err != nil { var authErr Error if errors.As(err, &authErr) { return nil, authErr } return nil, errTokenInvalid }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L84**: `var authErr Error`
+      - **What:** Declares local names.
+      - **Why:** Introduces variables or types used later in the function.
+      - **How:** Executes a Go declaration statement inside the function body.
+    - **L85**: `if errors.As(err, &authErr) { return nil, authErr }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L86**: `return nil, authErr`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L88**: `return nil, errTokenInvalid`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L91**: `principal.Token = tokenString`
   - **What:** Assigns principal.Token.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -347,7 +390,7 @@ func (a *Authenticator) parseToken(tokenString string) (*Principal, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L96**: `options := []jwt.ParserOption{jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()})}`
   - **What:** Defines options.
@@ -357,10 +400,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L98**: `options = append(options, jwt.WithAudience(a.audiences...))`
+      - **What:** Assigns options.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L100**: `if a.issuer != "" { options = append(options, jwt.WithIssuer(a.issuer)) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L101**: `options = append(options, jwt.WithIssuer(a.issuer))`
+      - **What:** Assigns options.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L104**: `parser := jwt.NewParser(options...)`
   - **What:** Defines parser.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -373,14 +426,34 @@ The list below documents the top-level statements inside the function body.
   - **What:** Defines token, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+  - **Nested steps:**
+    - **L107**: `func(_ *jwt.Token) (interface{}, error) { return a.secret, nil }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L108**: `return a.secret, nil`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 - **L110**: `if err != nil { return nil, Error{Status: http.StatusUnauthorized, Title: "Authentication Required", Detail: err.Error()} }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L111**: `return nil, Error{Status: http.StatusUnauthorized, Title: "Authentication Required", Detail: err.Error()}`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L114**: `if !token.Valid { return nil, errTokenInvalid }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L115**: `return nil, errTokenInvalid`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L118**: `principal := &Principal{ Subject: claims.Subject, Scopes: claims.Scopes(), }`
   - **What:** Defines principal.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -413,12 +486,27 @@ func (p *Principal) HasAnyScope(required []string) bool {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L126**: `for _, scope := range required { for _, owned := range p.Scopes { if scope == owned { return true } } }`
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L127**: `for _, owned := range p.Scopes { if scope == owned { return true } }`
+      - **What:** Iterates over a collection.
+      - **Why:** Processes multiple elements with the same logic.
+      - **How:** Executes a `for ... range` loop.
+      - **Nested steps:**
+        - **L128**: `if scope == owned { return true }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L129**: `return true`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
 - **L133**: `return false`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -447,16 +535,26 @@ func (c *gatewayClaims) Scopes() []string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L143**: `if len(c.Scp) > 0 { return c.Scp }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L144**: `return c.Scp`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L146**: `if c.Scope == "" { return nil }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L147**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L149**: `parts := strings.Fields(c.Scope)`
   - **What:** Defines parts.
   - **Why:** Keeps intermediate state available for later steps in the function.

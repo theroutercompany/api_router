@@ -112,7 +112,7 @@ func LoadConfig(path string) (Config, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L19**: `data, err := os.ReadFile(path)`
   - **What:** Defines data, err.
@@ -122,6 +122,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L21**: `return Config{}, fmt.Errorf("read config: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L24**: `var cfg Config`
   - **What:** Declares local names.
   - **Why:** Introduces variables or types used later in the function.
@@ -130,14 +135,33 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L25**: `err := json.Unmarshal(data, &cfg)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L26**: `return Config{}, fmt.Errorf("decode config: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L29**: `if cfg.NodeBaseURL == "" || cfg.GoBaseURL == "" { return Config{}, fmt.Errorf("nodeBaseUrl and goBaseUrl are required") }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L30**: `return Config{}, fmt.Errorf("nodeBaseUrl and goBaseUrl are required")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L33**: `if cfg.Concurrency <= 0 { cfg.Concurrency = 4 }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L34**: `cfg.Concurrency = 4`
+      - **What:** Assigns cfg.Concurrency.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L37**: `return cfg, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.

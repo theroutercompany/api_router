@@ -94,12 +94,27 @@ func StripJSONKeys(keys ...string) func([]byte) []byte {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L8**: `if len(keys) == 0 { return func(b []byte) []byte { return b } }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L9**: `return func(b []byte) []byte { return b }`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L9**: `func(b []byte) []byte { return b }`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+          - **Nested steps:**
+            - **L9**: `return b`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
 - **L12**: `keySet := make(map[string]struct{}, len(keys))`
   - **What:** Defines keySet.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -108,10 +123,68 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L14**: `keySet[key] = struct{}{}`
+      - **What:** Assigns keySet[key].
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L17**: `return func(b []byte) []byte { if len(b) == 0 { return b } var payload interface{} if err := json.Unmarshal(b, &payload); err != nil { retu…`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L17**: `func(b []byte) []byte { if len(b) == 0 { return b } var payload interface{} if err := json.Unmarshal(b, &payload); err != nil { return b } …`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L18**: `if len(b) == 0 { return b }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L19**: `return b`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L22**: `var payload interface{}`
+          - **What:** Declares local names.
+          - **Why:** Introduces variables or types used later in the function.
+          - **How:** Executes a Go declaration statement inside the function body.
+        - **L23**: `if err := json.Unmarshal(b, &payload); err != nil { return b }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L23**: `err := json.Unmarshal(b, &payload)`
+              - **What:** Defines err.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L24**: `return b`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L27**: `stripKeys(payload, keySet)`
+          - **What:** Calls stripKeys.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
+        - **L29**: `result, err := json.Marshal(payload)`
+          - **What:** Defines result, err.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L30**: `if err != nil { return b }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L31**: `return b`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L33**: `return result`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 
 ### `stripKeys`
 
@@ -143,10 +216,52 @@ func stripKeys(value interface{}, keySet map[string]struct{}) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L38**: `switch v := value.(type) { case map[string]interface{}: for key := range keySet { delete(v, key) } for _, child := range v { stripKeys(chil…`
   - **What:** Selects a branch based on dynamic type.
   - **Why:** Handles multiple concrete types cleanly.
   - **How:** Executes a type switch statement.
+  - **Nested steps:**
+    - **L38**: `v := value.(type)`
+      - **What:** Defines v.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L39**: `case map[string]interface{}:`
+      - **What:** Selects a switch case.
+      - **Why:** Makes multi-branch control flow explicit and readable.
+      - **How:** Runs this case body when the switch value matches (or when default is selected).
+      - **Nested steps:**
+        - **L40**: `for key := range keySet { delete(v, key) }`
+          - **What:** Iterates over a collection.
+          - **Why:** Processes multiple elements with the same logic.
+          - **How:** Executes a `for ... range` loop.
+          - **Nested steps:**
+            - **L41**: `delete(v, key)`
+              - **What:** Calls delete.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
+        - **L43**: `for _, child := range v { stripKeys(child, keySet) }`
+          - **What:** Iterates over a collection.
+          - **Why:** Processes multiple elements with the same logic.
+          - **How:** Executes a `for ... range` loop.
+          - **Nested steps:**
+            - **L44**: `stripKeys(child, keySet)`
+              - **What:** Calls stripKeys.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
+    - **L46**: `case []interface{}:`
+      - **What:** Selects a switch case.
+      - **Why:** Makes multi-branch control flow explicit and readable.
+      - **How:** Runs this case body when the switch value matches (or when default is selected).
+      - **Nested steps:**
+        - **L47**: `for _, elem := range v { stripKeys(elem, keySet) }`
+          - **What:** Iterates over a collection.
+          - **Why:** Processes multiple elements with the same logic.
+          - **How:** Executes a `for ... range` loop.
+          - **Nested steps:**
+            - **L48**: `stripKeys(elem, keySet)`
+              - **What:** Calls stripKeys.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
 

@@ -2,5 +2,56 @@
 title: Metrics
 ---
 
-Protocol-level metrics are emitted from `pkg/gateway/server/protocol_metrics.go`.
+The gateway exposes Prometheus metrics when `metrics.enabled` is true.
 
+Deep dive:
+
+- Metrics registry wrapper: `../annotated/pkg/gateway/metrics/registry`
+- Protocol metrics collectors: `../annotated/pkg/gateway/server/protocol_metrics`
+
+## Endpoint
+
+Mounting is done by the server/runtime. The handler is built by:
+
+- `pkg/gateway/metrics.(*Registry).Handler`
+
+## Exported metrics
+
+All protocol metrics are labeled by:
+
+- `protocol`: `http`, `websocket`, `sse`, `grpc`, or `unknown`
+- `product`: derived from `X-Router-Product` or URL prefixes (e.g. `trade`, `task`, `unknown`)
+
+### `gateway_protocol_requests_total`
+
+Counter of proxied requests labeled by:
+
+- `protocol`
+- `product`
+- `outcome` (`success` or `error`)
+
+### `gateway_protocol_inflight`
+
+Gauge of in-flight proxied requests labeled by:
+
+- `protocol`
+- `product`
+
+### `gateway_protocol_request_duration_seconds`
+
+Histogram of upstream request duration labeled by:
+
+- `protocol`
+- `product`
+
+### `gateway_protocol_active_connections`
+
+Gauge of active long-lived connections labeled by:
+
+- `protocol`
+- `product`
+
+Notes:
+
+- Websockets are tracked via hijack lifecycle hooks.
+- SSE and gRPC are tracked as “connections” for concurrency visibility.

@@ -67,7 +67,7 @@ func main() {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L13**: `outPath := flag.String("out", "dist/openapi.json", "Path to write the merged OpenAPI document")`
   - **What:** Defines outPath.
@@ -85,6 +85,19 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L18**: `_, err := svc.Document(context.Background())`
+      - **What:** Defines _, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L19**: `fmt.Fprintf(os.Stderr, "openapi merge failed: %v\n", err)`
+      - **What:** Calls fmt.Fprintf.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L20**: `os.Exit(1)`
+      - **What:** Calls os.Exit.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L23**: `fmt.Fprintf(os.Stdout, "OpenAPI document written to %s\n", *outPath)`
   - **What:** Calls fmt.Fprintf.
   - **Why:** Performs side effects or delegates work to a helper.

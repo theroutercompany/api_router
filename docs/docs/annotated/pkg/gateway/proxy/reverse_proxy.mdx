@@ -204,7 +204,7 @@ func New(opts Options) (http.Handler, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L42**: `target, err := url.Parse(opts.Target)`
   - **What:** Defines target, err.
@@ -214,6 +214,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L44**: `return nil, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L47**: `proxy := httputil.NewSingleHostReverseProxy(target)`
   - **What:** Defines proxy.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -230,6 +235,24 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L57**: `tlsCfg, err := buildTLSConfig(opts.TLS)`
+      - **What:** Defines tlsCfg, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L58**: `if err != nil { return nil, err }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L59**: `return nil, err`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L61**: `transport.TLSClientConfig = tlsCfg`
+      - **What:** Assigns transport.TLSClientConfig.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L64**: `h2cTransport := buildH2CTransport(target)`
   - **What:** Defines h2cTransport.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -246,10 +269,59 @@ The list below documents the top-level statements inside the function body.
   - **What:** Assigns proxy.Director.
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+  - **Nested steps:**
+    - **L68**: `func(r *http.Request) { originalDirector(r) r.URL.Scheme = target.Scheme r.URL.Host = target.Host r.Host = target.Host if opts.Product != "…`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L69**: `originalDirector(r)`
+          - **What:** Calls originalDirector.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
+        - **L70**: `r.URL.Scheme = target.Scheme`
+          - **What:** Assigns r.URL.Scheme.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L71**: `r.URL.Host = target.Host`
+          - **What:** Assigns r.URL.Host.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L72**: `r.Host = target.Host`
+          - **What:** Assigns r.Host.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L74**: `if opts.Product != "" { r.Header.Set("X-Router-Product", opts.Product) }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L75**: `r.Header.Set("X-Router-Product", opts.Product)`
+              - **What:** Calls r.Header.Set.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
 - **L79**: `proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) { pkglog.Shared().Errorw("proxy upstream failure", "error", er…`
   - **What:** Assigns proxy.ErrorHandler.
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+  - **Nested steps:**
+    - **L79**: `func(w http.ResponseWriter, r *http.Request, err error) { pkglog.Shared().Errorw("proxy upstream failure", "error", err, "url", r.URL.Strin…`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L80**: `pkglog.Shared().Errorw("proxy upstream failure", "error", err, "url", r.URL.String())`
+          - **What:** Calls pkglog.Shared().Errorw.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
+        - **L81**: `detail := fmt.Sprintf("Failed to reach %s service", opts.Product)`
+          - **What:** Defines detail.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L82**: `problem.Write(w, http.StatusBadGateway, "Upstream Service Unavailable", detail, r.Header.Get("X-Trace-Id"), r.URL.Path)`
+          - **What:** Calls problem.Write.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
 - **L85**: `return proxy, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -281,16 +353,35 @@ func buildH2CTransport(target *url.URL) *http2.Transport {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L89**: `if target == nil || target.Scheme != "http" { return nil }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L90**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L93**: `return &http2.Transport{ AllowHTTP: true, DialTLS: func(network, addr string, _ *tls.Config) (net.Conn, error) { var d net.Dialer return d.…`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L95**: `func(network, addr string, _ *tls.Config) (net.Conn, error) { var d net.Dialer return d.Dial(network, addr) }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L96**: `var d net.Dialer`
+          - **What:** Declares local names.
+          - **Why:** Introduces variables or types used later in the function.
+          - **How:** Executes a Go declaration statement inside the function body.
+        - **L97**: `return d.Dial(network, addr)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 
 ### `(*grpcAwareTransport).RoundTrip`
 
@@ -313,12 +404,25 @@ func (t *grpcAwareTransport) RoundTrip(req *http.Request) (*http.Response, error
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L108**: `if t.shouldUseH2C(req) { h2cReq := cloneRequest(req) sanitizeH2CRequest(h2cReq) return t.h2c.RoundTrip(h2cReq) }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L109**: `h2cReq := cloneRequest(req)`
+      - **What:** Defines h2cReq.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L110**: `sanitizeH2CRequest(h2cReq)`
+      - **What:** Calls sanitizeH2CRequest.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L111**: `return t.h2c.RoundTrip(h2cReq)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L113**: `return t.base.RoundTrip(req)`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -347,16 +451,26 @@ func (t *grpcAwareTransport) shouldUseH2C(req *http.Request) bool {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L117**: `if t.h2c == nil || req == nil || req.URL == nil { return false }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L118**: `return false`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L120**: `if req.URL.Scheme != "http" { return false }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L121**: `return false`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L123**: `ct := strings.ToLower(req.Header.Get("Content-Type"))`
   - **What:** Defines ct.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -387,16 +501,26 @@ func (t *grpcAwareTransport) CloseIdleConnections() {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L128**: `if t.base != nil { t.base.CloseIdleConnections() }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L129**: `t.base.CloseIdleConnections()`
+      - **What:** Calls t.base.CloseIdleConnections.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L131**: `if t.h2c != nil { t.h2c.CloseIdleConnections() }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L132**: `t.h2c.CloseIdleConnections()`
+      - **What:** Calls t.h2c.CloseIdleConnections.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 
 ### `cloneRequest`
 
@@ -423,12 +547,17 @@ func cloneRequest(req *http.Request) *http.Request {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L137**: `if req == nil { return nil }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L138**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L140**: `clone := req.Clone(req.Context())`
   - **What:** Defines clone.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -482,16 +611,26 @@ func sanitizeH2CRequest(req *http.Request) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L150**: `if req == nil { return }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L151**: `return`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L153**: `for _, key := range []string{"Connection", "Proxy-Connection", "Upgrade", "Keep-Alive", "Transfer-Encoding"} { req.Header.Del(key) }`
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L154**: `req.Header.Del(key)`
+      - **What:** Calls req.Header.Del.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L156**: `req.Proto = "HTTP/2.0"`
   - **What:** Assigns req.Proto.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -551,7 +690,7 @@ func buildTLSConfig(cfg TLSConfig) (*tls.Config, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L162**: `tlsCfg := &tls.Config{ MinVersion: tls.VersionTLS12, InsecureSkipVerify: cfg.InsecureSkipVerify, }`
   - **What:** Defines tlsCfg.
@@ -561,10 +700,68 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L168**: `data, err := os.ReadFile(cfg.CAFile)`
+      - **What:** Defines data, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L169**: `if err != nil { return nil, fmt.Errorf("read CA file %q: %w", cfg.CAFile, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L170**: `return nil, fmt.Errorf("read CA file %q: %w", cfg.CAFile, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L173**: `pool := x509.NewCertPool()`
+      - **What:** Defines pool.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L174**: `if !pool.AppendCertsFromPEM(data) { return nil, fmt.Errorf("parse CA bundle %q: %w", cfg.CAFile, errInvalidPEM) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L175**: `return nil, fmt.Errorf("parse CA bundle %q: %w", cfg.CAFile, errInvalidPEM)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L177**: `tlsCfg.RootCAs = pool`
+      - **What:** Assigns tlsCfg.RootCAs.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L180**: `if cfg.ClientCertFile != "" || cfg.ClientKeyFile != "" { if cfg.ClientCertFile == "" || cfg.ClientKeyFile == "" { return nil, errors.New("c…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L181**: `if cfg.ClientCertFile == "" || cfg.ClientKeyFile == "" { return nil, errors.New("client certificate and key must both be provided") }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L182**: `return nil, errors.New("client certificate and key must both be provided")`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L185**: `cert, err := tls.LoadX509KeyPair(cfg.ClientCertFile, cfg.ClientKeyFile)`
+      - **What:** Defines cert, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L186**: `if err != nil { return nil, fmt.Errorf("load client key pair: %w", err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L187**: `return nil, fmt.Errorf("load client key pair: %w", err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L189**: `tlsCfg.Certificates = []tls.Certificate{cert}`
+      - **What:** Assigns tlsCfg.Certificates.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L192**: `return tlsCfg, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.

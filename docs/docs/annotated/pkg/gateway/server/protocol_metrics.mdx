@@ -149,12 +149,17 @@ func newProtocolMetrics(reg *gatewaymetrics.Registry) *protocolMetrics {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L21**: `if reg == nil { return nil }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L22**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L25**: `requests := prometheus.NewCounterVec(prometheus.CounterOpts{ Name: "gateway_protocol_requests_total", Help: "Count of proxied requests labe…`
   - **What:** Defines requests.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -248,12 +253,22 @@ func (m *protocolMetrics) track(r *http.Request) func(status int, elapsed time.D
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L60**: `if m == nil || r == nil { return func(int, time.Duration) {} }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L61**: `return func(int, time.Duration) {}`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L61**: `func(int, time.Duration) {}`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L64**: `protocol := classifyProtocol(r)`
   - **What:** Defines protocol.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -266,6 +281,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L68**: `m.inflight.WithLabelValues(protocol, product).Inc()`
+      - **What:** Calls m.inflight.WithLabelValues(protocol, product).Inc.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L71**: `trackConnection := m.connections != nil && trackConnectionForProtocol(protocol)`
   - **What:** Defines trackConnection.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -274,10 +294,79 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L73**: `m.connections.WithLabelValues(protocol, product).Inc()`
+      - **What:** Calls m.connections.WithLabelValues(protocol, product).Inc.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L76**: `return func(status int, elapsed time.Duration) { if status <= 0 { status = http.StatusOK } outcome := "success" if status >= 400 { outcome …`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L76**: `func(status int, elapsed time.Duration) { if status <= 0 { status = http.StatusOK } outcome := "success" if status >= 400 { outcome = "erro…`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L77**: `if status <= 0 { status = http.StatusOK }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L78**: `status = http.StatusOK`
+              - **What:** Assigns status.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L81**: `outcome := "success"`
+          - **What:** Defines outcome.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L82**: `if status >= 400 { outcome = "error" }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L83**: `outcome = "error"`
+              - **What:** Assigns outcome.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L86**: `if m.requests != nil { m.requests.WithLabelValues(protocol, product, outcome).Inc() }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L87**: `m.requests.WithLabelValues(protocol, product, outcome).Inc()`
+              - **What:** Calls m.requests.WithLabelValues(protocol, product, outcome).Inc.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
+        - **L89**: `if m.duration != nil { m.duration.WithLabelValues(protocol, product).Observe(elapsed.Seconds()) }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L90**: `m.duration.WithLabelValues(protocol, product).Observe(elapsed.Seconds())`
+              - **What:** Calls m.duration.WithLabelValues(protocol, product).Observe.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
+        - **L92**: `if m.inflight != nil { m.inflight.WithLabelValues(protocol, product).Dec() }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L93**: `m.inflight.WithLabelValues(protocol, product).Dec()`
+              - **What:** Calls m.inflight.WithLabelValues(protocol, product).Dec.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
+        - **L95**: `if trackConnection { m.connections.WithLabelValues(protocol, product).Dec() }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L96**: `m.connections.WithLabelValues(protocol, product).Dec()`
+              - **What:** Calls m.connections.WithLabelValues(protocol, product).Dec.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
 
 ### `(*protocolMetrics).hijacked`
 
@@ -310,12 +399,17 @@ func (m *protocolMetrics) hijacked(r *http.Request) func() {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L102**: `if m == nil || m.connections == nil || r == nil { return nil }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L103**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L106**: `protocol := classifyProtocol(r)`
   - **What:** Defines protocol.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -324,6 +418,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L108**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L111**: `product := productFromRequest(r)`
   - **What:** Defines product.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -336,6 +435,16 @@ The list below documents the top-level statements inside the function body.
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L113**: `func() { m.connections.WithLabelValues(protocol, product).Dec() }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L114**: `m.connections.WithLabelValues(protocol, product).Dec()`
+          - **What:** Calls m.connections.WithLabelValues(protocol, product).Dec.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
 
 ### `trackConnectionForProtocol`
 
@@ -360,12 +469,31 @@ func trackConnectionForProtocol(protocol string) bool {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L119**: `switch protocol { case "sse", "grpc": return true default: return false }`
   - **What:** Selects a branch from multiple cases.
   - **Why:** Keeps multi-case branching readable and explicit.
   - **How:** Evaluates the switch expression and executes the first matching case.
+  - **Nested steps:**
+    - **L120**: `case "sse", "grpc":`
+      - **What:** Selects a switch case.
+      - **Why:** Makes multi-branch control flow explicit and readable.
+      - **How:** Runs this case body when the switch value matches (or when default is selected).
+      - **Nested steps:**
+        - **L121**: `return true`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L122**: `default:`
+      - **What:** Selects a switch case.
+      - **Why:** Makes multi-branch control flow explicit and readable.
+      - **How:** Runs this case body when the switch value matches (or when default is selected).
+      - **Nested steps:**
+        - **L123**: `return false`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 
 ### `classifyProtocol`
 
@@ -418,12 +546,17 @@ func classifyProtocol(r *http.Request) string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L128**: `if r == nil { return "unknown" }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L129**: `return "unknown"`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L132**: `accept := strings.ToLower(r.Header.Get("Accept"))`
   - **What:** Defines accept.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -436,26 +569,69 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L136**: `return "sse"`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L139**: `if upgrade := r.Header.Get("Upgrade"); upgrade != "" && strings.EqualFold(upgrade, "websocket") { return "websocket" }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L139**: `upgrade := r.Header.Get("Upgrade")`
+      - **What:** Defines upgrade.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L140**: `return "websocket"`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L143**: `if connection := r.Header.Get("Connection"); connection != "" && strings.Contains(strings.ToLower(connection), "upgrade") { if strings.Equa…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L143**: `connection := r.Header.Get("Connection")`
+      - **What:** Defines connection.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L144**: `if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") { return "websocket" }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L145**: `return "websocket"`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 - **L149**: `if strings.HasPrefix(contentType, "application/grpc") { return "grpc" }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L150**: `return "grpc"`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L153**: `if r.Header.Get("Grpc-Timeout") != "" { return "grpc" }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L154**: `return "grpc"`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L157**: `if r.ProtoMajor == 2 && strings.Contains(strings.ToLower(r.Header.Get("TE")), "trailers") && strings.HasPrefix(contentType, "application/")…`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L158**: `return "grpc"`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L161**: `return "http"`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -495,16 +671,30 @@ func productFromRequest(r *http.Request) string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L165**: `if r == nil { return "unknown" }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L166**: `return "unknown"`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L169**: `if product := r.Header.Get("X-Router-Product"); product != "" { return product }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L169**: `product := r.Header.Get("X-Router-Product")`
+      - **What:** Defines product.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L170**: `return product`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L173**: `path := r.URL.Path`
   - **What:** Defines path.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -513,4 +703,32 @@ The list below documents the top-level statements inside the function body.
   - **What:** Selects a branch from multiple cases.
   - **Why:** Keeps multi-case branching readable and explicit.
   - **How:** Evaluates the switch expression and executes the first matching case.
+  - **Nested steps:**
+    - **L175**: `case strings.HasPrefix(path, "/v1/trade"):`
+      - **What:** Selects a switch case.
+      - **Why:** Makes multi-branch control flow explicit and readable.
+      - **How:** Runs this case body when the switch value matches (or when default is selected).
+      - **Nested steps:**
+        - **L176**: `return "trade"`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L177**: `case strings.HasPrefix(path, "/v1/task"):`
+      - **What:** Selects a switch case.
+      - **Why:** Makes multi-branch control flow explicit and readable.
+      - **How:** Runs this case body when the switch value matches (or when default is selected).
+      - **Nested steps:**
+        - **L178**: `return "task"`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L179**: `default:`
+      - **What:** Selects a switch case.
+      - **Why:** Makes multi-branch control flow explicit and readable.
+      - **How:** Runs this case body when the switch value matches (or when default is selected).
+      - **Nested steps:**
+        - **L180**: `return "unknown"`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 

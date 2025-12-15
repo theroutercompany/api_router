@@ -2,5 +2,57 @@
 title: Admin API
 ---
 
-The admin server exposes status/config/reload endpoints when enabled.
+The admin server exposes control-plane endpoints when enabled. It is intended for operators and automation, not for public internet traffic.
 
+Deep dive:
+
+- Admin wiring and handlers: `../annotated/pkg/gateway/runtime/runtime`
+- CLI client for admin endpoints: `../annotated/cmd/apigw/main` (search for `adminCommand`)
+
+## Enable the admin server
+
+In YAML:
+
+```yaml
+admin:
+  enabled: true
+  listen: 127.0.0.1:9090
+  token: ""  # optional
+  allow: []  # optional
+```
+
+Or via env vars:
+
+```bash
+ADMIN_ENABLED="true"
+ADMIN_LISTEN="127.0.0.1:9090"
+ADMIN_TOKEN="..."   # optional
+ADMIN_ALLOW="127.0.0.1/32,10.0.0.0/24" # optional
+```
+
+## Endpoints
+
+The admin server uses a fixed prefix:
+
+- `/__admin/`
+
+### `GET /__admin/status`
+
+Returns basic runtime status metadata.
+
+### `GET /__admin/config`
+
+Returns the active runtime configuration (with sensitive fields redacted).
+
+### `POST /__admin/reload`
+
+Requests a config reload. If the runtime was started with a reload callback, it will be invoked.
+
+## Auth and access control
+
+Two mechanisms can apply:
+
+- **Token auth:** if `admin.token` is set, requests must include a bearer token.
+- **Allowlist:** if `admin.allow` is set, requests must come from an allowed IP/CIDR.
+
+For local development, keep the admin server bound to loopback (`127.0.0.1`) unless you have a reason to expose it.

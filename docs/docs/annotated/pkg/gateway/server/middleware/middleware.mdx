@@ -312,16 +312,82 @@ func RequestMetadata(ensure EnsureIDs) func(http.Handler) http.Handler {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L53**: `if ensure == nil { return func(next http.Handler) http.Handler { return next } }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L54**: `return func(next http.Handler) http.Handler { return next }`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L54**: `func(next http.Handler) http.Handler { return next }`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+          - **Nested steps:**
+            - **L54**: `return next`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
 - **L57**: `return func(next http.Handler) http.Handler { if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) } retur…`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L57**: `func(next http.Handler) http.Handler { if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) } return http.…`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L58**: `if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L59**: `return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+              - **Nested steps:**
+                - **L59**: `func(http.ResponseWriter, *http.Request) {}`
+                  - **What:** Defines an inline function (closure).
+                  - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+                  - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+        - **L61**: `return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { req, requestID, traceID := ensure(r) w.Header().Set("X-Request-Id", …`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+          - **Nested steps:**
+            - **L61**: `func(w http.ResponseWriter, r *http.Request) { req, requestID, traceID := ensure(r) w.Header().Set("X-Request-Id", requestID) if traceID !=…`
+              - **What:** Defines an inline function (closure).
+              - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+              - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+              - **Nested steps:**
+                - **L62**: `req, requestID, traceID := ensure(r)`
+                  - **What:** Defines req, requestID, traceID.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L63**: `w.Header().Set("X-Request-Id", requestID)`
+                  - **What:** Calls w.Header().Set.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
+                - **L64**: `if traceID != "" { w.Header().Set("X-Trace-Id", traceID) }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Handles different execution paths based on runtime state.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L65**: `w.Header().Set("X-Trace-Id", traceID)`
+                      - **What:** Calls w.Header().Set.
+                      - **Why:** Performs side effects or delegates work to a helper.
+                      - **How:** Executes the expression statement.
+                - **L67**: `next.ServeHTTP(w, req)`
+                  - **What:** Calls next.ServeHTTP.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
 
 ### `SecurityHeaders`
 
@@ -353,12 +419,66 @@ func SecurityHeaders() func(http.Handler) http.Handler {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L74**: `return func(next http.Handler) http.Handler { if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) } retur…`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L74**: `func(next http.Handler) http.Handler { if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) } return http.…`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L75**: `if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L76**: `return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+              - **Nested steps:**
+                - **L76**: `func(http.ResponseWriter, *http.Request) {}`
+                  - **What:** Defines an inline function (closure).
+                  - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+                  - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+        - **L78**: `return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { headers := w.Header() headers.Set("X-Content-Type-Options", "nosniff…`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+          - **Nested steps:**
+            - **L78**: `func(w http.ResponseWriter, r *http.Request) { headers := w.Header() headers.Set("X-Content-Type-Options", "nosniff") headers.Set("X-Frame-…`
+              - **What:** Defines an inline function (closure).
+              - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+              - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+              - **Nested steps:**
+                - **L79**: `headers := w.Header()`
+                  - **What:** Defines headers.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L80**: `headers.Set("X-Content-Type-Options", "nosniff")`
+                  - **What:** Calls headers.Set.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
+                - **L81**: `headers.Set("X-Frame-Options", "DENY")`
+                  - **What:** Calls headers.Set.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
+                - **L82**: `headers.Set("Referrer-Policy", "no-referrer")`
+                  - **What:** Calls headers.Set.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
+                - **L83**: `headers.Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")`
+                  - **What:** Calls headers.Set.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
+                - **L84**: `next.ServeHTTP(w, r)`
+                  - **What:** Calls next.ServeHTTP.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
 
 ### `BodyLimit`
 
@@ -400,12 +520,94 @@ func BodyLimit(limit int64, trace TraceIDFromContext, write ProblemWriter) func(
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L91**: `return func(next http.Handler) http.Handler { if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) } retur…`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L91**: `func(next http.Handler) http.Handler { if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) } return http.…`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L92**: `if next == nil { return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}) }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L93**: `return http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+              - **Nested steps:**
+                - **L93**: `func(http.ResponseWriter, *http.Request) {}`
+                  - **What:** Defines an inline function (closure).
+                  - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+                  - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+        - **L95**: `return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { if r.ContentLength > limit { tid := "" if trace != nil { tid = trace…`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+          - **Nested steps:**
+            - **L95**: `func(w http.ResponseWriter, r *http.Request) { if r.ContentLength > limit { tid := "" if trace != nil { tid = trace(r.Context()) } if write…`
+              - **What:** Defines an inline function (closure).
+              - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+              - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+              - **Nested steps:**
+                - **L96**: `if r.ContentLength > limit { tid := "" if trace != nil { tid = trace(r.Context()) } if write != nil { write(w, http.StatusRequestEntityTooL…`
+                  - **What:** Branches conditionally.
+                  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L97**: `tid := ""`
+                      - **What:** Defines tid.
+                      - **Why:** Keeps intermediate state available for later steps in the function.
+                      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                    - **L98**: `if trace != nil { tid = trace(r.Context()) }`
+                      - **What:** Branches conditionally.
+                      - **Why:** Handles different execution paths based on runtime state.
+                      - **How:** Evaluates the condition and executes the matching branch.
+                      - **Nested steps:**
+                        - **L99**: `tid = trace(r.Context())`
+                          - **What:** Assigns tid.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                    - **L101**: `if write != nil { write(w, http.StatusRequestEntityTooLarge, "Payload Too Large", fmt.Sprintf("Request body exceeds %d bytes", limit), tid,…`
+                      - **What:** Branches conditionally.
+                      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+                      - **How:** Evaluates the condition and executes the matching branch.
+                      - **Nested steps:**
+                        - **L102**: `write(w, http.StatusRequestEntityTooLarge, "Payload Too Large", fmt.Sprintf("Request body exceeds %d bytes", limit), tid, r.URL.Path)`
+                          - **What:** Calls write.
+                          - **Why:** Performs side effects or delegates work to a helper.
+                          - **How:** Executes the expression statement.
+                        - **L103**: `return`
+                          - **What:** Returns from the current function.
+                          - **Why:** Ends the current execution path and hands control back to the caller.
+                          - **How:** Executes a `return` statement (possibly returning values).
+                    - **L105**: `http.Error(w, http.StatusText(http.StatusRequestEntityTooLarge), http.StatusRequestEntityTooLarge)`
+                      - **What:** Calls http.Error.
+                      - **Why:** Performs side effects or delegates work to a helper.
+                      - **How:** Executes the expression statement.
+                    - **L106**: `return`
+                      - **What:** Returns from the current function.
+                      - **Why:** Ends the current execution path and hands control back to the caller.
+                      - **How:** Executes a `return` statement (possibly returning values).
+                - **L108**: `if r.Body != nil { r.Body = http.MaxBytesReader(w, r.Body, limit) }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Handles different execution paths based on runtime state.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L109**: `r.Body = http.MaxBytesReader(w, r.Body, limit)`
+                      - **What:** Assigns r.Body.
+                      - **Why:** Keeps intermediate state available for later steps in the function.
+                      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L111**: `next.ServeHTTP(w, r)`
+                  - **What:** Calls next.ServeHTTP.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
 
 ### `RateLimit`
 
@@ -449,12 +651,93 @@ func RateLimit(allow AllowFunc, key ClientKey, now func() time.Time, trace Trace
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L118**: `return func(next http.Handler) http.Handler { if next == nil || allow == nil || key == nil || now == nil { return next } return http.Handle…`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L118**: `func(next http.Handler) http.Handler { if next == nil || allow == nil || key == nil || now == nil { return next } return http.HandlerFunc(f…`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L119**: `if next == nil || allow == nil || key == nil || now == nil { return next }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L120**: `return next`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L122**: `return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { if r.Method == http.MethodOptions { next.ServeHTTP(w, r) return } cl…`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+          - **Nested steps:**
+            - **L122**: `func(w http.ResponseWriter, r *http.Request) { if r.Method == http.MethodOptions { next.ServeHTTP(w, r) return } client := key(r) if allow(…`
+              - **What:** Defines an inline function (closure).
+              - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+              - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+              - **Nested steps:**
+                - **L123**: `if r.Method == http.MethodOptions { next.ServeHTTP(w, r) return }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L124**: `next.ServeHTTP(w, r)`
+                      - **What:** Calls next.ServeHTTP.
+                      - **Why:** Performs side effects or delegates work to a helper.
+                      - **How:** Executes the expression statement.
+                    - **L125**: `return`
+                      - **What:** Returns from the current function.
+                      - **Why:** Ends the current execution path and hands control back to the caller.
+                      - **How:** Executes a `return` statement (possibly returning values).
+                - **L127**: `client := key(r)`
+                  - **What:** Defines client.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L128**: `if allow(client, now()) { next.ServeHTTP(w, r) return }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L129**: `next.ServeHTTP(w, r)`
+                      - **What:** Calls next.ServeHTTP.
+                      - **Why:** Performs side effects or delegates work to a helper.
+                      - **How:** Executes the expression statement.
+                    - **L130**: `return`
+                      - **What:** Returns from the current function.
+                      - **Why:** Ends the current execution path and hands control back to the caller.
+                      - **How:** Executes a `return` statement (possibly returning values).
+                - **L132**: `if write != nil { tid := "" if trace != nil { tid = trace(r.Context()) } write(w, http.StatusTooManyRequests, "Too Many Requests", "Rate li…`
+                  - **What:** Branches conditionally.
+                  - **Why:** Handles different execution paths based on runtime state.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L133**: `tid := ""`
+                      - **What:** Defines tid.
+                      - **Why:** Keeps intermediate state available for later steps in the function.
+                      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                    - **L134**: `if trace != nil { tid = trace(r.Context()) }`
+                      - **What:** Branches conditionally.
+                      - **Why:** Handles different execution paths based on runtime state.
+                      - **How:** Evaluates the condition and executes the matching branch.
+                      - **Nested steps:**
+                        - **L135**: `tid = trace(r.Context())`
+                          - **What:** Assigns tid.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                    - **L137**: `write(w, http.StatusTooManyRequests, "Too Many Requests", "Rate limit exceeded", tid, r.URL.Path)`
+                      - **What:** Calls write.
+                      - **Why:** Performs side effects or delegates work to a helper.
+                      - **How:** Executes the expression statement.
+                    - **L139**: `http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)`
+                      - **What:** Calls http.Error.
+                      - **Why:** Performs side effects or delegates work to a helper.
+                      - **How:** Executes the expression statement.
 
 ### `CORS`
 
@@ -495,12 +778,79 @@ func CORS(handler *cors.Cors, trace TraceIDFromContext, write ProblemWriter) fun
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L147**: `return func(next http.Handler) http.Handler { if handler == nil || next == nil { return next } corsHandler := handler.Handler(next) return …`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L147**: `func(next http.Handler) http.Handler { if handler == nil || next == nil { return next } corsHandler := handler.Handler(next) return http.Ha…`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L148**: `if handler == nil || next == nil { return next }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L149**: `return next`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L151**: `corsHandler := handler.Handler(next)`
+          - **What:** Defines corsHandler.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L152**: `return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { origin := strings.TrimSpace(r.Header.Get("Origin")) if origin != "" …`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+          - **Nested steps:**
+            - **L152**: `func(w http.ResponseWriter, r *http.Request) { origin := strings.TrimSpace(r.Header.Get("Origin")) if origin != "" && !handler.OriginAllowe…`
+              - **What:** Defines an inline function (closure).
+              - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+              - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+              - **Nested steps:**
+                - **L153**: `origin := strings.TrimSpace(r.Header.Get("Origin"))`
+                  - **What:** Defines origin.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L154**: `if origin != "" && !handler.OriginAllowed(r) { if write != nil { tid := "" if trace != nil { tid = trace(r.Context()) } write(w, http.Statu…`
+                  - **What:** Branches conditionally.
+                  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L155**: `if write != nil { tid := "" if trace != nil { tid = trace(r.Context()) } write(w, http.StatusForbidden, "Not allowed by CORS", fmt.Sprintf(…`
+                      - **What:** Branches conditionally.
+                      - **Why:** Handles different execution paths based on runtime state.
+                      - **How:** Evaluates the condition and executes the matching branch.
+                      - **Nested steps:**
+                        - **L156**: `tid := ""`
+                          - **What:** Defines tid.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                        - **L157**: `if trace != nil { tid = trace(r.Context()) }`
+                          - **What:** Branches conditionally.
+                          - **Why:** Handles different execution paths based on runtime state.
+                          - **How:** Evaluates the condition and executes the matching branch.
+                        - **L160**: `write(w, http.StatusForbidden, "Not allowed by CORS", fmt.Sprintf("Origin %s is not allowed", origin), tid, r.URL.Path)`
+                          - **What:** Calls write.
+                          - **Why:** Performs side effects or delegates work to a helper.
+                          - **How:** Executes the expression statement.
+                        - **L162**: `http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)`
+                          - **What:** Calls http.Error.
+                          - **Why:** Performs side effects or delegates work to a helper.
+                          - **How:** Executes the expression statement.
+                    - **L164**: `return`
+                      - **What:** Returns from the current function.
+                      - **Why:** Ends the current execution path and hands control back to the caller.
+                      - **How:** Executes a `return` statement (possibly returning values).
+                - **L166**: `corsHandler.ServeHTTP(w, r)`
+                  - **What:** Calls corsHandler.ServeHTTP.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
 
 ### `Logging`
 
@@ -609,12 +959,205 @@ func Logging(
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L180**: `return func(next http.Handler) http.Handler { if next == nil || logger == nil { return next } return http.HandlerFunc(func(w http.ResponseW…`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L180**: `func(next http.Handler) http.Handler { if next == nil || logger == nil { return next } return http.HandlerFunc(func(w http.ResponseWriter, …`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L181**: `if next == nil || logger == nil { return next }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L182**: `return next`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L185**: `return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { start := time.Now() trackFn := func(int, time.Duration) {} if track …`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+          - **Nested steps:**
+            - **L185**: `func(w http.ResponseWriter, r *http.Request) { start := time.Now() trackFn := func(int, time.Duration) {} if track != nil { if fn := track(…`
+              - **What:** Defines an inline function (closure).
+              - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+              - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+              - **Nested steps:**
+                - **L186**: `start := time.Now()`
+                  - **What:** Defines start.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L188**: `trackFn := func(int, time.Duration) {}`
+                  - **What:** Defines trackFn.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                  - **Nested steps:**
+                    - **L188**: `func(int, time.Duration) {}`
+                      - **What:** Defines an inline function (closure).
+                      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+                      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+                - **L189**: `if track != nil { if fn := track(r); fn != nil { trackFn = fn } }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Handles different execution paths based on runtime state.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L190**: `if fn := track(r); fn != nil { trackFn = fn }`
+                      - **What:** Branches conditionally.
+                      - **Why:** Handles different execution paths based on runtime state.
+                      - **How:** Evaluates the condition and executes the matching branch.
+                      - **Nested steps:**
+                        - **L190**: `fn := track(r)`
+                          - **What:** Defines fn.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                        - **L191**: `trackFn = fn`
+                          - **What:** Assigns trackFn.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L195**: `var hijackTracker func() (func(), func(net.Conn) net.Conn)`
+                  - **What:** Declares local names.
+                  - **Why:** Introduces variables or types used later in the function.
+                  - **How:** Executes a Go declaration statement inside the function body.
+                - **L196**: `if hijacked != nil { hijackTracker = func() (func(), func(net.Conn) net.Conn) { return hijacked(r) } }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Handles different execution paths based on runtime state.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L197**: `hijackTracker = func() (func(), func(net.Conn) net.Conn) { return hijacked(r) }`
+                      - **What:** Assigns hijackTracker.
+                      - **Why:** Keeps intermediate state available for later steps in the function.
+                      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                      - **Nested steps:**
+                        - **L197**: `func() (func(), func(net.Conn) net.Conn) { return hijacked(r) }`
+                          - **What:** Defines an inline function (closure).
+                          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+                          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+                - **L202**: `writer := newLoggingResponseWriter(w, hijackTracker)`
+                  - **What:** Defines writer.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L203**: `next.ServeHTTP(writer, r)`
+                  - **What:** Calls next.ServeHTTP.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
+                - **L205**: `duration := time.Since(start)`
+                  - **What:** Defines duration.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L206**: `status := writer.status`
+                  - **What:** Defines status.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L207**: `if status == 0 { status = http.StatusOK }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Handles different execution paths based on runtime state.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L208**: `status = http.StatusOK`
+                      - **What:** Assigns status.
+                      - **Why:** Keeps intermediate state available for later steps in the function.
+                      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L211**: `trackFn(status, duration)`
+                  - **What:** Calls trackFn.
+                  - **Why:** Performs side effects or delegates work to a helper.
+                  - **How:** Executes the expression statement.
+                - **L213**: `fields := []any{ "method", r.Method, "path", r.URL.Path, "status", status, "durationMs", float64(duration.Microseconds()) / 1000.0, "bytesW…`
+                  - **What:** Defines fields.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L221**: `if requestID != nil { if rid := requestID(r.Context()); rid != "" { fields = append(fields, "requestId", rid) } }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Handles different execution paths based on runtime state.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L222**: `if rid := requestID(r.Context()); rid != "" { fields = append(fields, "requestId", rid) }`
+                      - **What:** Branches conditionally.
+                      - **Why:** Handles different execution paths based on runtime state.
+                      - **How:** Evaluates the condition and executes the matching branch.
+                      - **Nested steps:**
+                        - **L222**: `rid := requestID(r.Context())`
+                          - **What:** Defines rid.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                        - **L223**: `fields = append(fields, "requestId", rid)`
+                          - **What:** Assigns fields.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L226**: `if traceID != nil { if tid := traceID(r.Context()); tid != "" { fields = append(fields, "traceId", tid) } }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Handles different execution paths based on runtime state.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L227**: `if tid := traceID(r.Context()); tid != "" { fields = append(fields, "traceId", tid) }`
+                      - **What:** Branches conditionally.
+                      - **Why:** Handles different execution paths based on runtime state.
+                      - **How:** Evaluates the condition and executes the matching branch.
+                      - **Nested steps:**
+                        - **L227**: `tid := traceID(r.Context())`
+                          - **What:** Defines tid.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                        - **L228**: `fields = append(fields, "traceId", tid)`
+                          - **What:** Assigns fields.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L231**: `if clientAddr != nil { if remote := clientAddr(r); remote != "" { fields = append(fields, "remoteAddr", remote) } }`
+                  - **What:** Branches conditionally.
+                  - **Why:** Handles different execution paths based on runtime state.
+                  - **How:** Evaluates the condition and executes the matching branch.
+                  - **Nested steps:**
+                    - **L232**: `if remote := clientAddr(r); remote != "" { fields = append(fields, "remoteAddr", remote) }`
+                      - **What:** Branches conditionally.
+                      - **Why:** Handles different execution paths based on runtime state.
+                      - **How:** Evaluates the condition and executes the matching branch.
+                      - **Nested steps:**
+                        - **L232**: `remote := clientAddr(r)`
+                          - **What:** Defines remote.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                        - **L233**: `fields = append(fields, "remoteAddr", remote)`
+                          - **What:** Assigns fields.
+                          - **Why:** Keeps intermediate state available for later steps in the function.
+                          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L237**: `switch { case status >= 500: logger.Errorw("http request completed", fields...) case status >= 400: logger.Warnw("http request completed", …`
+                  - **What:** Selects a branch from multiple cases.
+                  - **Why:** Keeps multi-case branching readable and explicit.
+                  - **How:** Evaluates the switch expression and executes the first matching case.
+                  - **Nested steps:**
+                    - **L238**: `case status >= 500:`
+                      - **What:** Selects a switch case.
+                      - **Why:** Makes multi-branch control flow explicit and readable.
+                      - **How:** Runs this case body when the switch value matches (or when default is selected).
+                      - **Nested steps:**
+                        - **L239**: `logger.Errorw("http request completed", fields...)`
+                          - **What:** Calls logger.Errorw.
+                          - **Why:** Performs side effects or delegates work to a helper.
+                          - **How:** Executes the expression statement.
+                    - **L240**: `case status >= 400:`
+                      - **What:** Selects a switch case.
+                      - **Why:** Makes multi-branch control flow explicit and readable.
+                      - **How:** Runs this case body when the switch value matches (or when default is selected).
+                      - **Nested steps:**
+                        - **L241**: `logger.Warnw("http request completed", fields...)`
+                          - **What:** Calls logger.Warnw.
+                          - **Why:** Performs side effects or delegates work to a helper.
+                          - **How:** Executes the expression statement.
+                    - **L242**: `default:`
+                      - **What:** Selects a switch case.
+                      - **Why:** Makes multi-branch control flow explicit and readable.
+                      - **How:** Runs this case body when the switch value matches (or when default is selected).
+                      - **Nested steps:**
+                        - **L243**: `logger.Infow("http request completed", fields...)`
+                          - **What:** Calls logger.Infow.
+                          - **Why:** Performs side effects or delegates work to a helper.
+                          - **How:** Executes the expression statement.
 
 ### `newLoggingResponseWriter`
 
@@ -636,7 +1179,7 @@ func newLoggingResponseWriter(w http.ResponseWriter, tracker func() (func(), fun
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L258**: `return &loggingResponseWriter{ ResponseWriter: w, status: http.StatusOK, hijackTracker: tracker, }`
   - **What:** Returns from the current function.
@@ -660,7 +1203,7 @@ func (w *loggingResponseWriter) WriteHeader(status int) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L266**: `w.status = status`
   - **What:** Assigns w.status.
@@ -692,12 +1235,17 @@ func (w *loggingResponseWriter) Write(b []byte) (int, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L271**: `if w.status == 0 { w.status = http.StatusOK }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L272**: `w.status = http.StatusOK`
+      - **What:** Assigns w.status.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L274**: `n, err := w.ResponseWriter.Write(b)`
   - **What:** Defines n, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -729,12 +1277,21 @@ func (w *loggingResponseWriter) Flush() {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L280**: `if flusher, ok := w.ResponseWriter.(http.Flusher); ok { flusher.Flush() }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L280**: `flusher, ok := w.ResponseWriter.(http.Flusher)`
+      - **What:** Defines flusher, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L281**: `flusher.Flush()`
+      - **What:** Calls flusher.Flush.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 
 ### `(*loggingResponseWriter).Hijack`
 
@@ -777,7 +1334,7 @@ func (w *loggingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L286**: `hijacker, ok := w.ResponseWriter.(http.Hijacker)`
   - **What:** Defines hijacker, ok.
@@ -787,6 +1344,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L288**: `return nil, nil, errors.New("hijacker not supported")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L290**: `conn, rw, err := hijacker.Hijack()`
   - **What:** Defines conn, rw, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -795,10 +1357,56 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L292**: `return nil, nil, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L295**: `if w.hijackTracker != nil { var closer func() var wrapper func(net.Conn) net.Conn w.hijackOnce.Do(func() { closer, wrapper = w.hijackTracke…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L296**: `var closer func()`
+      - **What:** Declares local names.
+      - **Why:** Introduces variables or types used later in the function.
+      - **How:** Executes a Go declaration statement inside the function body.
+    - **L297**: `var wrapper func(net.Conn) net.Conn`
+      - **What:** Declares local names.
+      - **Why:** Introduces variables or types used later in the function.
+      - **How:** Executes a Go declaration statement inside the function body.
+    - **L298**: `w.hijackOnce.Do(func() { closer, wrapper = w.hijackTracker() })`
+      - **What:** Calls w.hijackOnce.Do.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+      - **Nested steps:**
+        - **L298**: `func() { closer, wrapper = w.hijackTracker() }`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+          - **Nested steps:**
+            - **L299**: `closer, wrapper = w.hijackTracker()`
+              - **What:** Assigns closer, wrapper.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L301**: `if wrapper != nil { conn = wrapper(conn) }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L302**: `conn = wrapper(conn)`
+          - **What:** Assigns conn.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L304**: `if closer != nil { conn = &trackingConn{Conn: conn, onClose: closer} }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L305**: `conn = &trackingConn{Conn: conn, onClose: closer}`
+          - **What:** Assigns conn.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L309**: `return conn, rw, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -823,12 +1431,21 @@ func (w *loggingResponseWriter) Push(target string, opts *http.PushOptions) erro
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L313**: `if pusher, ok := w.ResponseWriter.(http.Pusher); ok { return pusher.Push(target, opts) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L313**: `pusher, ok := w.ResponseWriter.(http.Pusher)`
+      - **What:** Defines pusher, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L314**: `return pusher.Push(target, opts)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L316**: `return http.ErrNotSupported`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -856,7 +1473,7 @@ func (c *trackingConn) Close() error {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L327**: `err := c.Conn.Close()`
   - **What:** Defines err.
@@ -866,6 +1483,21 @@ The list below documents the top-level statements inside the function body.
   - **What:** Calls c.once.Do.
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
+  - **Nested steps:**
+    - **L328**: `func() { if c.onClose != nil { c.onClose() } }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L329**: `if c.onClose != nil { c.onClose() }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L330**: `c.onClose()`
+              - **What:** Calls c.onClose.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
 - **L333**: `return err`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -892,12 +1524,17 @@ func (c *trackingConn) Read(b []byte) (int, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L337**: `if c.timeout > 0 { _ = c.Conn.SetReadDeadline(time.Now().Add(c.timeout)) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L338**: `_ = c.Conn.SetReadDeadline(time.Now().Add(c.timeout))`
+      - **What:** Assigns _.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L340**: `return c.Conn.Read(b)`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -924,12 +1561,17 @@ func (c *trackingConn) Write(b []byte) (int, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L344**: `if c.timeout > 0 { _ = c.Conn.SetWriteDeadline(time.Now().Add(c.timeout)) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L345**: `_ = c.Conn.SetWriteDeadline(time.Now().Add(c.timeout))`
+      - **What:** Assigns _.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L347**: `return c.Conn.Write(b)`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.

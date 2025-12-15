@@ -216,44 +216,89 @@ func New(opts Options) (http.Handler, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L40**: `if strings.TrimSpace(opts.Secret) == "" { return nil, errors.New("webhook secret required") }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L41**: `return nil, errors.New("webhook secret required")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L43**: `if strings.TrimSpace(opts.TargetURL) == "" { return nil, errors.New("webhook targetURL required") }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L44**: `return nil, errors.New("webhook targetURL required")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L46**: `if strings.TrimSpace(opts.SignatureHeader) == "" { return nil, errors.New("webhook signature header required") }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L47**: `return nil, errors.New("webhook signature header required")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L49**: `if opts.MaxAttempts <= 0 { return nil, errors.New("webhook maxAttempts must be positive") }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L50**: `return nil, errors.New("webhook maxAttempts must be positive")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L52**: `if opts.InitialBackoff <= 0 { return nil, errors.New("webhook initial backoff must be positive") }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L53**: `return nil, errors.New("webhook initial backoff must be positive")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L55**: `if opts.Timeout <= 0 { return nil, errors.New("webhook timeout must be positive") }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L56**: `return nil, errors.New("webhook timeout must be positive")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L58**: `if opts.Client == nil { opts.Client = &http.Client{ Timeout: opts.Timeout, } }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L59**: `opts.Client = &http.Client{ Timeout: opts.Timeout, }`
+      - **What:** Assigns opts.Client.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L63**: `if opts.Logger == nil { opts.Logger = pkglog.Shared() }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L64**: `opts.Logger = pkglog.Shared()`
+      - **What:** Assigns opts.Logger.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L66**: `if opts.MaxBodyBytes <= 0 { opts.MaxBodyBytes = defaultMaxBodyBytes }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L67**: `opts.MaxBodyBytes = defaultMaxBodyBytes`
+      - **What:** Assigns opts.MaxBodyBytes.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L70**: `handler := &webhookHandler{ name: opts.Name, targetURL: opts.TargetURL, secret: []byte(opts.Secret), signatureHeader: opts.SignatureHeader,…`
   - **What:** Defines handler.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -310,12 +355,25 @@ func (h *webhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L100**: `if r.Method != http.MethodPost { w.Header().Set("Allow", http.MethodPost) http.Error(w, "method not allowed", http.StatusMethodNotAllowed) …`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L101**: `w.Header().Set("Allow", http.MethodPost)`
+      - **What:** Calls w.Header().Set.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L102**: `http.Error(w, "method not allowed", http.StatusMethodNotAllowed)`
+      - **What:** Calls http.Error.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L103**: `return`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L105**: `defer r.Body.Close()`
   - **What:** Defers a call for cleanup.
   - **Why:** Ensures the deferred action runs even on early returns.
@@ -326,16 +384,80 @@ The list below documents the top-level statements inside the function body.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L108**: `if err != nil { var tooLarge *errBodyTooLarge if errors.As(err, &tooLarge) { http.Error(w, "payload too large", http.StatusRequestEntityToo…`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L109**: `var tooLarge *errBodyTooLarge`
+      - **What:** Declares local names.
+      - **Why:** Introduces variables or types used later in the function.
+      - **How:** Executes a Go declaration statement inside the function body.
+    - **L110**: `if errors.As(err, &tooLarge) { http.Error(w, "payload too large", http.StatusRequestEntityTooLarge) return }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L111**: `http.Error(w, "payload too large", http.StatusRequestEntityTooLarge)`
+          - **What:** Calls http.Error.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
+        - **L112**: `return`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L114**: `h.logger.Errorw("webhook read body failed", "error", err, "webhook", h.name)`
+      - **What:** Calls h.logger.Errorw.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L115**: `http.Error(w, "invalid payload", http.StatusBadRequest)`
+      - **What:** Calls http.Error.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L116**: `return`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L119**: `if err := h.verifySignature(r.Header.Get(h.signatureHeader), body); err != nil { h.logger.Warnw("webhook signature verification failed", "e…`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L119**: `err := h.verifySignature(r.Header.Get(h.signatureHeader), body)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L120**: `h.logger.Warnw("webhook signature verification failed", "error", err, "webhook", h.name)`
+      - **What:** Calls h.logger.Warnw.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L121**: `http.Error(w, "invalid signature", http.StatusUnauthorized)`
+      - **What:** Calls http.Error.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L122**: `return`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L125**: `if err := h.forwardWithRetry(r.Context(), r, body); err != nil { h.logger.Errorw("webhook delivery failed", "error", err, "webhook", h.name…`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L125**: `err := h.forwardWithRetry(r.Context(), r, body)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L126**: `h.logger.Errorw("webhook delivery failed", "error", err, "webhook", h.name)`
+      - **What:** Calls h.logger.Errorw.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L127**: `http.Error(w, "upstream unavailable", http.StatusBadGateway)`
+      - **What:** Calls http.Error.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L128**: `return`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L131**: `w.WriteHeader(http.StatusAccepted)`
   - **What:** Calls w.WriteHeader.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -374,7 +496,7 @@ func (h *webhookHandler) verifySignature(sigHeader string, body []byte) error {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L135**: `sig := strings.TrimSpace(sigHeader)`
   - **What:** Defines sig.
@@ -384,10 +506,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L137**: `return errors.New("signature header missing")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L139**: `if strings.HasPrefix(strings.ToLower(sig), "sha256=") { sig = sig[7:] }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L140**: `sig = sig[7:]`
+      - **What:** Assigns sig.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L143**: `expectedMAC := computeHMAC(body, h.secret)`
   - **What:** Defines expectedMAC.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -400,10 +532,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L146**: `return fmt.Errorf("invalid signature encoding: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L149**: `if !hmac.Equal(expectedMAC, provided) { return errors.New("signature mismatch") }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L150**: `return errors.New("signature mismatch")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L152**: `return nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -454,7 +596,7 @@ func (h *webhookHandler) forwardWithRetry(parentCtx context.Context, original *h
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L156**: `backoff := h.initialBackoff`
   - **What:** Defines backoff.
@@ -464,6 +606,76 @@ The list below documents the top-level statements inside the function body.
   - **What:** Runs a loop.
   - **Why:** Repeats logic until a condition is met or the loop terminates.
   - **How:** Executes a `for` loop statement.
+  - **Nested steps:**
+    - **L157**: `attempt := 1`
+      - **What:** Defines attempt.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L157**: `attempt++`
+      - **What:** Updates a counter.
+      - **Why:** Maintains an index or tally used by subsequent logic.
+      - **How:** Executes an increment/decrement statement.
+    - **L158**: `ctx, cancel := context.WithTimeout(parentCtx, h.timeout)`
+      - **What:** Defines ctx, cancel.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L159**: `err := h.forwardOnce(ctx, original, body, attempt)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L160**: `cancel()`
+      - **What:** Calls cancel.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L161**: `if err == nil { return nil }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L162**: `return nil`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L165**: `retryable := errors.Is(err, errUpstreamRetryable)`
+      - **What:** Defines retryable.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L166**: `h.logger.Warnw("webhook delivery attempt failed", "webhook", h.name, "attempt", attempt, "maxAttempts", h.maxAttempts, "retryable", retryab…`
+      - **What:** Calls h.logger.Warnw.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L174**: `if !retryable || attempt == h.maxAttempts { return err }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L175**: `return err`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L178**: `select { case <-time.After(backoff): backoff = increaseBackoff(backoff, 4*time.Second) case <-parentCtx.Done(): return parentCtx.Err() }`
+      - **What:** Selects among concurrent operations.
+      - **Why:** Coordinates channel operations without blocking incorrectly.
+      - **How:** Executes a `select` statement and runs one ready case.
+      - **Nested steps:**
+        - **L179**: `case <-time.After(backoff):`
+          - **What:** Selects a select-case branch.
+          - **Why:** Coordinates concurrent operations without blocking incorrectly.
+          - **How:** Runs this case body when its channel operation is ready (or runs default immediately).
+          - **Nested steps:**
+            - **L180**: `backoff = increaseBackoff(backoff, 4*time.Second)`
+              - **What:** Assigns backoff.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L181**: `case <-parentCtx.Done():`
+          - **What:** Selects a select-case branch.
+          - **Why:** Coordinates concurrent operations without blocking incorrectly.
+          - **How:** Runs this case body when its channel operation is ready (or runs default immediately).
+          - **Nested steps:**
+            - **L182**: `return parentCtx.Err()`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
 - **L185**: `return errors.New("webhook delivery exhausted retries")`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -507,7 +719,7 @@ func (h *webhookHandler) forwardOnce(ctx context.Context, original *http.Request
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L189**: `req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.targetURL, bytes.NewReader(body))`
   - **What:** Defines req, err.
@@ -517,6 +729,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L191**: `return fmt.Errorf("build request: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L194**: `copyHeaders(original.Header, req.Header)`
   - **What:** Calls copyHeaders.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -537,6 +754,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L200**: `return fmt.Errorf("%w: %v", errUpstreamRetryable, err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L202**: `defer resp.Body.Close()`
   - **What:** Defers a call for cleanup.
   - **Why:** Ensures the deferred action runs even on early returns.
@@ -549,10 +771,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L206**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L208**: `if resp.StatusCode >= 400 && resp.StatusCode < 500 { return fmt.Errorf("upstream returned status %d", resp.StatusCode) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L209**: `return fmt.Errorf("upstream returned status %d", resp.StatusCode)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L211**: `return fmt.Errorf("%w: upstream status %d", errUpstreamRetryable, resp.StatusCode)`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -585,12 +817,17 @@ func readRequestBody(body io.Reader, maxBytes int64) ([]byte, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L215**: `if maxBytes <= 0 { maxBytes = defaultMaxBodyBytes }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L216**: `maxBytes = defaultMaxBodyBytes`
+      - **What:** Assigns maxBytes.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L218**: `limited := io.LimitReader(body, maxBytes+1)`
   - **What:** Defines limited.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -603,10 +840,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L221**: `return nil, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L223**: `if int64(len(data)) > maxBytes { return nil, &errBodyTooLarge{size: int64(len(data)), limit: maxBytes} }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L224**: `return nil, &errBodyTooLarge{size: int64(len(data)), limit: maxBytes}`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L226**: `return data, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -630,7 +877,7 @@ func computeHMAC(body []byte, secret []byte) []byte {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L230**: `mac := hmac.New(sha256.New, secret)`
   - **What:** Defines mac.
@@ -666,12 +913,22 @@ func copyHeaders(src http.Header, dst http.Header) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L236**: `for key, values := range src { for _, value := range values { dst.Add(key, value) } }`
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L237**: `for _, value := range values { dst.Add(key, value) }`
+      - **What:** Iterates over a collection.
+      - **Why:** Processes multiple elements with the same logic.
+      - **How:** Executes a `for ... range` loop.
+      - **Nested steps:**
+        - **L238**: `dst.Add(key, value)`
+          - **What:** Calls dst.Add.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
 - **L241**: `dst.Del("Host")`
   - **What:** Calls dst.Del.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -697,7 +954,7 @@ func increaseBackoff(current time.Duration, max time.Duration) time.Duration {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L245**: `next := current * 2`
   - **What:** Defines next.
@@ -707,6 +964,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L247**: `return max`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L249**: `return next`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -728,7 +990,7 @@ func (e *errBodyTooLarge) Error() string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L260**: `return fmt.Sprintf("body size %d exceeds limit %d bytes", e.size, e.limit)`
   - **What:** Returns from the current function.

@@ -2,5 +2,147 @@
 title: Config Reference
 ---
 
-This will be generated from `pkg/gateway/config` once the documentation generator is wired in.
+The gateway’s configuration schema is defined in `pkg/gateway/config/config.go` and is loaded by the CLI (`cmd/apigw`) and the runtime (`pkg/gateway/runtime`).
 
+## Load order and precedence
+
+Configuration is applied in layers (later layers win):
+
+1. Defaults from code (`Default()`)
+2. YAML file(s)
+3. Environment variable overrides
+4. Normalization + semantic validation
+
+Deep dive:
+
+- Annotated schema and loader: `../annotated/pkg/gateway/config/config`
+
+## Example configuration
+
+`config/examples/gateway.sample.yaml`:
+
+```yaml
+version: "" # optional version metadata.
+
+http:
+  port: 8080
+  shutdownTimeout: 15s
+
+readiness:
+  timeout: 2s
+  userAgent: api-router-gateway/readyz
+  upstreams:
+    - name: trade
+      baseURL: https://trade.example.com
+      healthPath: /health
+      tls:
+        enabled: false
+        insecureSkipVerify: false
+        caFile: ""
+        clientCertFile: ""
+        clientKeyFile: ""
+    - name: task
+      baseURL: https://task.example.com
+      healthPath: /health
+      tls:
+        enabled: false
+        insecureSkipVerify: false
+        caFile: ""
+        clientCertFile: ""
+        clientKeyFile: ""
+
+auth:
+  secret: replace-me
+  issuer: router
+  audiences:
+    - api
+
+cors:
+  allowedOrigins:
+    - https://app.example.com
+
+rateLimit:
+  window: 60s
+  max: 120
+
+metrics:
+  enabled: true
+
+admin:
+  enabled: false
+  listen: 127.0.0.1:9090
+  token: "" # optional bearer token required for admin requests
+  allow: [] # optional CIDR/host list
+```
+
+## Key sections
+
+### `http`
+
+- `http.port`: public listen port (default `8080`)
+- `http.shutdownTimeout`: graceful shutdown timeout (default `15s`)
+
+### `readiness`
+
+Readiness checks probe configured upstreams before reporting healthy.
+
+- `readiness.timeout`: timeout per upstream probe
+- `readiness.userAgent`: `User-Agent` header for probes
+- `readiness.upstreams[]`:
+  - `name`: logical upstream name (e.g. `trade`)
+  - `baseURL`: upstream base URL
+  - `healthPath`: upstream health path (default `/health`)
+  - `tls.*`: TLS/mTLS options for upstream calls
+
+### `auth`
+
+JWT validation settings:
+
+- `auth.secret`: shared secret for HMAC JWT validation
+- `auth.issuer`: expected issuer claim
+- `auth.audiences[]`: expected audience claim(s)
+
+### `cors`
+
+- `cors.allowedOrigins[]`: allowed browser origins
+
+### `rateLimit`
+
+- `rateLimit.window`: rate limit window duration
+- `rateLimit.max`: max requests per window
+
+### `metrics`
+
+- `metrics.enabled`: enables `/metrics` exposure
+
+### `admin`
+
+Control-plane endpoints (status/config/reload):
+
+- `admin.enabled`: enables the admin server
+- `admin.listen`: bind address (default `127.0.0.1:9090`)
+- `admin.token`: optional bearer token for admin requests
+- `admin.allow[]`: optional allowlist of CIDR/IP entries
+
+### `websocket`
+
+Websocket limits are configured under:
+
+- `websocket.maxConcurrent`
+- `websocket.idleTimeout`
+
+Deep dive:
+
+- Annotated websocket config: `../annotated/pkg/gateway/config/config` (search for `WebSocketConfig`)
+
+### `webhooks`
+
+Webhook ingestion and forwarding configuration lives under:
+
+- `webhooks.enabled`
+- `webhooks.endpoints[]` (name, path, secret, target URL, retry policy)
+
+Deep dive:
+
+- Config schema and validation: `../annotated/pkg/gateway/config/config`
+- Handler behavior: `../annotated/pkg/gateway/webhook/handler`

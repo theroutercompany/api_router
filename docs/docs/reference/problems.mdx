@@ -2,5 +2,42 @@
 title: Problem+JSON
 ---
 
-Some gateway handlers return RFC 7807-style Problem+JSON responses.
+Some gateway handlers return RFC 7807 Problem Details responses with a consistent JSON shape and an optional trace identifier.
 
+Deep dive:
+
+- Problem implementation: `../annotated/pkg/gateway/problem/problem`
+
+## Content type
+
+Problem responses use:
+
+- `application/problem+json`
+
+## Response schema
+
+The gateway uses a small superset of RFC 7807:
+
+```json
+{
+  "type": "about:blank",
+  "title": "Payload Too Large",
+  "status": 413,
+  "detail": "Request body exceeds 1048576 bytes",
+  "instance": "/v1/trade/orders",
+  "traceId": "31635592-fc56-4b8f-bf39-9ae21ebce8c9"
+}
+```
+
+Notes:
+
+- `traceId` is included when the request has a trace ID available.
+- `instance` is typically the request path.
+
+## When it is used
+
+Middleware and handlers use problem responses for consistent error UX, for example:
+
+- request body too large (413)
+- rate limit exceeded (429)
+- CORS rejected (403)

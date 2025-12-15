@@ -128,7 +128,7 @@ func main() {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L14**: `configPath := flag.String("config", "shadowdiff.config.json", "Path to shadow diff configuration")`
   - **What:** Defines configPath.
@@ -146,6 +146,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L19**: `log.Fatalf("load config: %v", err)`
+      - **What:** Calls log.Fatalf.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L22**: `fixtures, err := shadowdiff.LoadFixtures(cfg.Fixtures)`
   - **What:** Defines fixtures, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -154,6 +159,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L24**: `log.Fatalf("load fixtures: %v", err)`
+      - **What:** Calls log.Fatalf.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L27**: `runner := shadowdiff.Runner{ Config: cfg, Normalizers: []func([]byte) []byte{ shadowdiff.StripJSONKeys("timestamp", "uptime", "checkedAt", …`
   - **What:** Defines runner.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -178,6 +188,50 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L40**: `if result.Err != nil { fmt.Printf("[%s] error: %v\n", result.Fixture.Name, result.Err) continue }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L41**: `fmt.Printf("[%s] error: %v\n", result.Fixture.Name, result.Err)`
+          - **What:** Calls fmt.Printf.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
+        - **L42**: `continue`
+          - **What:** Executes a statement.
+          - **Why:** Advances the function logic.
+          - **How:** Runs this statement as part of the function body.
+    - **L45**: `statusMatch := result.NodeStatus == result.GoStatus`
+      - **What:** Defines statusMatch.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L46**: `bodyMatch := result.BodyDiff == ""`
+      - **What:** Defines bodyMatch.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L48**: `if !statusMatch || !bodyMatch { diffCount++ fmt.Printf("[%s] status node=%d go=%d\n", result.Fixture.Name, result.NodeStatus, result.GoStat…`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L49**: `diffCount++`
+          - **What:** Updates a counter.
+          - **Why:** Maintains an index or tally used by subsequent logic.
+          - **How:** Executes an increment/decrement statement.
+        - **L50**: `fmt.Printf("[%s] status node=%d go=%d\n", result.Fixture.Name, result.NodeStatus, result.GoStatus)`
+          - **What:** Calls fmt.Printf.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
+        - **L51**: `if result.BodyDiff != "" { fmt.Println(result.BodyDiff) }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L52**: `fmt.Println(result.BodyDiff)`
+              - **What:** Calls fmt.Println.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
 - **L57**: `fmt.Printf("Processed %d fixtures, %d diffs found\n", len(results), diffCount)`
   - **What:** Calls fmt.Printf.
   - **Why:** Performs side effects or delegates work to a helper.

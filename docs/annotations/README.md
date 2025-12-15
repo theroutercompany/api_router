@@ -12,6 +12,28 @@ From the repo root:
 go run ./cmd/docsgen
 ```
 
+### Walkthrough output
+
+By default, the generator includes a per-function walkthrough that documents statements in the function body (including nested blocks and inline closures).
+
+You can tune this behavior:
+
+```bash
+# Disable walkthroughs
+go run ./cmd/docsgen -walkthrough=false
+
+# Increase walkthrough coverage for very large functions
+go run ./cmd/docsgen -walkthrough-max-depth 8 -walkthrough-max-steps 2000
+```
+
+### Initialize stubs
+
+If you add a new file to the generator’s core list (or want to refresh symbol stubs), run:
+
+```bash
+go run ./cmd/docsgen -init-annotations
+```
+
 ## How annotation files map to source files
 
 For a Go file:
@@ -54,6 +76,11 @@ symbols:
     how: ...
 ```
 
+## Authoring tips
+
+- YAML parsing: avoid starting a value with backticks. Prefer `The <symbol> ...` instead of starting with `` `Symbol` ... ``.
+- MDX rendering: avoid using raw `<` in prose (outside inline code) because MDX will try to parse it as JSX.
+
 ### Symbol IDs
 
 The generator uses stable IDs:
@@ -63,4 +90,3 @@ The generator uses stable IDs:
 - types: `type <Name>`
 - top-level functions: `func <Name>`
 - methods: `method (<ReceiverType>).<Name>` (example: `method (*Server).initProxies`)
-

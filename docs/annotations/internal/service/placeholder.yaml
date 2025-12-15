@@ -1,0 +1,34 @@
+file: internal/service/placeholder.go
+title: internal/service/placeholder.go
+overview:
+  what: |
+    Minimal placeholder package and type for future internal service orchestration.
+
+    Today this file intentionally does almost nothing. It exists so the repository can
+    safely depend on `internal/service` without committing to an API surface prematurely.
+  why: |
+    The gateway's runtime wiring currently lives mostly in `pkg/gateway/runtime` and `pkg/gateway/server`.
+
+    As the project grows, it is common to introduce an internal "service layer" that coordinates:
+    - startup/shutdown of multiple subsystems
+    - lifecycle hooks and dependency injection
+    - shared cross-cutting concerns (backoff policies, schedulers, etc)
+
+    This placeholder provides a stable import path for that future work without blocking current development.
+  how: |
+    - `Placeholder` is an empty struct (zero size).
+    - `NewPlaceholder()` returns a pointer to a new instance.
+  notes: |
+    When real services are introduced, this file is expected to be replaced or expanded.
+    Do not build new production behavior on top of this placeholder type.
+symbols:
+  func NewPlaceholder:
+    what: Constructs a no-op placeholder service instance.
+    why: Mirrors the "constructor returns pointer" pattern used throughout the repo, making it easy to evolve later.
+    how: Returns `&Placeholder{}`.
+    notes: ""
+  type Placeholder:
+    what: Empty struct used as scaffolding for future internal services.
+    why: Keeps the `internal/service` package non-empty and provides a hook for future orchestration services.
+    how: Declared as `struct{}` with no fields.
+    notes: This type intentionally carries no behavior.

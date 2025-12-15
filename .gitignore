@@ -6,6 +6,7 @@ coverage/
 logs/
 tmp/
 .tmp/
+.gocache/
 .DS_Store
 .idea/
 .vscode/

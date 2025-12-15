@@ -169,7 +169,7 @@ func Run(ctx context.Context, opts Options) error {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L34**: `cleanupPID, err := writePIDFile(opts.PIDFile)`
   - **What:** Defines cleanupPID, err.
@@ -179,6 +179,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L36**: `return err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L38**: `defer cleanupPID()`
   - **What:** Defers a call for cleanup.
   - **Why:** Ensures the deferred action runs even on early returns.
@@ -191,6 +196,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L42**: `return err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L44**: `defer logCloser()`
   - **What:** Defers a call for cleanup.
   - **Why:** Ensures the deferred action runs even on early returns.
@@ -203,6 +213,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L48**: `loadOpts = append(loadOpts, gatewayconfig.WithPath(opts.ConfigPath))`
+      - **What:** Assigns loadOpts.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L51**: `cfg, err := gatewayconfig.Load(loadOpts...)`
   - **What:** Defines cfg, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -211,6 +226,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L53**: `return fmt.Errorf("load config: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L56**: `rt, err := gatewayruntime.New(cfg)`
   - **What:** Defines rt, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -219,10 +239,24 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L58**: `return fmt.Errorf("build runtime: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L61**: `if err := rt.Start(ctx); err != nil { return err }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L61**: `err := rt.Start(ctx)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L62**: `return err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L64**: `return rt.Wait()`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -264,7 +298,7 @@ func Status(pidPath string) (ProcessStatus, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L69**: `pid, err := readPIDFile(pidPath)`
   - **What:** Defines pid, err.
@@ -274,10 +308,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L71**: `return ProcessStatus{}, nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L73**: `if err != nil { return ProcessStatus{}, err }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L74**: `return ProcessStatus{}, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L77**: `status := ProcessStatus{PID: pid}`
   - **What:** Defines status.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -290,10 +334,28 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L80**: `return status, fmt.Errorf("find process: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L82**: `if err := proc.Signal(syscall.Signal(0)); err == nil { status.Running = true } else { status.Running = false }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L82**: `err := proc.Signal(syscall.Signal(0))`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L83**: `status.Running = true`
+      - **What:** Assigns status.Running.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L85**: `status.Running = false`
+      - **What:** Assigns status.Running.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L87**: `return status, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -361,12 +423,17 @@ func Stop(pidPath string, sig syscall.Signal) (ProcessStatus, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L92**: `if sig == 0 { sig = syscall.SIGTERM }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L93**: `sig = syscall.SIGTERM`
+      - **What:** Assigns sig.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L96**: `status, err := Status(pidPath)`
   - **What:** Defines status, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -375,14 +442,33 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L98**: `return status, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L100**: `if status.PID == 0 { return status, os.ErrNotExist }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L101**: `return status, os.ErrNotExist`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L103**: `if !status.Running { _ = os.Remove(pidPath) return status, nil }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L104**: `_ = os.Remove(pidPath)`
+      - **What:** Assigns _.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L105**: `return status, nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L108**: `proc, err := os.FindProcess(status.PID)`
   - **What:** Defines proc, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -391,10 +477,24 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L110**: `return status, fmt.Errorf("find process: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L112**: `if err := proc.Signal(sig); err != nil { return status, fmt.Errorf("signal process: %w", err) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L112**: `err := proc.Signal(sig)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L113**: `return status, fmt.Errorf("signal process: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L116**: `deadline := time.Now().Add(5 * time.Second)`
   - **What:** Defines deadline.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -403,10 +503,59 @@ The list below documents the top-level statements inside the function body.
   - **What:** Runs a loop.
   - **Why:** Repeats logic until a condition is met or the loop terminates.
   - **How:** Executes a `for` loop statement.
+  - **Nested steps:**
+    - **L118**: `time.Sleep(200 * time.Millisecond)`
+      - **What:** Calls time.Sleep.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L119**: `st, err := Status(pidPath)`
+      - **What:** Defines st, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L120**: `if errors.Is(err, os.ErrNotExist) || (err == nil && !st.Running) { _ = os.Remove(pidPath) return st, nil }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L121**: `_ = os.Remove(pidPath)`
+          - **What:** Assigns _.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L122**: `return st, nil`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L124**: `if err != nil { return status, err }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L125**: `return status, err`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 - **L129**: `if sig != syscall.SIGKILL { if err := proc.Signal(syscall.SIGKILL); err != nil { return status, fmt.Errorf("force kill process: %w", err) }…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L130**: `if err := proc.Signal(syscall.SIGKILL); err != nil { return status, fmt.Errorf("force kill process: %w", err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L130**: `err := proc.Signal(syscall.SIGKILL)`
+          - **What:** Defines err.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L131**: `return status, fmt.Errorf("force kill process: %w", err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L133**: `time.Sleep(200 * time.Millisecond)`
+      - **What:** Calls time.Sleep.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L135**: `_ = os.Remove(pidPath)`
   - **What:** Assigns _.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -454,7 +603,7 @@ func writePIDFile(path string) (func(), error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L140**: `path = strings.TrimSpace(path)`
   - **What:** Assigns path.
@@ -464,14 +613,52 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L142**: `return func() {}, nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L142**: `func() {}`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L145**: `if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { return func() {}, fmt.Errorf("ensure pid directory: %w", err) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L145**: `err := os.MkdirAll(filepath.Dir(path), 0o755)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L146**: `return func() {}, fmt.Errorf("ensure pid directory: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L146**: `func() {}`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L149**: `if _, err := readPIDFile(path); err == nil { return func() {}, fmt.Errorf("pid file %s already exists", path) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L149**: `_, err := readPIDFile(path)`
+      - **What:** Defines _, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L150**: `return func() {}, fmt.Errorf("pid file %s already exists", path)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L150**: `func() {}`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L153**: `tmp := []byte(fmt.Sprintf("%d\n", os.Getpid()))`
   - **What:** Defines tmp.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -480,10 +667,34 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L154**: `err := os.WriteFile(path, tmp, 0o644)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L155**: `return func() {}, fmt.Errorf("write pid file: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L155**: `func() {}`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L158**: `return func() { _ = os.Remove(path) }, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L158**: `func() { _ = os.Remove(path) }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L159**: `_ = os.Remove(path)`
+          - **What:** Assigns _.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
 ### `readPIDFile`
 
@@ -523,7 +734,7 @@ func readPIDFile(path string) (int, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L164**: `path = strings.TrimSpace(path)`
   - **What:** Assigns path.
@@ -533,14 +744,33 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L166**: `return 0, fmt.Errorf("pid file path is required")`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L169**: `data, err := os.ReadFile(path)`
   - **What:** Defines data, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L170**: `if err != nil { if errors.Is(err, os.ErrNotExist) { return 0, os.ErrNotExist } return 0, fmt.Errorf("read pid file: %w", err) }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L171**: `if errors.Is(err, os.ErrNotExist) { return 0, os.ErrNotExist }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L172**: `return 0, os.ErrNotExist`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L174**: `return 0, fmt.Errorf("read pid file: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L177**: `pid, err := strconv.Atoi(strings.TrimSpace(string(data)))`
   - **What:** Defines pid, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -549,10 +779,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L179**: `return 0, fmt.Errorf("parse pid: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L181**: `if pid <= 0 { return 0, fmt.Errorf("invalid pid value %d", pid) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L182**: `return 0, fmt.Errorf("invalid pid value %d", pid)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L184**: `return pid, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -597,7 +837,7 @@ func setupLogFile(path string) (func(), error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L188**: `path = strings.TrimSpace(path)`
   - **What:** Assigns path.
@@ -607,10 +847,34 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L190**: `return func() {}, nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L190**: `func() {}`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L193**: `if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil { return func() {}, fmt.Errorf("ensure log directory: %w", err) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L193**: `err := os.MkdirAll(filepath.Dir(path), 0o755)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L194**: `return func() {}, fmt.Errorf("ensure log directory: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L194**: `func() {}`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L197**: `file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)`
   - **What:** Defines file, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -619,14 +883,52 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L199**: `return func() {}, fmt.Errorf("open log file: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L199**: `func() {}`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L202**: `if err := os.Setenv("APIGW_LOG_PATH", path); err != nil { _ = file.Close() return func() {}, fmt.Errorf("set log env: %w", err) }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L202**: `err := os.Setenv("APIGW_LOG_PATH", path)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L203**: `_ = file.Close()`
+      - **What:** Assigns _.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L204**: `return func() {}, fmt.Errorf("set log env: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L204**: `func() {}`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L207**: `return func() { _ = file.Close() }, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L207**: `func() { _ = file.Close() }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L208**: `_ = file.Close()`
+          - **What:** Assigns _.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
 ### `WaitSignal`
 
@@ -651,7 +953,7 @@ func WaitSignal(ctx context.Context) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L214**: `sigCh := make(chan os.Signal, 1)`
   - **What:** Defines sigCh.
@@ -665,4 +967,13 @@ The list below documents the top-level statements inside the function body.
   - **What:** Selects among concurrent operations.
   - **Why:** Coordinates channel operations without blocking incorrectly.
   - **How:** Executes a `select` statement and runs one ready case.
+  - **Nested steps:**
+    - **L217**: `case <-ctx.Done():`
+      - **What:** Selects a select-case branch.
+      - **Why:** Coordinates concurrent operations without blocking incorrectly.
+      - **How:** Runs this case body when its channel operation is ready (or runs default immediately).
+    - **L218**: `case <-sigCh:`
+      - **What:** Selects a select-case branch.
+      - **Why:** Coordinates concurrent operations without blocking incorrectly.
+      - **How:** Runs this case body when its channel operation is ready (or runs default immediately).
 

@@ -88,7 +88,7 @@ func Write(w http.ResponseWriter, status int, title, detail, traceID, instance s
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L23**: `resp := Response{ Type: "about:blank", Title: title, Status: status, Detail: detail, Instance: instance, TraceID: traceID, }`
   - **What:** Defines resp.

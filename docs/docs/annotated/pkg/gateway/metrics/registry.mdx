@@ -139,12 +139,22 @@ func WithNamespace(namespace string) Option {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L24**: `return func(o *options) { o.namespace = strings.TrimSpace(namespace) }`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L24**: `func(o *options) { o.namespace = strings.TrimSpace(namespace) }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L25**: `o.namespace = strings.TrimSpace(namespace)`
+          - **What:** Assigns o.namespace.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
 ### `WithoutDefaultCollectors`
 
@@ -164,12 +174,22 @@ func WithoutDefaultCollectors() Option {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L32**: `return func(o *options) { o.registerDefaultCollectors = false }`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L32**: `func(o *options) { o.registerDefaultCollectors = false }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L33**: `o.registerDefaultCollectors = false`
+          - **What:** Assigns o.registerDefaultCollectors.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
 ### `NewRegistry`
 
@@ -205,7 +225,7 @@ func NewRegistry(opts ...Option) *Registry {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L47**: `settings := options{ registerDefaultCollectors: true, }`
   - **What:** Defines settings.
@@ -215,6 +235,16 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L51**: `if opt != nil { opt(&settings) }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L52**: `opt(&settings)`
+          - **What:** Calls opt.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
 - **L56**: `reg := prometheus.NewRegistry()`
   - **What:** Defines reg.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -223,6 +253,15 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L58**: `reg.MustRegister(collectors.NewGoCollector())`
+      - **What:** Calls reg.MustRegister.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L59**: `reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))`
+      - **What:** Calls reg.MustRegister.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L62**: `return &Registry{ namespace: settings.namespace, registry: reg, }`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -247,12 +286,17 @@ func (r *Registry) Namespace() string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L70**: `if r == nil { return "" }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L71**: `return ""`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L73**: `return r.namespace`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -277,12 +321,17 @@ func (r *Registry) Handler() http.Handler {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L79**: `if r == nil || r.registry == nil { return http.NotFoundHandler() }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L80**: `return http.NotFoundHandler()`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L82**: `return promhttp.HandlerFor(r.registry, promhttp.HandlerOpts{})`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -309,12 +358,17 @@ func (r *Registry) Register(c prometheus.Collector) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L89**: `if r == nil || r.registry == nil || c == nil { return }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L90**: `return`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L92**: `r.registry.MustRegister(c)`
   - **What:** Calls r.registry.MustRegister.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -339,12 +393,17 @@ func (r *Registry) Raw() *prometheus.Registry {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L97**: `if r == nil { return nil }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L98**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L100**: `return r.registry`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.

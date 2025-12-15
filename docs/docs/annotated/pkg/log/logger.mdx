@@ -227,7 +227,7 @@ func (z *zapLogger) Debugw(msg string, keysAndValues ...any) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L32**: `z.s.Debugw(msg, keysAndValues...)`
   - **What:** Calls z.s.Debugw.
@@ -250,7 +250,7 @@ func (z *zapLogger) Infow(msg string, keysAndValues ...any) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L36**: `z.s.Infow(msg, keysAndValues...)`
   - **What:** Calls z.s.Infow.
@@ -273,7 +273,7 @@ func (z *zapLogger) Warnw(msg string, keysAndValues ...any) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L40**: `z.s.Warnw(msg, keysAndValues...)`
   - **What:** Calls z.s.Warnw.
@@ -296,7 +296,7 @@ func (z *zapLogger) Errorw(msg string, keysAndValues ...any) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L44**: `z.s.Errorw(msg, keysAndValues...)`
   - **What:** Calls z.s.Errorw.
@@ -325,7 +325,7 @@ func Shared() Logger {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L56**: `ensureDefault()`
   - **What:** Calls ensureDefault.
@@ -375,16 +375,26 @@ func Configure(logger Logger, syncFn func() error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L65**: `if logger == nil { panic("log: Configure called with nil logger") }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L66**: `panic("log: Configure called with nil logger")`
+      - **What:** Calls panic.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L69**: `once.Do(func() {})`
   - **What:** Calls once.Do.
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
+  - **Nested steps:**
+    - **L69**: `func() {}`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
 - **L71**: `mu.Lock()`
   - **What:** Calls mu.Lock.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -397,6 +407,25 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L74**: `syncLogger = func() error { return nil }`
+      - **What:** Assigns syncLogger.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+      - **Nested steps:**
+        - **L74**: `func() error { return nil }`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+          - **Nested steps:**
+            - **L74**: `return nil`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+    - **L76**: `syncLogger = syncFn`
+      - **What:** Assigns syncLogger.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L78**: `mu.Unlock()`
   - **What:** Calls mu.Unlock.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -423,12 +452,27 @@ func NewZapLogger(base *zap.Logger) (Logger, func() error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L83**: `if base == nil { return NewNoop(), func() error { return nil } }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L84**: `return NewNoop(), func() error { return nil }`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L84**: `func() error { return nil }`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+          - **Nested steps:**
+            - **L84**: `return nil`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
 - **L86**: `return &zapLogger{s: base.Sugar()}, base.Sync`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -453,12 +497,27 @@ func NewZapSugaredLogger(s *zap.SugaredLogger) (Logger, func() error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L91**: `if s == nil { return NewNoop(), func() error { return nil } }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L92**: `return NewNoop(), func() error { return nil }`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
+      - **Nested steps:**
+        - **L92**: `func() error { return nil }`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+          - **Nested steps:**
+            - **L92**: `return nil`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
 - **L94**: `return &zapLogger{s: s}, s.Sync`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -480,7 +539,7 @@ func NewNoop() Logger {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L99**: `return noopLogger{}`
   - **What:** Returns from the current function.
@@ -512,12 +571,34 @@ func Sync() error {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L104**: `if err := syncLogger(); err != nil { msg := err.Error() if strings.Contains(msg, "bad file descriptor") || strings.Contains(msg, "invalid a…`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L104**: `err := syncLogger()`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L105**: `msg := err.Error()`
+      - **What:** Defines msg.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L106**: `if strings.Contains(msg, "bad file descriptor") || strings.Contains(msg, "invalid argument") { return nil }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L107**: `return nil`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L109**: `return err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L111**: `return nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -563,10 +644,86 @@ func ensureDefault() {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L115**: `once.Do(func() { cfg := zap.NewProductionConfig() if path := strings.TrimSpace(os.Getenv("APIGW_LOG_PATH")); path != "" { cfg.OutputPaths =…`
   - **What:** Calls once.Do.
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
+  - **Nested steps:**
+    - **L115**: `func() { cfg := zap.NewProductionConfig() if path := strings.TrimSpace(os.Getenv("APIGW_LOG_PATH")); path != "" { cfg.OutputPaths = []strin…`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L116**: `cfg := zap.NewProductionConfig()`
+          - **What:** Defines cfg.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L117**: `if path := strings.TrimSpace(os.Getenv("APIGW_LOG_PATH")); path != "" { cfg.OutputPaths = []string{path} cfg.ErrorOutputPaths = []string{pa…`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L117**: `path := strings.TrimSpace(os.Getenv("APIGW_LOG_PATH"))`
+              - **What:** Defines path.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L118**: `cfg.OutputPaths = []string{path}`
+              - **What:** Assigns cfg.OutputPaths.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L119**: `cfg.ErrorOutputPaths = []string{path}`
+              - **What:** Assigns cfg.ErrorOutputPaths.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L121**: `cfg.EncoderConfig.TimeKey = "time"`
+          - **What:** Assigns cfg.EncoderConfig.TimeKey.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L122**: `cfg.EncoderConfig.MessageKey = "msg"`
+          - **What:** Assigns cfg.EncoderConfig.MessageKey.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L123**: `cfg.EncoderConfig.LevelKey = "level"`
+          - **What:** Assigns cfg.EncoderConfig.LevelKey.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L124**: `cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder`
+          - **What:** Assigns cfg.EncoderConfig.EncodeTime.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L126**: `base, err := cfg.Build()`
+          - **What:** Defines base, err.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L127**: `if err != nil { panic(err) }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L128**: `panic(err)`
+              - **What:** Calls panic.
+              - **Why:** Performs side effects or delegates work to a helper.
+              - **How:** Executes the expression statement.
+        - **L131**: `logger, syncFn := NewZapLogger(base)`
+          - **What:** Defines logger, syncFn.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L133**: `mu.Lock()`
+          - **What:** Calls mu.Lock.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
+        - **L134**: `global = logger`
+          - **What:** Assigns global.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L135**: `syncLogger = syncFn`
+          - **What:** Assigns syncLogger.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L136**: `mu.Unlock()`
+          - **What:** Calls mu.Unlock.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
 

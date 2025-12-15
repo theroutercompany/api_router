@@ -748,7 +748,7 @@ func (d Duration) AsDuration() time.Duration {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L168**: `return time.Duration(d)`
   - **What:** Returns from the current function.
@@ -771,7 +771,7 @@ func (d Duration) MarshalYAML() (interface{}, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L173**: `return d.AsDuration().String(), nil`
   - **What:** Returns from the current function.
@@ -823,16 +823,109 @@ func (d *Duration) UnmarshalYAML(value *yaml.Node) error {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L178**: `if value == nil { return nil }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L179**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L182**: `switch value.Kind { case yaml.ScalarNode: txt := strings.TrimSpace(value.Value) if txt == "" { *d = Duration(0) return nil } if ms, err := …`
   - **What:** Selects a branch from multiple cases.
   - **Why:** Keeps multi-case branching readable and explicit.
   - **How:** Evaluates the switch expression and executes the first matching case.
+  - **Nested steps:**
+    - **L183**: `case yaml.ScalarNode:`
+      - **What:** Selects a switch case.
+      - **Why:** Makes multi-branch control flow explicit and readable.
+      - **How:** Runs this case body when the switch value matches (or when default is selected).
+      - **Nested steps:**
+        - **L184**: `txt := strings.TrimSpace(value.Value)`
+          - **What:** Defines txt.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L185**: `if txt == "" { *d = Duration(0) return nil }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L186**: `*d = Duration(0)`
+              - **What:** Assigns *d.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L187**: `return nil`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L189**: `if ms, err := strconv.Atoi(txt); err == nil { if ms < 0 { return fmt.Errorf("duration must be non-negative, got %d", ms) } *d = Duration(ti…`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L189**: `ms, err := strconv.Atoi(txt)`
+              - **What:** Defines ms, err.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L190**: `if ms < 0 { return fmt.Errorf("duration must be non-negative, got %d", ms) }`
+              - **What:** Branches conditionally.
+              - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+              - **How:** Evaluates the condition and executes the matching branch.
+              - **Nested steps:**
+                - **L191**: `return fmt.Errorf("duration must be non-negative, got %d", ms)`
+                  - **What:** Returns from the current function.
+                  - **Why:** Ends the current execution path and hands control back to the caller.
+                  - **How:** Executes a `return` statement (possibly returning values).
+            - **L193**: `*d = Duration(time.Duration(ms) * time.Millisecond)`
+              - **What:** Assigns *d.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L194**: `return nil`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L196**: `parsed, err := time.ParseDuration(txt)`
+          - **What:** Defines parsed, err.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L197**: `if err != nil { return fmt.Errorf("parse duration %q: %w", txt, err) }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L198**: `return fmt.Errorf("parse duration %q: %w", txt, err)`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L200**: `if parsed < 0 { return fmt.Errorf("duration must be non-negative, got %s", parsed) }`
+          - **What:** Branches conditionally.
+          - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L201**: `return fmt.Errorf("duration must be non-negative, got %s", parsed)`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+        - **L203**: `*d = Duration(parsed)`
+          - **What:** Assigns *d.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L204**: `return nil`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L205**: `default:`
+      - **What:** Selects a switch case.
+      - **Why:** Makes multi-branch control flow explicit and readable.
+      - **How:** Runs this case body when the switch value matches (or when default is selected).
+      - **Nested steps:**
+        - **L206**: `return fmt.Errorf("unsupported duration node kind: %v", value.Kind)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 
 ### `DurationFrom`
 
@@ -850,7 +943,7 @@ func DurationFrom(d time.Duration) Duration {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L212**: `return Duration(d)`
   - **What:** Returns from the current function.
@@ -922,7 +1015,7 @@ func Default() Config {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L217**: `return Config{ Version: os.Getenv(envGitSHA), HTTP: HTTPConfig{ Port: defaultPort, ShutdownTimeout: DurationFrom(defaultShutdownTimeout), }…`
   - **What:** Returns from the current function.
@@ -949,12 +1042,27 @@ func WithPath(path string) Option {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L279**: `return func(o *loaderOptions) { if strings.TrimSpace(path) != "" { o.paths = append(o.paths, path) } }`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L279**: `func(o *loaderOptions) { if strings.TrimSpace(path) != "" { o.paths = append(o.paths, path) } }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L280**: `if strings.TrimSpace(path) != "" { o.paths = append(o.paths, path) }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L281**: `o.paths = append(o.paths, path)`
+              - **What:** Assigns o.paths.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
 ### `WithLookupEnv`
 
@@ -974,12 +1082,22 @@ func WithLookupEnv(fn func(string) (string, bool)) Option {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L288**: `return func(o *loaderOptions) { o.lookupEnv = fn }`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+  - **Nested steps:**
+    - **L288**: `func(o *loaderOptions) { o.lookupEnv = fn }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L289**: `o.lookupEnv = fn`
+          - **What:** Assigns o.lookupEnv.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
 ### `Load`
 
@@ -1049,7 +1167,7 @@ func Load(opts ...Option) (Config, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L295**: `options := loaderOptions{ lookupEnv: os.LookupEnv, }`
   - **What:** Defines options.
@@ -1059,10 +1177,29 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L298**: `envPath := strings.TrimSpace(os.Getenv(defaultConfigEnvVar))`
+      - **What:** Defines envPath.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L299**: `options.paths = append(options.paths, envPath)`
+      - **What:** Assigns options.paths.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L301**: `for _, opt := range opts { if opt != nil { opt(&options) } }`
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L302**: `if opt != nil { opt(&options) }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L303**: `opt(&options)`
+          - **What:** Calls opt.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
 - **L307**: `cfg := Default()`
   - **What:** Defines cfg.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -1071,18 +1208,95 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L310**: `if strings.TrimSpace(path) == "" { continue }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L311**: `continue`
+          - **What:** Executes a statement.
+          - **Why:** Advances the function logic.
+          - **How:** Runs this statement as part of the function body.
+    - **L313**: `data, err := os.ReadFile(path)`
+      - **What:** Defines data, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L314**: `switch { case errors.Is(err, os.ErrNotExist): continue case err != nil: return cfg, fmt.Errorf("read config %q: %w", path, err) }`
+      - **What:** Selects a branch from multiple cases.
+      - **Why:** Keeps multi-case branching readable and explicit.
+      - **How:** Evaluates the switch expression and executes the first matching case.
+      - **Nested steps:**
+        - **L315**: `case errors.Is(err, os.ErrNotExist):`
+          - **What:** Selects a switch case.
+          - **Why:** Makes multi-branch control flow explicit and readable.
+          - **How:** Runs this case body when the switch value matches (or when default is selected).
+          - **Nested steps:**
+            - **L316**: `continue`
+              - **What:** Executes a statement.
+              - **Why:** Advances the function logic.
+              - **How:** Runs this statement as part of the function body.
+        - **L317**: `case err != nil:`
+          - **What:** Selects a switch case.
+          - **Why:** Makes multi-branch control flow explicit and readable.
+          - **How:** Runs this case body when the switch value matches (or when default is selected).
+          - **Nested steps:**
+            - **L318**: `return cfg, fmt.Errorf("read config %q: %w", path, err)`
+              - **What:** Returns from the current function.
+              - **Why:** Ends the current execution path and hands control back to the caller.
+              - **How:** Executes a `return` statement (possibly returning values).
+    - **L320**: `if err := yaml.Unmarshal(data, &cfg); err != nil { return cfg, fmt.Errorf("decode config %q: %w", path, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L320**: `err := yaml.Unmarshal(data, &cfg)`
+          - **What:** Defines err.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L321**: `return cfg, fmt.Errorf("decode config %q: %w", path, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 - **L325**: `if err := applyEnvOverrides(&cfg, options.lookupEnv); err != nil { return cfg, err }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L325**: `err := applyEnvOverrides(&cfg, options.lookupEnv)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L326**: `return cfg, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L329**: `if err := cfg.normalize(); err != nil { return cfg, err }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L329**: `err := cfg.normalize()`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L330**: `return cfg, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L333**: `if err := cfg.Validate(); err != nil { return cfg, err }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L333**: `err := cfg.Validate()`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L334**: `return cfg, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L337**: `return cfg, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -1211,84 +1425,342 @@ func applyEnvOverrides(cfg *Config, lookup func(string) (string, bool)) error {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L341**: `if lookup == nil { lookup = os.LookupEnv }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L342**: `lookup = os.LookupEnv`
+      - **What:** Assigns lookup.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L345**: `if val, ok := lookup(envPort); ok && strings.TrimSpace(val) != "" { port, err := strconv.Atoi(strings.TrimSpace(val)) if err != nil || port…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L345**: `val, ok := lookup(envPort)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L346**: `port, err := strconv.Atoi(strings.TrimSpace(val))`
+      - **What:** Defines port, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L347**: `if err != nil || port <= 0 { return fmt.Errorf("invalid %s value: %s", envPort, val) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L348**: `return fmt.Errorf("invalid %s value: %s", envPort, val)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L350**: `cfg.HTTP.Port = port`
+      - **What:** Assigns cfg.HTTP.Port.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L353**: `if val, ok := lookup(envShutdownTimeout); ok && strings.TrimSpace(val) != "" { timeout, err := parsePositiveDurationMillis(val) if err != n…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L353**: `val, ok := lookup(envShutdownTimeout)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L354**: `timeout, err := parsePositiveDurationMillis(val)`
+      - **What:** Defines timeout, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L355**: `if err != nil { return fmt.Errorf("invalid %s: %w", envShutdownTimeout, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L356**: `return fmt.Errorf("invalid %s: %w", envShutdownTimeout, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L358**: `cfg.HTTP.ShutdownTimeout = DurationFrom(timeout)`
+      - **What:** Assigns cfg.HTTP.ShutdownTimeout.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L361**: `if val, ok := lookup(envReadinessTimeout); ok && strings.TrimSpace(val) != "" { timeout, err := parsePositiveDurationMillis(val) if err != …`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L361**: `val, ok := lookup(envReadinessTimeout)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L362**: `timeout, err := parsePositiveDurationMillis(val)`
+      - **What:** Defines timeout, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L363**: `if err != nil { return fmt.Errorf("invalid %s: %w", envReadinessTimeout, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L364**: `return fmt.Errorf("invalid %s: %w", envReadinessTimeout, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L366**: `cfg.Readiness.Timeout = DurationFrom(timeout)`
+      - **What:** Assigns cfg.Readiness.Timeout.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L369**: `if val, ok := lookup(envReadinessUserAgent); ok && strings.TrimSpace(val) != "" { cfg.Readiness.UserAgent = strings.TrimSpace(val) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L369**: `val, ok := lookup(envReadinessUserAgent)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L370**: `cfg.Readiness.UserAgent = strings.TrimSpace(val)`
+      - **What:** Assigns cfg.Readiness.UserAgent.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L373**: `if val, ok := lookup(envGitSHA); ok && strings.TrimSpace(val) != "" { cfg.Version = strings.TrimSpace(val) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L373**: `val, ok := lookup(envGitSHA)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L374**: `cfg.Version = strings.TrimSpace(val)`
+      - **What:** Assigns cfg.Version.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L377**: `if val, ok := lookup(envJWTSecret); ok && strings.TrimSpace(val) != "" { cfg.Auth.Secret = strings.TrimSpace(val) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L377**: `val, ok := lookup(envJWTSecret)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L378**: `cfg.Auth.Secret = strings.TrimSpace(val)`
+      - **What:** Assigns cfg.Auth.Secret.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L381**: `if val, ok := lookup(envJWTAudience); ok && strings.TrimSpace(val) != "" { cfg.Auth.Audiences = splitAndTrim(val) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L381**: `val, ok := lookup(envJWTAudience)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L382**: `cfg.Auth.Audiences = splitAndTrim(val)`
+      - **What:** Assigns cfg.Auth.Audiences.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L385**: `if val, ok := lookup(envJWTIssuer); ok && strings.TrimSpace(val) != "" { cfg.Auth.Issuer = strings.TrimSpace(val) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L385**: `val, ok := lookup(envJWTIssuer)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L386**: `cfg.Auth.Issuer = strings.TrimSpace(val)`
+      - **What:** Assigns cfg.Auth.Issuer.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L389**: `if val, ok := lookup(envCorsAllowedOrigins); ok && strings.TrimSpace(val) != "" { cfg.CORS.AllowedOrigins = splitAndTrim(val) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L389**: `val, ok := lookup(envCorsAllowedOrigins)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L390**: `cfg.CORS.AllowedOrigins = splitAndTrim(val)`
+      - **What:** Assigns cfg.CORS.AllowedOrigins.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L393**: `if val, ok := lookup(envRateLimitWindow); ok && strings.TrimSpace(val) != "" { window, err := parsePositiveDurationMillis(val) if err != ni…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L393**: `val, ok := lookup(envRateLimitWindow)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L394**: `window, err := parsePositiveDurationMillis(val)`
+      - **What:** Defines window, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L395**: `if err != nil { return fmt.Errorf("invalid %s: %w", envRateLimitWindow, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L396**: `return fmt.Errorf("invalid %s: %w", envRateLimitWindow, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L398**: `cfg.RateLimit.Window = DurationFrom(window)`
+      - **What:** Assigns cfg.RateLimit.Window.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L401**: `if val, ok := lookup(envRateLimitMax); ok && strings.TrimSpace(val) != "" { max, err := strconv.Atoi(strings.TrimSpace(val)) if err != nil …`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L401**: `val, ok := lookup(envRateLimitMax)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L402**: `max, err := strconv.Atoi(strings.TrimSpace(val))`
+      - **What:** Defines max, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L403**: `if err != nil || max <= 0 { return fmt.Errorf("invalid %s: %s", envRateLimitMax, val) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L404**: `return fmt.Errorf("invalid %s: %s", envRateLimitMax, val)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L406**: `cfg.RateLimit.Max = max`
+      - **What:** Assigns cfg.RateLimit.Max.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L409**: `if val, ok := lookup(envMetricsEnabled); ok && strings.TrimSpace(val) != "" { enabled, err := strconv.ParseBool(strings.TrimSpace(val)) if …`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L409**: `val, ok := lookup(envMetricsEnabled)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L410**: `enabled, err := strconv.ParseBool(strings.TrimSpace(val))`
+      - **What:** Defines enabled, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L411**: `if err != nil { return fmt.Errorf("invalid %s: %w", envMetricsEnabled, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L412**: `return fmt.Errorf("invalid %s: %w", envMetricsEnabled, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L414**: `cfg.Metrics.Enabled = enabled`
+      - **What:** Assigns cfg.Metrics.Enabled.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L417**: `if err := applyUpstreamOverrides(cfg, lookup, envTradePrefix); err != nil { return fmt.Errorf("trade upstream config: %w", err) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L417**: `err := applyUpstreamOverrides(cfg, lookup, envTradePrefix)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L418**: `return fmt.Errorf("trade upstream config: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L420**: `if err := applyUpstreamOverrides(cfg, lookup, envTaskPrefix); err != nil { return fmt.Errorf("task upstream config: %w", err) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L420**: `err := applyUpstreamOverrides(cfg, lookup, envTaskPrefix)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L421**: `return fmt.Errorf("task upstream config: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L424**: `if val, ok := lookup(envAdminEnabled); ok && strings.TrimSpace(val) != "" { enabled, err := strconv.ParseBool(strings.TrimSpace(val)) if er…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L424**: `val, ok := lookup(envAdminEnabled)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L425**: `enabled, err := strconv.ParseBool(strings.TrimSpace(val))`
+      - **What:** Defines enabled, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L426**: `if err != nil { return fmt.Errorf("invalid %s: %w", envAdminEnabled, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L427**: `return fmt.Errorf("invalid %s: %w", envAdminEnabled, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L429**: `cfg.Admin.Enabled = enabled`
+      - **What:** Assigns cfg.Admin.Enabled.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L432**: `if val, ok := lookup(envAdminListen); ok && strings.TrimSpace(val) != "" { cfg.Admin.Listen = strings.TrimSpace(val) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L432**: `val, ok := lookup(envAdminListen)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L433**: `cfg.Admin.Listen = strings.TrimSpace(val)`
+      - **What:** Assigns cfg.Admin.Listen.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L436**: `if val, ok := lookup(envAdminToken); ok { cfg.Admin.Token = strings.TrimSpace(val) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L436**: `val, ok := lookup(envAdminToken)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L437**: `cfg.Admin.Token = strings.TrimSpace(val)`
+      - **What:** Assigns cfg.Admin.Token.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L440**: `if val, ok := lookup(envAdminAllow); ok && strings.TrimSpace(val) != "" { cfg.Admin.Allow = splitAndTrim(val) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L440**: `val, ok := lookup(envAdminAllow)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L441**: `cfg.Admin.Allow = splitAndTrim(val)`
+      - **What:** Assigns cfg.Admin.Allow.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L444**: `return nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -1351,7 +1823,7 @@ func applyUpstreamOverrides(cfg *Config, lookup func(string) (string, bool), pre
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L448**: `upstream := cfg.ensureUpstream(prefix)`
   - **What:** Defines upstream.
@@ -1361,30 +1833,140 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L450**: `val, ok := lookup(prefix + envAPIURL)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L451**: `upstream.BaseURL = strings.TrimSpace(val)`
+      - **What:** Assigns upstream.BaseURL.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L453**: `if val, ok := lookup(prefix + envHealthPath); ok && strings.TrimSpace(val) != "" { upstream.HealthPath = ensureLeadingSlash(strings.TrimSpa…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L453**: `val, ok := lookup(prefix + envHealthPath)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L454**: `upstream.HealthPath = ensureLeadingSlash(strings.TrimSpace(val))`
+      - **What:** Assigns upstream.HealthPath.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L457**: `if val, ok := lookup(prefix + envTLSEnabled); ok && strings.TrimSpace(val) != "" { enabled, err := strconv.ParseBool(strings.TrimSpace(val)…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L457**: `val, ok := lookup(prefix + envTLSEnabled)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L458**: `enabled, err := strconv.ParseBool(strings.TrimSpace(val))`
+      - **What:** Defines enabled, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L459**: `if err != nil { return fmt.Errorf("invalid %s%s: %w", prefix, envTLSEnabled, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L460**: `return fmt.Errorf("invalid %s%s: %w", prefix, envTLSEnabled, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L462**: `upstream.TLS.Enabled = enabled`
+      - **What:** Assigns upstream.TLS.Enabled.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L465**: `if val, ok := lookup(prefix + envTLSInsecureSkipVerify); ok && strings.TrimSpace(val) != "" { enabled, err := strconv.ParseBool(strings.Tri…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L465**: `val, ok := lookup(prefix + envTLSInsecureSkipVerify)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L466**: `enabled, err := strconv.ParseBool(strings.TrimSpace(val))`
+      - **What:** Defines enabled, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L467**: `if err != nil { return fmt.Errorf("invalid %s%s: %w", prefix, envTLSInsecureSkipVerify, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L468**: `return fmt.Errorf("invalid %s%s: %w", prefix, envTLSInsecureSkipVerify, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L470**: `upstream.TLS.InsecureSkipVerify = enabled`
+      - **What:** Assigns upstream.TLS.InsecureSkipVerify.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L471**: `if enabled { upstream.TLS.Enabled = true }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L472**: `upstream.TLS.Enabled = true`
+          - **What:** Assigns upstream.TLS.Enabled.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L476**: `if val, ok := lookup(prefix + envTLSCAFile); ok && strings.TrimSpace(val) != "" { upstream.TLS.CAFile = strings.TrimSpace(val) upstream.TLS…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L476**: `val, ok := lookup(prefix + envTLSCAFile)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L477**: `upstream.TLS.CAFile = strings.TrimSpace(val)`
+      - **What:** Assigns upstream.TLS.CAFile.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L478**: `upstream.TLS.Enabled = true`
+      - **What:** Assigns upstream.TLS.Enabled.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L480**: `if val, ok := lookup(prefix + envTLSCertFile); ok && strings.TrimSpace(val) != "" { upstream.TLS.ClientCertFile = strings.TrimSpace(val) up…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L480**: `val, ok := lookup(prefix + envTLSCertFile)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L481**: `upstream.TLS.ClientCertFile = strings.TrimSpace(val)`
+      - **What:** Assigns upstream.TLS.ClientCertFile.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L482**: `upstream.TLS.Enabled = true`
+      - **What:** Assigns upstream.TLS.Enabled.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L484**: `if val, ok := lookup(prefix + envTLSKeyFile); ok && strings.TrimSpace(val) != "" { upstream.TLS.ClientKeyFile = strings.TrimSpace(val) upst…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L484**: `val, ok := lookup(prefix + envTLSKeyFile)`
+      - **What:** Defines val, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L485**: `upstream.TLS.ClientKeyFile = strings.TrimSpace(val)`
+      - **What:** Assigns upstream.TLS.ClientKeyFile.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L486**: `upstream.TLS.Enabled = true`
+      - **What:** Assigns upstream.TLS.Enabled.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L489**: `return nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -1467,44 +2049,89 @@ func (cfg *Config) normalize() error {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L494**: `if cfg.HTTP.Port == 0 { cfg.HTTP.Port = defaultPort }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L495**: `cfg.HTTP.Port = defaultPort`
+      - **What:** Assigns cfg.HTTP.Port.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L497**: `if cfg.HTTP.ShutdownTimeout.AsDuration() <= 0 { cfg.HTTP.ShutdownTimeout = DurationFrom(defaultShutdownTimeout) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L498**: `cfg.HTTP.ShutdownTimeout = DurationFrom(defaultShutdownTimeout)`
+      - **What:** Assigns cfg.HTTP.ShutdownTimeout.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L500**: `if cfg.Readiness.Timeout.AsDuration() <= 0 { cfg.Readiness.Timeout = DurationFrom(defaultReadinessTimeout) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L501**: `cfg.Readiness.Timeout = DurationFrom(defaultReadinessTimeout)`
+      - **What:** Assigns cfg.Readiness.Timeout.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L503**: `if strings.TrimSpace(cfg.Readiness.UserAgent) == "" { cfg.Readiness.UserAgent = defaultReadinessUserAgent }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L504**: `cfg.Readiness.UserAgent = defaultReadinessUserAgent`
+      - **What:** Assigns cfg.Readiness.UserAgent.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L506**: `if cfg.RateLimit.Window.AsDuration() <= 0 { cfg.RateLimit.Window = DurationFrom(defaultRateLimitWindow) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L507**: `cfg.RateLimit.Window = DurationFrom(defaultRateLimitWindow)`
+      - **What:** Assigns cfg.RateLimit.Window.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L509**: `if cfg.RateLimit.Max <= 0 { cfg.RateLimit.Max = defaultRateLimitMax }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L510**: `cfg.RateLimit.Max = defaultRateLimitMax`
+      - **What:** Assigns cfg.RateLimit.Max.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L513**: `if strings.TrimSpace(cfg.Admin.Listen) == "" { cfg.Admin.Listen = defaultAdminListen }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L514**: `cfg.Admin.Listen = defaultAdminListen`
+      - **What:** Assigns cfg.Admin.Listen.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L517**: `if cfg.WebSocket.IdleTimeout.AsDuration() <= 0 { cfg.WebSocket.IdleTimeout = DurationFrom(defaultWebSocketIdleTimeout) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L518**: `cfg.WebSocket.IdleTimeout = DurationFrom(defaultWebSocketIdleTimeout)`
+      - **What:** Assigns cfg.WebSocket.IdleTimeout.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L520**: `if cfg.WebSocket.MaxConcurrent < 0 { cfg.WebSocket.MaxConcurrent = defaultWebSocketMaxConcurrent }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L521**: `cfg.WebSocket.MaxConcurrent = defaultWebSocketMaxConcurrent`
+      - **What:** Assigns cfg.WebSocket.MaxConcurrent.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L524**: `cfg.ensureUpstream(envTradePrefix)`
   - **What:** Calls cfg.ensureUpstream.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -1517,10 +2144,78 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L528**: `if strings.TrimSpace(cfg.Readiness.Upstreams[i].HealthPath) == "" { cfg.Readiness.Upstreams[i].HealthPath = defaultHealthPath } else { cfg.…`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L529**: `cfg.Readiness.Upstreams[i].HealthPath = defaultHealthPath`
+          - **What:** Assigns cfg.Readiness.Upstreams[i].HealthPath.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L531**: `cfg.Readiness.Upstreams[i].HealthPath = ensureLeadingSlash(cfg.Readiness.Upstreams[i].HealthPath)`
+          - **What:** Assigns cfg.Readiness.Upstreams[i].HealthPath.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L533**: `if cfg.Readiness.Upstreams[i].TLS.InsecureSkipVerify { cfg.Readiness.Upstreams[i].TLS.Enabled = true }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L534**: `cfg.Readiness.Upstreams[i].TLS.Enabled = true`
+          - **What:** Assigns cfg.Readiness.Upstreams[i].TLS.Enabled.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L538**: `for i := range cfg.Webhooks.Endpoints { cfg.Webhooks.Endpoints[i].Name = strings.ToLower(strings.TrimSpace(cfg.Webhooks.Endpoints[i].Name))…`
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L539**: `cfg.Webhooks.Endpoints[i].Name = strings.ToLower(strings.TrimSpace(cfg.Webhooks.Endpoints[i].Name))`
+      - **What:** Assigns cfg.Webhooks.Endpoints[i].Name.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L540**: `cfg.Webhooks.Endpoints[i].Path = ensureLeadingSlash(strings.TrimSpace(cfg.Webhooks.Endpoints[i].Path))`
+      - **What:** Assigns cfg.Webhooks.Endpoints[i].Path.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L541**: `if strings.TrimSpace(cfg.Webhooks.Endpoints[i].SignatureHeader) == "" { cfg.Webhooks.Endpoints[i].SignatureHeader = defaultWebhookSignature…`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L542**: `cfg.Webhooks.Endpoints[i].SignatureHeader = defaultWebhookSignatureHeader`
+          - **What:** Assigns cfg.Webhooks.Endpoints[i].SignatureHeader.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L544**: `if cfg.Webhooks.Endpoints[i].MaxAttempts <= 0 { cfg.Webhooks.Endpoints[i].MaxAttempts = defaultWebhookMaxAttempts }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L545**: `cfg.Webhooks.Endpoints[i].MaxAttempts = defaultWebhookMaxAttempts`
+          - **What:** Assigns cfg.Webhooks.Endpoints[i].MaxAttempts.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L547**: `if cfg.Webhooks.Endpoints[i].InitialBackoff.AsDuration() <= 0 { cfg.Webhooks.Endpoints[i].InitialBackoff = DurationFrom(defaultWebhookBacko…`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L548**: `cfg.Webhooks.Endpoints[i].InitialBackoff = DurationFrom(defaultWebhookBackoff)`
+          - **What:** Assigns cfg.Webhooks.Endpoints[i].InitialBackoff.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L550**: `if cfg.Webhooks.Endpoints[i].Timeout.AsDuration() <= 0 { cfg.Webhooks.Endpoints[i].Timeout = DurationFrom(defaultWebhookTimeout) }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L551**: `cfg.Webhooks.Endpoints[i].Timeout = DurationFrom(defaultWebhookTimeout)`
+          - **What:** Assigns cfg.Webhooks.Endpoints[i].Timeout.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L555**: `return nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -1678,7 +2373,7 @@ func (cfg Config) Validate() error {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L560**: `var errs []error`
   - **What:** Declares local names.
@@ -1688,18 +2383,38 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L563**: `errs = append(errs, fmt.Errorf("http.port must be positive"))`
+      - **What:** Assigns errs.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L565**: `if cfg.HTTP.ShutdownTimeout.AsDuration() <= 0 { errs = append(errs, fmt.Errorf("http.shutdownTimeout must be positive")) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L566**: `errs = append(errs, fmt.Errorf("http.shutdownTimeout must be positive"))`
+      - **What:** Assigns errs.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L568**: `if cfg.Readiness.Timeout.AsDuration() <= 0 { errs = append(errs, fmt.Errorf("readiness.timeout must be positive")) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L569**: `errs = append(errs, fmt.Errorf("readiness.timeout must be positive"))`
+      - **What:** Assigns errs.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L571**: `if len(cfg.Readiness.Upstreams) == 0 { errs = append(errs, fmt.Errorf("at least one readiness upstream required")) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L572**: `errs = append(errs, fmt.Errorf("at least one readiness upstream required"))`
+      - **What:** Assigns errs.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L575**: `requiredUpstreams := map[string]bool{"trade": false, "task": false}`
   - **What:** Defines requiredUpstreams.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -1712,38 +2427,365 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L578**: `name := strings.TrimSpace(strings.ToLower(upstream.Name))`
+      - **What:** Defines name.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L579**: `if name == "" { errs = append(errs, fmt.Errorf("readiness upstream name must not be empty")) continue }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L580**: `errs = append(errs, fmt.Errorf("readiness upstream name must not be empty"))`
+          - **What:** Assigns errs.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L581**: `continue`
+          - **What:** Executes a statement.
+          - **Why:** Advances the function logic.
+          - **How:** Runs this statement as part of the function body.
+    - **L583**: `if _, exists := seen[name]; exists { errs = append(errs, fmt.Errorf("duplicate readiness upstream name: %s", upstream.Name)) continue }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L583**: `_, exists := seen[name]`
+          - **What:** Defines _, exists.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L584**: `errs = append(errs, fmt.Errorf("duplicate readiness upstream name: %s", upstream.Name))`
+          - **What:** Assigns errs.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L585**: `continue`
+          - **What:** Executes a statement.
+          - **Why:** Advances the function logic.
+          - **How:** Runs this statement as part of the function body.
+    - **L587**: `seen[name] = struct{}{}`
+      - **What:** Assigns seen[name].
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L588**: `if upstream.BaseURL == "" { errs = append(errs, fmt.Errorf("readiness upstream %s requires baseURL", upstream.Name)) } else if _, err := ur…`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L589**: `errs = append(errs, fmt.Errorf("readiness upstream %s requires baseURL", upstream.Name))`
+          - **What:** Assigns errs.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L590**: `if _, err := url.ParseRequestURI(upstream.BaseURL); err != nil { errs = append(errs, fmt.Errorf("readiness upstream %s baseURL invalid: %w"…`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L590**: `_, err := url.ParseRequestURI(upstream.BaseURL)`
+              - **What:** Defines _, err.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L591**: `errs = append(errs, fmt.Errorf("readiness upstream %s baseURL invalid: %w", upstream.Name, err))`
+              - **What:** Assigns errs.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L593**: `if upstream.TLS.ClientCertFile != "" && upstream.TLS.ClientKeyFile == "" { errs = append(errs, fmt.Errorf("readiness upstream %s tls client…`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L594**: `errs = append(errs, fmt.Errorf("readiness upstream %s tls client key required when cert provided", upstream.Name))`
+          - **What:** Assigns errs.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L596**: `if upstream.TLS.ClientKeyFile != "" && upstream.TLS.ClientCertFile == "" { errs = append(errs, fmt.Errorf("readiness upstream %s tls client…`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L597**: `errs = append(errs, fmt.Errorf("readiness upstream %s tls client cert required when key provided", upstream.Name))`
+          - **What:** Assigns errs.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L599**: `if _, ok := requiredUpstreams[name]; ok { requiredUpstreams[name] = true }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L599**: `_, ok := requiredUpstreams[name]`
+          - **What:** Defines _, ok.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L600**: `requiredUpstreams[name] = true`
+          - **What:** Assigns requiredUpstreams[name].
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L604**: `for key, satisfied := range requiredUpstreams { if !satisfied { errs = append(errs, fmt.Errorf("%s upstream configuration is required", key…`
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L605**: `if !satisfied { errs = append(errs, fmt.Errorf("%s upstream configuration is required", key)) }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L606**: `errs = append(errs, fmt.Errorf("%s upstream configuration is required", key))`
+          - **What:** Assigns errs.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L610**: `if cfg.RateLimit.Max <= 0 { errs = append(errs, fmt.Errorf("rateLimit.max must be positive")) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L611**: `errs = append(errs, fmt.Errorf("rateLimit.max must be positive"))`
+      - **What:** Assigns errs.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L613**: `if cfg.RateLimit.Window.AsDuration() <= 0 { errs = append(errs, fmt.Errorf("rateLimit.window must be positive")) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L614**: `errs = append(errs, fmt.Errorf("rateLimit.window must be positive"))`
+      - **What:** Assigns errs.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L617**: `if cfg.Admin.Enabled { if strings.TrimSpace(cfg.Admin.Listen) == "" { errs = append(errs, fmt.Errorf("admin.listen must be provided when ad…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L618**: `if strings.TrimSpace(cfg.Admin.Listen) == "" { errs = append(errs, fmt.Errorf("admin.listen must be provided when admin.enabled is true")) }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L619**: `errs = append(errs, fmt.Errorf("admin.listen must be provided when admin.enabled is true"))`
+          - **What:** Assigns errs.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L621**: `for _, entry := range cfg.Admin.Allow { e := strings.TrimSpace(entry) if e == "" { continue } if strings.Contains(e, "/") { if _, err := ne…`
+      - **What:** Iterates over a collection.
+      - **Why:** Processes multiple elements with the same logic.
+      - **How:** Executes a `for ... range` loop.
+      - **Nested steps:**
+        - **L622**: `e := strings.TrimSpace(entry)`
+          - **What:** Defines e.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L623**: `if e == "" { continue }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L624**: `continue`
+              - **What:** Executes a statement.
+              - **Why:** Advances the function logic.
+              - **How:** Runs this statement as part of the function body.
+        - **L626**: `if strings.Contains(e, "/") { if _, err := netip.ParsePrefix(e); err != nil { errs = append(errs, fmt.Errorf("invalid admin allow value %q:…`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L627**: `if _, err := netip.ParsePrefix(e); err != nil { errs = append(errs, fmt.Errorf("invalid admin allow value %q: %w", e, err)) }`
+              - **What:** Branches conditionally.
+              - **Why:** Handles different execution paths based on runtime state.
+              - **How:** Evaluates the condition and executes the matching branch.
+              - **Nested steps:**
+                - **L627**: `_, err := netip.ParsePrefix(e)`
+                  - **What:** Defines _, err.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L628**: `errs = append(errs, fmt.Errorf("invalid admin allow value %q: %w", e, err))`
+                  - **What:** Assigns errs.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L630**: `if _, err := netip.ParseAddr(e); err != nil { errs = append(errs, fmt.Errorf("invalid admin allow value %q: %w", e, err)) }`
+              - **What:** Branches conditionally.
+              - **Why:** Handles different execution paths based on runtime state.
+              - **How:** Evaluates the condition and executes the matching branch.
+              - **Nested steps:**
+                - **L630**: `_, err := netip.ParseAddr(e)`
+                  - **What:** Defines _, err.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L631**: `errs = append(errs, fmt.Errorf("invalid admin allow value %q: %w", e, err))`
+                  - **What:** Assigns errs.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L636**: `if cfg.WebSocket.MaxConcurrent < 0 { errs = append(errs, fmt.Errorf("websocket.maxConcurrent cannot be negative")) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L637**: `errs = append(errs, fmt.Errorf("websocket.maxConcurrent cannot be negative"))`
+      - **What:** Assigns errs.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L639**: `if cfg.WebSocket.IdleTimeout.AsDuration() < 0 { errs = append(errs, fmt.Errorf("websocket.idleTimeout cannot be negative")) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L640**: `errs = append(errs, fmt.Errorf("websocket.idleTimeout cannot be negative"))`
+      - **What:** Assigns errs.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L643**: `if cfg.Webhooks.Enabled { if len(cfg.Webhooks.Endpoints) == 0 { errs = append(errs, fmt.Errorf("webhooks.enabled is true but no endpoints c…`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L644**: `if len(cfg.Webhooks.Endpoints) == 0 { errs = append(errs, fmt.Errorf("webhooks.enabled is true but no endpoints configured")) }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L645**: `errs = append(errs, fmt.Errorf("webhooks.enabled is true but no endpoints configured"))`
+          - **What:** Assigns errs.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L647**: `seenWebhookNames := make(map[string]struct{})`
+      - **What:** Defines seenWebhookNames.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L648**: `seenWebhookPaths := make(map[string]struct{})`
+      - **What:** Defines seenWebhookPaths.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L649**: `for _, endpoint := range cfg.Webhooks.Endpoints { name := strings.TrimSpace(endpoint.Name) if name == "" { errs = append(errs, fmt.Errorf("…`
+      - **What:** Iterates over a collection.
+      - **Why:** Processes multiple elements with the same logic.
+      - **How:** Executes a `for ... range` loop.
+      - **Nested steps:**
+        - **L650**: `name := strings.TrimSpace(endpoint.Name)`
+          - **What:** Defines name.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L651**: `if name == "" { errs = append(errs, fmt.Errorf("webhook endpoint name must be provided")) } else { if _, exists := seenWebhookNames[name]; …`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L652**: `errs = append(errs, fmt.Errorf("webhook endpoint name must be provided"))`
+              - **What:** Assigns errs.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L654**: `if _, exists := seenWebhookNames[name]; exists { errs = append(errs, fmt.Errorf("duplicate webhook endpoint name: %s", name)) }`
+              - **What:** Branches conditionally.
+              - **Why:** Handles different execution paths based on runtime state.
+              - **How:** Evaluates the condition and executes the matching branch.
+              - **Nested steps:**
+                - **L654**: `_, exists := seenWebhookNames[name]`
+                  - **What:** Defines _, exists.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L655**: `errs = append(errs, fmt.Errorf("duplicate webhook endpoint name: %s", name))`
+                  - **What:** Assigns errs.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L657**: `seenWebhookNames[name] = struct{}{}`
+              - **What:** Assigns seenWebhookNames[name].
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L660**: `path := strings.TrimSpace(endpoint.Path)`
+          - **What:** Defines path.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L661**: `if path == "" || path == "/" { errs = append(errs, fmt.Errorf("webhook endpoint %s must specify a path", name)) } else { if _, exists := se…`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L662**: `errs = append(errs, fmt.Errorf("webhook endpoint %s must specify a path", name))`
+              - **What:** Assigns errs.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L664**: `if _, exists := seenWebhookPaths[path]; exists { errs = append(errs, fmt.Errorf("duplicate webhook endpoint path: %s", path)) }`
+              - **What:** Branches conditionally.
+              - **Why:** Handles different execution paths based on runtime state.
+              - **How:** Evaluates the condition and executes the matching branch.
+              - **Nested steps:**
+                - **L664**: `_, exists := seenWebhookPaths[path]`
+                  - **What:** Defines _, exists.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L665**: `errs = append(errs, fmt.Errorf("duplicate webhook endpoint path: %s", path))`
+                  - **What:** Assigns errs.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L667**: `seenWebhookPaths[path] = struct{}{}`
+              - **What:** Assigns seenWebhookPaths[path].
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L670**: `if strings.TrimSpace(endpoint.TargetURL) == "" { errs = append(errs, fmt.Errorf("webhook endpoint %s targetURL is required", name)) } else …`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L671**: `errs = append(errs, fmt.Errorf("webhook endpoint %s targetURL is required", name))`
+              - **What:** Assigns errs.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+            - **L672**: `if _, err := url.ParseRequestURI(endpoint.TargetURL); err != nil { errs = append(errs, fmt.Errorf("webhook endpoint %s targetURL invalid: %…`
+              - **What:** Branches conditionally.
+              - **Why:** Handles different execution paths based on runtime state.
+              - **How:** Evaluates the condition and executes the matching branch.
+              - **Nested steps:**
+                - **L672**: `_, err := url.ParseRequestURI(endpoint.TargetURL)`
+                  - **What:** Defines _, err.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+                - **L673**: `errs = append(errs, fmt.Errorf("webhook endpoint %s targetURL invalid: %w", name, err))`
+                  - **What:** Assigns errs.
+                  - **Why:** Keeps intermediate state available for later steps in the function.
+                  - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L676**: `if strings.TrimSpace(endpoint.Secret) == "" { errs = append(errs, fmt.Errorf("webhook endpoint %s secret is required", name)) }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L677**: `errs = append(errs, fmt.Errorf("webhook endpoint %s secret is required", name))`
+              - **What:** Assigns errs.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L680**: `if endpoint.MaxAttempts <= 0 { errs = append(errs, fmt.Errorf("webhook endpoint %s maxAttempts must be positive", name)) }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L681**: `errs = append(errs, fmt.Errorf("webhook endpoint %s maxAttempts must be positive", name))`
+              - **What:** Assigns errs.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L684**: `if endpoint.InitialBackoff.AsDuration() <= 0 { errs = append(errs, fmt.Errorf("webhook endpoint %s initialBackoff must be positive", name))…`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L685**: `errs = append(errs, fmt.Errorf("webhook endpoint %s initialBackoff must be positive", name))`
+              - **What:** Assigns errs.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L687**: `if endpoint.Timeout.AsDuration() <= 0 { errs = append(errs, fmt.Errorf("webhook endpoint %s timeout must be positive", name)) }`
+          - **What:** Branches conditionally.
+          - **Why:** Handles different execution paths based on runtime state.
+          - **How:** Evaluates the condition and executes the matching branch.
+          - **Nested steps:**
+            - **L688**: `errs = append(errs, fmt.Errorf("webhook endpoint %s timeout must be positive", name))`
+              - **What:** Assigns errs.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L693**: `if len(errs) == 0 { return nil }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L694**: `return nil`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L696**: `return errors.Join(errs...)`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -1779,7 +2821,7 @@ func (cfg *Config) ensureUpstream(prefix string) *UpstreamConfig {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L700**: `name := strings.ToLower(prefix)`
   - **What:** Defines name.
@@ -1789,6 +2831,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L702**: `if strings.EqualFold(cfg.Readiness.Upstreams[i].Name, name) { cfg.Readiness.Upstreams[i].Name = name return &cfg.Readiness.Upstreams[i] }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L703**: `cfg.Readiness.Upstreams[i].Name = name`
+          - **What:** Assigns cfg.Readiness.Upstreams[i].Name.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L704**: `return &cfg.Readiness.Upstreams[i]`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 - **L708**: `upstream := UpstreamConfig{ Name: name, BaseURL: "", HealthPath: defaultHealthPath, }`
   - **What:** Defines upstream.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -1825,7 +2881,7 @@ func parsePositiveDurationMillis(value string) (time.Duration, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L718**: `ms, err := strconv.Atoi(strings.TrimSpace(value))`
   - **What:** Defines ms, err.
@@ -1835,10 +2891,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L720**: `return 0, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L722**: `if ms <= 0 { return 0, fmt.Errorf("value must be positive: %d", ms) }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L723**: `return 0, fmt.Errorf("value must be positive: %d", ms)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L725**: `return time.Duration(ms) * time.Millisecond, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -1869,12 +2935,22 @@ func splitAndTrim(value string) []string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L729**: `parts := strings.FieldsFunc(value, func(r rune) bool { return r == ',' || r == ' ' || r == ';' })`
   - **What:** Defines parts.
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+  - **Nested steps:**
+    - **L729**: `func(r rune) bool { return r == ',' || r == ' ' || r == ';' }`
+      - **What:** Defines an inline function (closure).
+      - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+      - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+      - **Nested steps:**
+        - **L730**: `return r == ',' || r == ' ' || r == ';'`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
 - **L732**: `result := make([]string, 0, len(parts))`
   - **What:** Defines result.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -1883,6 +2959,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L734**: `if trimmed := strings.TrimSpace(part); trimmed != "" { result = append(result, trimmed) }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L734**: `trimmed := strings.TrimSpace(part)`
+          - **What:** Defines trimmed.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L735**: `result = append(result, trimmed)`
+          - **What:** Assigns result.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L738**: `return result`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -1910,16 +3000,26 @@ func ensureLeadingSlash(path string) string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L742**: `if path == "" { return "/" }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L743**: `return "/"`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L745**: `if strings.HasPrefix(path, "/") { return path }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L746**: `return path`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L748**: `return "/" + path`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.

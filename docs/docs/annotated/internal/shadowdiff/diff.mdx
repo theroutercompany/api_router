@@ -154,7 +154,7 @@ func (r *Runner) Run(ctx context.Context, fixtures []Fixture) []Result {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L35**: `client := r.Client`
   - **What:** Defines client.
@@ -164,6 +164,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L37**: `client = &http.Client{Timeout: 5 * time.Second}`
+      - **What:** Assigns client.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L40**: `results := make([]Result, len(fixtures))`
   - **What:** Defines results.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -180,6 +185,47 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L45**: `sem <- struct{}{}`
+      - **What:** Sends a value on a channel.
+      - **Why:** Communicates with another goroutine.
+      - **How:** Executes a channel send operation.
+    - **L46**: `wg.Add(1)`
+      - **What:** Calls wg.Add.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L47**: `go func(idx int, fx Fixture) { defer wg.Done() defer func() { <-sem }() results[idx] = r.execute(ctx, client, fx) }(i, fixture)`
+      - **What:** Starts a goroutine.
+      - **Why:** Runs work concurrently.
+      - **How:** Invokes the function call asynchronously using `go`.
+      - **Nested steps:**
+        - **L47**: `func(idx int, fx Fixture) { defer wg.Done() defer func() { <-sem }() results[idx] = r.execute(ctx, client, fx) }`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+          - **Nested steps:**
+            - **L48**: `defer wg.Done()`
+              - **What:** Defers a call for cleanup.
+              - **Why:** Ensures the deferred action runs even on early returns.
+              - **How:** Schedules the call to run when the surrounding function returns.
+            - **L49**: `defer func() { <-sem }()`
+              - **What:** Defers a call for cleanup.
+              - **Why:** Ensures the deferred action runs even on early returns.
+              - **How:** Schedules the call to run when the surrounding function returns.
+              - **Nested steps:**
+                - **L49**: `func() { <-sem }`
+                  - **What:** Defines an inline function (closure).
+                  - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+                  - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+                  - **Nested steps:**
+                    - **L49**: `<-sem`
+                      - **What:** Evaluates an expression.
+                      - **Why:** Performs side effects or delegates work to a helper.
+                      - **How:** Executes the expression statement.
+            - **L50**: `results[idx] = r.execute(ctx, client, fx)`
+              - **What:** Assigns results[idx].
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L54**: `wg.Wait()`
   - **What:** Calls wg.Wait.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -240,7 +286,7 @@ func (r *Runner) execute(ctx context.Context, client *http.Client, fixture Fixtu
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L59**: `res := Result{Fixture: fixture}`
   - **What:** Defines res.
@@ -264,12 +310,30 @@ The list below documents the top-level statements inside the function body.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L67**: `if nodeErr != nil { res.Err = fmt.Errorf("node request failed: %w", nodeErr) return res }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L68**: `res.Err = fmt.Errorf("node request failed: %w", nodeErr)`
+      - **What:** Assigns res.Err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L69**: `return res`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L71**: `if goErr != nil { res.Err = fmt.Errorf("go request failed: %w", goErr) return res }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L72**: `res.Err = fmt.Errorf("go request failed: %w", goErr)`
+      - **What:** Assigns res.Err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L73**: `return res`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L76**: `res.NodeStatus = nodeResp.StatusCode`
   - **What:** Assigns res.NodeStatus.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -298,10 +362,24 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L85**: `nodeBody = normalizer(nodeBody)`
+      - **What:** Assigns nodeBody.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L86**: `goBody = normalizer(goBody)`
+      - **What:** Assigns goBody.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L89**: `if !bytes.Equal(nodeBody, goBody) || res.NodeStatus != res.GoStatus { res.BodyDiff = diffJSON(nodeBody, goBody) }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L90**: `res.BodyDiff = diffJSON(nodeBody, goBody)`
+      - **What:** Assigns res.BodyDiff.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L92**: `return res`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -353,7 +431,7 @@ func (r *Runner) send(ctx context.Context, client *http.Client, baseURL string, 
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L96**: `method := fixture.Method`
   - **What:** Defines method.
@@ -363,6 +441,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L98**: `method = http.MethodGet`
+      - **What:** Assigns method.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L101**: `target, err := url.JoinPath(baseURL, fixture.Path)`
   - **What:** Defines target, err.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -371,6 +454,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L103**: `return nil, 0, fmt.Errorf("build url: %w", err)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L106**: `reqBody := bytes.NewReader(fixture.Body)`
   - **What:** Defines reqBody.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -383,10 +471,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L109**: `return nil, 0, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L112**: `for key, value := range fixture.Headers { req.Header.Set(key, value) }`
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L113**: `req.Header.Set(key, value)`
+      - **What:** Calls req.Header.Set.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L116**: `start := time.Now()`
   - **What:** Defines start.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -403,6 +501,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L121**: `return nil, latency, err`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L124**: `return resp, latency, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -447,7 +550,7 @@ func diffJSON(expected, actual []byte) string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L128**: `var expAny, actAny interface{}`
   - **What:** Declares local names.
@@ -455,12 +558,48 @@ The list below documents the top-level statements inside the function body.
   - **How:** Executes a Go declaration statement inside the function body.
 - **L129**: `if err := json.Unmarshal(expected, &expAny); err != nil { if bytes.Equal(expected, actual) { return "" } return fmt.Sprintf("expected raw:\…`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L129**: `err := json.Unmarshal(expected, &expAny)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L130**: `if bytes.Equal(expected, actual) { return "" }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L131**: `return ""`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L133**: `return fmt.Sprintf("expected raw:\n%s\nactual:\n%s\n", expected, actual)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L135**: `if err := json.Unmarshal(actual, &actAny); err != nil { if bytes.Equal(expected, actual) { return "" } return fmt.Sprintf("expected raw:\n%…`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L135**: `err := json.Unmarshal(actual, &actAny)`
+      - **What:** Defines err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L136**: `if bytes.Equal(expected, actual) { return "" }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L137**: `return ""`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L139**: `return fmt.Sprintf("expected raw:\n%s\nactual:\n%s\n", expected, actual)`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L142**: `expCanonical, _ := json.MarshalIndent(expAny, "", " ")`
   - **What:** Defines expCanonical, _.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -473,6 +612,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L146**: `return ""`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L149**: `return fmt.Sprintf("expected:\n%s\nactual:\n%s\n", expCanonical, actCanonical)`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.

@@ -1,0 +1,29 @@
+file: pkg/gateway/proxy/testdata/sse_server.go
+title: pkg/gateway/proxy/testdata/sse_server.go
+overview:
+  what: |
+    Test-only upstream handler that emits Server-Sent Events (SSE).
+  why: |
+    SSE is a long-lived streaming protocol that depends on:
+    - correct `text/event-stream` content type
+    - periodic flushes
+    - request cancellation propagation
+
+    This handler exists so proxy tests can validate that the gateway forwards SSE streams correctly
+    without buffering and without requiring an external upstream.
+  how: |
+    `NewSSEServer()` returns an `http.Handler` that:
+    - validates flush support
+    - sets standard SSE response headers
+    - emits a small JSON payload every tick using the SSE wire format
+    - flushes each event
+    - stops after a small number of messages (or when the client cancels)
+  notes: |
+    The handler uses `math/rand` to vary a small hint field. The randomness is not used for assertions;
+    it simply ensures the payload is not constant and exercises JSON encoding.
+symbols:
+  func NewSSEServer:
+    what: Constructs an SSE handler suitable for proxy streaming tests.
+    why: Provides a deterministic, local SSE upstream to exercise the gateway's proxying of event streams.
+    how: Returns an `http.HandlerFunc` that writes SSE frames (`id`, `event`, `data`) on a timer, flushing after each frame and stopping after a small number of events.
+    notes: SSE requires `http.Flusher`; the handler returns 500 if flushing is unsupported.

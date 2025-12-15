@@ -118,12 +118,17 @@ func newRateLimiter(window time.Duration, max int) *rateLimiter {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L25**: `if window <= 0 || max <= 0 { return &rateLimiter{ window: 0, max: 0, } }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L26**: `return &rateLimiter{ window: 0, max: 0, }`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L32**: `seconds := window.Seconds()`
   - **What:** Defines seconds.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -132,6 +137,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L34**: `seconds = 1`
+      - **What:** Assigns seconds.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L37**: `limit := rate.Limit(float64(max) / seconds)`
   - **What:** Defines limit.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -140,6 +150,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L39**: `limit = rate.Every(window / time.Duration(max))`
+      - **What:** Assigns limit.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L42**: `return &rateLimiter{ window: window, max: max, limit: limit, clients: make(map[string]*clientLimiter), }`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -190,12 +205,17 @@ func (r *rateLimiter) allow(key string, now time.Time) bool {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L51**: `if r == nil || r.window <= 0 || r.max <= 0 { return true }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L52**: `return true`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L55**: `r.mu.Lock()`
   - **What:** Calls r.mu.Lock.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -208,6 +228,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L59**: `r.clients = make(map[string]*clientLimiter)`
+      - **What:** Assigns r.clients.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L62**: `client, ok := r.clients[key]`
   - **What:** Defines client, ok.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -216,6 +241,19 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L64**: `client = &clientLimiter{ limiter: rate.NewLimiter(r.limit, r.max), lastSeen: now, }`
+      - **What:** Assigns client.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L68**: `r.clients[key] = client`
+      - **What:** Assigns r.clients[key].
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L70**: `client.lastSeen = now`
+      - **What:** Assigns client.lastSeen.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L73**: `allowed := client.limiter.Allow()`
   - **What:** Defines allowed.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -224,6 +262,15 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L76**: `r.cleanupLocked(now)`
+      - **What:** Calls r.cleanupLocked.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L77**: `r.nextCleanup = now.Add(r.window)`
+      - **What:** Assigns r.nextCleanup.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L80**: `return allowed`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -254,12 +301,17 @@ func (r *rateLimiter) cleanupLocked(now time.Time) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L84**: `if r.clients == nil { return }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L85**: `return`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L88**: `threshold := now.Add(-2 * r.window)`
   - **What:** Defines threshold.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -268,4 +320,14 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L90**: `if client.lastSeen.Before(threshold) { delete(r.clients, key) }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L91**: `delete(r.clients, key)`
+          - **What:** Calls delete.
+          - **Why:** Performs side effects or delegates work to a helper.
+          - **How:** Executes the expression statement.
 

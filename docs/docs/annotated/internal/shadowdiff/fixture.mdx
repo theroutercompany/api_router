@@ -114,7 +114,7 @@ func LoadFixtures(paths []string) ([]Fixture, error) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L21**: `var fixtures []Fixture`
   - **What:** Declares local names.
@@ -124,6 +124,41 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L23**: `data, err := os.ReadFile(path)`
+      - **What:** Defines data, err.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L24**: `if err != nil { return nil, fmt.Errorf("read fixture %s: %w", path, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L25**: `return nil, fmt.Errorf("read fixture %s: %w", path, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L28**: `var fileFixtures []Fixture`
+      - **What:** Declares local names.
+      - **Why:** Introduces variables or types used later in the function.
+      - **How:** Executes a Go declaration statement inside the function body.
+    - **L29**: `if err := json.Unmarshal(data, &fileFixtures); err != nil { return nil, fmt.Errorf("decode fixture %s: %w", path, err) }`
+      - **What:** Branches conditionally.
+      - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L29**: `err := json.Unmarshal(data, &fileFixtures)`
+          - **What:** Defines err.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L30**: `return nil, fmt.Errorf("decode fixture %s: %w", path, err)`
+          - **What:** Returns from the current function.
+          - **Why:** Ends the current execution path and hands control back to the caller.
+          - **How:** Executes a `return` statement (possibly returning values).
+    - **L32**: `fixtures = append(fixtures, fileFixtures...)`
+      - **What:** Assigns fixtures.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L34**: `return fixtures, nil`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.

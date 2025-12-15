@@ -1,0 +1,48 @@
+file: pkg/gateway/proxy/testdata/graphql_stream_server.go
+title: pkg/gateway/proxy/testdata/graphql_stream_server.go
+overview:
+  what: |
+    Test-only HTTP handlers used by the proxy package to simulate streaming upstream behavior.
+
+    Specifically, this file provides a handler that emits chunked JSON responses over time
+    to mimic GraphQL subscription streams or deferred payloads.
+  why: |
+    Proxy streaming behavior is easy to regress:
+    - buffering responses accidentally breaks streaming semantics
+    - not flushing promptly increases latency for clients
+    - cancellation may not propagate correctly
+
+    This handler exists so tests can:
+    - verify the reverse proxy forwards chunked responses incrementally
+    - verify upstream cancellation is observed
+    - avoid depending on an external upstream server for streaming test coverage
+  how: |
+    - `NewGraphQLStreamHandler()` constructs an instance with a cancellation channel.
+    - `ServeHTTP` checks that the response writer supports flushing, sets streaming-friendly headers,
+      then loops on a ticker, emitting newline-delimited JSON payloads until the request context is cancelled.
+    - When the request is cancelled, it closes `cancelCh` exactly once using `sync.Once`.
+    - `Cancelled()` exposes a channel that tests can wait on to confirm cancellation propagation.
+  notes: |
+    This handler is in `testdata` and is not intended for production use.
+    It intentionally writes small payloads frequently to exercise flush and streaming behavior.
+symbols:
+  func NewGraphQLStreamHandler:
+    what: Constructs a new streaming handler instance.
+    why: Ensures each test gets an isolated handler with its own cancellation channel.
+    how: Returns a `GraphQLStreamHandler` with `cancelCh` initialized.
+    notes: ""
+  method (*GraphQLStreamHandler).Cancelled:
+    what: Returns a channel that is closed when the client request context is cancelled.
+    why: Tests need a reliable signal that the upstream handler observed cancellation.
+    how: Exposes the internal `cancelCh` as a receive-only channel.
+    notes: The channel is closed once using `sync.Once` in `ServeHTTP`.
+  method (*GraphQLStreamHandler).ServeHTTP:
+    what: Implements `http.Handler` by streaming newline-delimited JSON payloads.
+    why: Simulates GraphQL streaming responses so proxy tests can validate flush/cancellation behavior.
+    how: Verifies `http.Flusher` support, sets headers, ticks periodically, and on each tick marshals a small payload and writes it followed by a newline and a flush. On context cancellation, closes `cancelCh` once and returns.
+    notes: This handler intentionally does not terminate on its own; tests should cancel the request context to stop it.
+  type GraphQLStreamHandler:
+    what: Stateful streaming handler that tracks cancellation.
+    why: Holds the synchronization and channel state needed to emit and to signal cancellation safely across goroutines.
+    how: Uses `onCancel sync.Once` to guard a `close(cancelCh)` call, preventing panics from double-closing.
+    notes: The fields are not exported because this is a test helper, not a stable API surface.

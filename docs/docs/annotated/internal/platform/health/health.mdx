@@ -150,20 +150,35 @@ func NewChecker(client *http.Client, upstreams []Upstream, timeout time.Duration
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L45**: `if client == nil { client = http.DefaultClient }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L46**: `client = http.DefaultClient`
+      - **What:** Assigns client.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L48**: `if timeout <= 0 { timeout = 2 * time.Second }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L49**: `timeout = 2 * time.Second`
+      - **What:** Assigns timeout.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L51**: `if userAgent == "" { userAgent = "api-router-gateway/readyz" }`
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L52**: `userAgent = "api-router-gateway/readyz"`
+      - **What:** Assigns userAgent.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L55**: `return &Checker{ client: client, upstreams: upstreams, timeout: timeout, userAgent: userAgent, }`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -215,12 +230,17 @@ func (c *Checker) Readiness(ctx context.Context) Report {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L65**: `if len(c.upstreams) == 0 { return Report{Status: "ready", CheckedAt: time.Now().UTC()} }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L66**: `return Report{Status: "ready", CheckedAt: time.Now().UTC()}`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L69**: `results := make([]UpstreamReport, len(c.upstreams))`
   - **What:** Defines results.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -233,6 +253,29 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L73**: `wg.Add(1)`
+      - **What:** Calls wg.Add.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
+    - **L74**: `go func(i int, u Upstream) { defer wg.Done() results[i] = c.probe(ctx, u) }(idx, upstream)`
+      - **What:** Starts a goroutine.
+      - **Why:** Runs work concurrently.
+      - **How:** Invokes the function call asynchronously using `go`.
+      - **Nested steps:**
+        - **L74**: `func(i int, u Upstream) { defer wg.Done() results[i] = c.probe(ctx, u) }`
+          - **What:** Defines an inline function (closure).
+          - **Why:** Encapsulates callback logic and may capture variables from the surrounding scope.
+          - **How:** Declares a `func` literal and uses it as a value (for example, as an HTTP handler or callback).
+          - **Nested steps:**
+            - **L75**: `defer wg.Done()`
+              - **What:** Defers a call for cleanup.
+              - **Why:** Ensures the deferred action runs even on early returns.
+              - **How:** Schedules the call to run when the surrounding function returns.
+            - **L76**: `results[i] = c.probe(ctx, u)`
+              - **What:** Assigns results[i].
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L80**: `wg.Wait()`
   - **What:** Calls wg.Wait.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -249,6 +292,20 @@ The list below documents the top-level statements inside the function body.
   - **What:** Iterates over a collection.
   - **Why:** Processes multiple elements with the same logic.
   - **How:** Executes a `for ... range` loop.
+  - **Nested steps:**
+    - **L89**: `if !r.Healthy { report.Status = "degraded" break }`
+      - **What:** Branches conditionally.
+      - **Why:** Handles different execution paths based on runtime state.
+      - **How:** Evaluates the condition and executes the matching branch.
+      - **Nested steps:**
+        - **L90**: `report.Status = "degraded"`
+          - **What:** Assigns report.Status.
+          - **Why:** Keeps intermediate state available for later steps in the function.
+          - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L91**: `break`
+          - **What:** Executes a statement.
+          - **Why:** Advances the function logic.
+          - **How:** Runs this statement as part of the function body.
 - **L95**: `return report`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -312,7 +369,7 @@ func (c *Checker) probe(ctx context.Context, upstream Upstream) UpstreamReport {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L99**: `checkedAt := time.Now().UTC()`
   - **What:** Defines checkedAt.
@@ -328,8 +385,17 @@ The list below documents the top-level statements inside the function body.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L107**: `if err != nil { report.Error = fmt.Sprintf("failed to build upstream url: %v", err) return report }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L108**: `report.Error = fmt.Sprintf("failed to build upstream url: %v", err)`
+      - **What:** Assigns report.Error.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L109**: `return report`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L112**: `reqCtx, cancel := context.WithTimeout(ctx, c.timeout)`
   - **What:** Defines reqCtx, cancel.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -344,8 +410,17 @@ The list below documents the top-level statements inside the function body.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L116**: `if err != nil { report.Error = fmt.Sprintf("failed to create request: %v", err) return report }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L117**: `report.Error = fmt.Sprintf("failed to create request: %v", err)`
+      - **What:** Assigns report.Error.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L118**: `return report`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L121**: `req.Header.Set("User-Agent", c.userAgent)`
   - **What:** Calls req.Header.Set.
   - **Why:** Performs side effects or delegates work to a helper.
@@ -356,8 +431,36 @@ The list below documents the top-level statements inside the function body.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L124**: `if err != nil { select { case <-reqCtx.Done(): report.Error = reqCtx.Err().Error() default: report.Error = err.Error() } return report }`
   - **What:** Branches conditionally.
-  - **Why:** Handles different execution paths based on runtime state.
+  - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L125**: `select { case <-reqCtx.Done(): report.Error = reqCtx.Err().Error() default: report.Error = err.Error() }`
+      - **What:** Selects among concurrent operations.
+      - **Why:** Coordinates channel operations without blocking incorrectly.
+      - **How:** Executes a `select` statement and runs one ready case.
+      - **Nested steps:**
+        - **L126**: `case <-reqCtx.Done():`
+          - **What:** Selects a select-case branch.
+          - **Why:** Coordinates concurrent operations without blocking incorrectly.
+          - **How:** Runs this case body when its channel operation is ready (or runs default immediately).
+          - **Nested steps:**
+            - **L127**: `report.Error = reqCtx.Err().Error()`
+              - **What:** Assigns report.Error.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+        - **L128**: `default:`
+          - **What:** Selects a select-case branch.
+          - **Why:** Coordinates concurrent operations without blocking incorrectly.
+          - **How:** Runs this case body when its channel operation is ready (or runs default immediately).
+          - **Nested steps:**
+            - **L129**: `report.Error = err.Error()`
+              - **What:** Assigns report.Error.
+              - **Why:** Keeps intermediate state available for later steps in the function.
+              - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L131**: `return report`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L133**: `defer resp.Body.Close()`
   - **What:** Defers a call for cleanup.
   - **Why:** Ensures the deferred action runs even on early returns.
@@ -374,6 +477,11 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L138**: `report.Error = fmt.Sprintf("health check failed with status %d", resp.StatusCode)`
+      - **What:** Assigns report.Error.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 - **L141**: `return report`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.

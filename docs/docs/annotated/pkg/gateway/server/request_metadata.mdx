@@ -115,7 +115,7 @@ func ensureRequestIDs(r *http.Request) (*http.Request, string, string) {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L18**: `requestID := r.Header.Get("X-Request-Id")`
   - **What:** Defines requestID.
@@ -125,6 +125,15 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L20**: `requestID = uuid.NewString()`
+      - **What:** Assigns requestID.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L21**: `r.Header.Set("X-Request-Id", requestID)`
+      - **What:** Calls r.Header.Set.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L24**: `traceID := r.Header.Get("X-Trace-Id")`
   - **What:** Defines traceID.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -133,6 +142,15 @@ The list below documents the top-level statements inside the function body.
   - **What:** Branches conditionally.
   - **Why:** Handles different execution paths based on runtime state.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L26**: `traceID = requestID`
+      - **What:** Assigns traceID.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L27**: `r.Header.Set("X-Trace-Id", traceID)`
+      - **What:** Calls r.Header.Set.
+      - **Why:** Performs side effects or delegates work to a helper.
+      - **How:** Executes the expression statement.
 - **L30**: `ctx := context.WithValue(r.Context(), requestIDKey, requestID)`
   - **What:** Defines ctx.
   - **Why:** Keeps intermediate state available for later steps in the function.
@@ -168,16 +186,30 @@ func requestIDFromContext(ctx context.Context) string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L37**: `if ctx == nil { return "" }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L38**: `return ""`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L40**: `if value, ok := ctx.Value(requestIDKey).(string); ok { return value }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L40**: `value, ok := ctx.Value(requestIDKey).(string)`
+      - **What:** Defines value, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L41**: `return value`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L43**: `return ""`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
@@ -205,16 +237,30 @@ func traceIDFromContext(ctx context.Context) string {
 
 #### Walkthrough
 
-The list below documents the top-level statements inside the function body.
+The list below documents the statements inside the function body, including nested blocks and inline closures.
 
 - **L47**: `if ctx == nil { return "" }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L48**: `return ""`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L50**: `if value, ok := ctx.Value(traceIDKey).(string); ok { return value }`
   - **What:** Branches conditionally.
   - **Why:** Short-circuits early when a precondition is not met or an error/edge case is detected.
   - **How:** Evaluates the condition and executes the matching branch.
+  - **Nested steps:**
+    - **L50**: `value, ok := ctx.Value(traceIDKey).(string)`
+      - **What:** Defines value, ok.
+      - **Why:** Keeps intermediate state available for later steps in the function.
+      - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+    - **L51**: `return value`
+      - **What:** Returns from the current function.
+      - **Why:** Ends the current execution path and hands control back to the caller.
+      - **How:** Executes a `return` statement (possibly returning values).
 - **L53**: `return ""`
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.

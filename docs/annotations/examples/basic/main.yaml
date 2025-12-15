@@ -1,0 +1,29 @@
+file: examples/basic/main.go
+title: examples/basic/main.go
+overview:
+  what: |
+    A minimal example program that runs the gateway runtime programmatically (without the `apigw` CLI).
+  why: |
+    This repo exposes a reusable SDK surface under `pkg/gateway/*`.
+
+    When embedding the gateway into another Go process (or when writing custom tooling),
+    you often want to:
+    - build a config struct in code (instead of loading YAML)
+    - construct the runtime directly
+    - run with a context that responds to OS signals
+  how: |
+    The example:
+    - starts from `gatewayconfig.Default()`
+    - overrides a few fields to make local usage obvious (port, readiness upstreams, auth secret)
+    - builds a runtime via `gatewayruntime.New(cfg)`
+    - runs it under a SIGINT/SIGTERM context
+    - flushes logs on shutdown via `pkglog.Sync()`
+  notes: |
+    This is an example, not a hardened production entrypoint.
+    In production, secrets should not be hard-coded and readiness upstreams should be configured via YAML/env.
+symbols:
+  func main:
+    what: Demonstrates how to construct and run the gateway runtime from Go code.
+    why: Provides a concrete reference for engineers embedding the gateway or writing a custom entrypoint.
+    how: Builds a config, creates a runtime, runs it under a signal-aware context, and flushes logs at the end.
+    notes: The example uses fixed URLs and a fixed secret for clarity; treat those values as placeholders.
