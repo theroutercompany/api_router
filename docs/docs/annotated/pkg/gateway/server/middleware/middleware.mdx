@@ -94,7 +94,7 @@ type Logger interface {
 }
 ```
 
-#### `Logger`
+#### `Logger` {#type-logger}
 
 **What:** Minimal logger interface required by middleware.
 
@@ -110,7 +110,7 @@ type Logger interface {
 type ProblemWriter func(w http.ResponseWriter, status int, title, detail, traceID, instance string)
 ```
 
-#### `ProblemWriter`
+#### `ProblemWriter` {#type-problemwriter}
 
 **What:** Function that writes a problem+json response.
 
@@ -124,7 +124,7 @@ type ProblemWriter func(w http.ResponseWriter, status int, title, detail, traceI
 type EnsureIDs func(*http.Request) (*http.Request, string, string)
 ```
 
-#### `EnsureIDs`
+#### `EnsureIDs` {#type-ensureids}
 
 **What:** Function type that ensures a request has request/trace identifiers.
 
@@ -138,7 +138,7 @@ type EnsureIDs func(*http.Request) (*http.Request, string, string)
 type TraceIDFromContext func(context.Context) string
 ```
 
-#### `TraceIDFromContext`
+#### `TraceIDFromContext` {#type-traceidfromcontext}
 
 **What:** Extractor that reads a trace ID from a context.
 
@@ -152,7 +152,7 @@ type TraceIDFromContext func(context.Context) string
 type RequestIDFromContext func(context.Context) string
 ```
 
-#### `RequestIDFromContext`
+#### `RequestIDFromContext` {#type-requestidfromcontext}
 
 **What:** Extractor that reads a request ID from a context.
 
@@ -166,7 +166,7 @@ type RequestIDFromContext func(context.Context) string
 type ClientAddress func(*http.Request) string
 ```
 
-#### `ClientAddress`
+#### `ClientAddress` {#type-clientaddress}
 
 **What:** Extractor that resolves a client address string from an HTTP request.
 
@@ -182,7 +182,7 @@ type ClientAddress func(*http.Request) string
 type TrackFunc func(*http.Request) func(status int, elapsed time.Duration)
 ```
 
-#### `TrackFunc`
+#### `TrackFunc` {#type-trackfunc}
 
 **What:** Callback that returns a per-request metric recording function.
 
@@ -196,7 +196,7 @@ type TrackFunc func(*http.Request) func(status int, elapsed time.Duration)
 type HijackedFunc func(*http.Request) (func(), func(net.Conn) net.Conn)
 ```
 
-#### `HijackedFunc`
+#### `HijackedFunc` {#type-hijackedfunc}
 
 **What:** Callback used to integrate upgraded-connection tracking and wrapping into the logging middleware.
 
@@ -212,7 +212,7 @@ type HijackedFunc func(*http.Request) (func(), func(net.Conn) net.Conn)
 type AllowFunc func(key string, now time.Time) bool
 ```
 
-#### `AllowFunc`
+#### `AllowFunc` {#type-allowfunc}
 
 **What:** Function type that decides whether a rate-limit key is allowed at a given time.
 
@@ -226,7 +226,7 @@ type AllowFunc func(key string, now time.Time) bool
 type ClientKey func(*http.Request) string
 ```
 
-#### `ClientKey`
+#### `ClientKey` {#type-clientkey}
 
 **What:** Function type that derives a rate-limit key from a request.
 
@@ -246,7 +246,7 @@ type loggingResponseWriter struct {
 }
 ```
 
-#### `loggingResponseWriter`
+#### `loggingResponseWriter` {#type-loggingresponsewriter}
 
 **What:** An `http.ResponseWriter` wrapper that captures status/bytes and supports hijack tracking.
 
@@ -265,7 +265,7 @@ type trackingConn struct {
 }
 ```
 
-#### `trackingConn`
+#### `trackingConn` {#type-trackingconn}
 
 **What:** Connection wrapper used to invoke an on-close callback once.
 
@@ -278,7 +278,7 @@ type trackingConn struct {
 
 ## Functions and Methods
 
-### `RequestMetadata`
+### `RequestMetadata` {#func-requestmetadata}
 
 **What:** Ensures every request has stable IDs and echoes them back in response headers.
 
@@ -389,7 +389,7 @@ The list below documents the statements inside the function body, including nest
                   - **Why:** Performs side effects or delegates work to a helper.
                   - **How:** Executes the expression statement.
 
-### `SecurityHeaders`
+### `SecurityHeaders` {#func-securityheaders}
 
 **What:** Adds baseline security hardening headers to all responses.
 
@@ -480,7 +480,7 @@ The list below documents the statements inside the function body, including nest
                   - **Why:** Performs side effects or delegates work to a helper.
                   - **How:** Executes the expression statement.
 
-### `BodyLimit`
+### `BodyLimit` {#func-bodylimit}
 
 **What:** Enforces a maximum request body size.
 
@@ -609,7 +609,7 @@ The list below documents the statements inside the function body, including nest
                   - **Why:** Performs side effects or delegates work to a helper.
                   - **How:** Executes the expression statement.
 
-### `RateLimit`
+### `RateLimit` {#func-ratelimit}
 
 **What:** Enforces per-client rate limiting.
 
@@ -739,7 +739,7 @@ The list below documents the statements inside the function body, including nest
                       - **Why:** Performs side effects or delegates work to a helper.
                       - **How:** Executes the expression statement.
 
-### `CORS`
+### `CORS` {#func-cors}
 
 **What:** Applies CORS policy using the provided `*cors.Cors` configuration.
 
@@ -852,7 +852,7 @@ The list below documents the statements inside the function body, including nest
                   - **Why:** Performs side effects or delegates work to a helper.
                   - **How:** Executes the expression statement.
 
-### `Logging`
+### `Logging` {#func-logging}
 
 **What:** Emits structured logs for each HTTP request and optionally integrates protocol metrics tracking.
 
@@ -1159,7 +1159,7 @@ The list below documents the statements inside the function body, including nest
                           - **Why:** Performs side effects or delegates work to a helper.
                           - **How:** Executes the expression statement.
 
-### `newLoggingResponseWriter`
+### `newLoggingResponseWriter` {#func-newloggingresponsewriter}
 
 **What:** Constructs a `loggingResponseWriter` wrapper.
 
@@ -1186,7 +1186,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*loggingResponseWriter).WriteHeader`
+### `(*loggingResponseWriter).WriteHeader` {#method-loggingresponsewriter-writeheader}
 
 **What:** Captures the status code while delegating header writes.
 
@@ -1214,7 +1214,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `(*loggingResponseWriter).Write`
+### `(*loggingResponseWriter).Write` {#method-loggingresponsewriter-write}
 
 **What:** Captures bytes written while delegating response writes.
 
@@ -1259,7 +1259,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*loggingResponseWriter).Flush`
+### `(*loggingResponseWriter).Flush` {#method-loggingresponsewriter-flush}
 
 **What:** Implements `http.Flusher` when the underlying writer supports it.
 
@@ -1293,7 +1293,7 @@ The list below documents the statements inside the function body, including nest
       - **Why:** Performs side effects or delegates work to a helper.
       - **How:** Executes the expression statement.
 
-### `(*loggingResponseWriter).Hijack`
+### `(*loggingResponseWriter).Hijack` {#method-loggingresponsewriter-hijack}
 
 **What:** Implements `http.Hijacker` and integrates upgraded-connection tracking.
 
@@ -1412,7 +1412,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*loggingResponseWriter).Push`
+### `(*loggingResponseWriter).Push` {#method-loggingresponsewriter-push}
 
 **What:** Implements `http.Pusher` when the underlying writer supports it.
 
@@ -1451,7 +1451,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*trackingConn).Close`
+### `(*trackingConn).Close` {#method-trackingconn-close}
 
 **What:** Closes the underlying connection and runs the on-close callback once.
 
@@ -1503,7 +1503,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*trackingConn).Read`
+### `(*trackingConn).Read` {#method-trackingconn-read}
 
 **What:** Reads from the underlying connection with optional deadline enforcement.
 
@@ -1540,7 +1540,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*trackingConn).Write`
+### `(*trackingConn).Write` {#method-trackingconn-write}
 
 **What:** Writes to the underlying connection with optional deadline enforcement.
 
@@ -1576,4 +1576,34 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Start Here
+
+- [Repo tour](../../../../../start-here/repo-tour)
+- [Request lifecycle](../../../../../start-here/request-lifecycle)
+
+### Architecture
+
+- [HTTP server](../../../../../architecture/server)
+
+### Guides
+
+- [Auth and CORS](../../../../../guides/auth-cors)
+- [WebSockets limits](../../../../../guides/websockets)
+- [Webhooks](../../../../../guides/webhooks)
+- [Troubleshooting](../../../../../guides/troubleshooting)
+
+### Reference
+
+- [Metrics](../../../../../reference/metrics)
+- [Problem+JSON](../../../../../reference/problems)
+
+### Neighboring source
+
+- [Runtime](../../runtime/)
+- [Proxy](../../proxy/reverse_proxy)
+- [Config](../../config/)
 

@@ -6,3 +6,8 @@ JWT auth is configured via `auth` settings (and env overrides for secrets).
 
 For public browser clients, configure `cors.allowedOrigins`.
 
+## Deep dive
+
+- Reference: [JWT env vars](../reference/env#auth-jwt), [CORS env vars](../reference/env#cors), [auth config](../reference/config#auth), [cors config](../reference/config#cors)
+- Code: [Authenticator](../annotated/pkg/gateway/auth/authenticator), [Middleware chain](../annotated/pkg/gateway/server/middleware/)
+- Error format: [Problem+JSON](../reference/problems)

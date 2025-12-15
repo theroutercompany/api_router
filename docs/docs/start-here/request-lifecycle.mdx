@@ -4,6 +4,11 @@ title: Request Lifecycle
 
 This page is a conceptual map. The line-by-line implementation lives under **Annotated Source**.
 
+Deep dive:
+
+- Annotated Source: [Index](../annotated/)
+- Architecture: [HTTP server](../architecture/server), [Proxy](../architecture/proxy)
+
 ## HTTP request (typical)
 
 1. Listener accepts the request (server).
@@ -15,6 +20,14 @@ This page is a conceptual map. The line-by-line implementation lives under **Ann
    - `/v1/trade/*` and `/v1/task/*` (proxy handlers), or
    - configured webhook paths (webhook handler).
 
+Implementation:
+
+- Server routes: [Server](../annotated/pkg/gateway/server/)
+- Middleware chain: [Middleware](../annotated/pkg/gateway/server/middleware/)
+- Proxy handler: [Reverse proxy](../annotated/pkg/gateway/proxy/reverse_proxy)
+- Webhooks: [Webhook handler](../annotated/pkg/gateway/webhook/handler)
+- Health/readiness helpers: [Health checker](../annotated/internal/platform/health/)
+
 ## WebSocket upgrade
 
 When the request is a WebSocket upgrade:
@@ -22,3 +35,8 @@ When the request is a WebSocket upgrade:
 - A concurrency limiter may reject requests at capacity.
 - The gateway tracks upgraded connections and enforces idle timeouts by wrapping the hijacked `net.Conn`.
 
+Implementation:
+
+- Limits + tracking: [Server](../annotated/pkg/gateway/server/)
+- Streaming/protocol detection: [Reverse proxy](../annotated/pkg/gateway/proxy/reverse_proxy)
+- Metrics (connections): [Protocol metrics](../annotated/pkg/gateway/server/protocol_metrics), [Metrics reference](../reference/metrics)

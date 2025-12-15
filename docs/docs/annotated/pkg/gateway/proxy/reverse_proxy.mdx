@@ -76,7 +76,7 @@ import (
 var errInvalidPEM = errors.New("invalid PEM block")
 ```
 
-#### `errInvalidPEM`
+#### `errInvalidPEM` {#var-errinvalidpem}
 
 **What:** Sentinel error used when a provided CA bundle cannot be parsed as PEM.
 
@@ -99,7 +99,7 @@ type TLSConfig struct {
 }
 ```
 
-#### `TLSConfig`
+#### `TLSConfig` {#type-tlsconfig}
 
 **What:** TLS/mTLS settings applied to upstream requests made by the proxy.
 
@@ -117,7 +117,7 @@ type Options struct {
 }
 ```
 
-#### `Options`
+#### `Options` {#type-options}
 
 **What:** Parameters for building a reverse proxy (target URL, product label, TLS settings).
 
@@ -134,7 +134,7 @@ type grpcAwareTransport struct {
 }
 ```
 
-#### `grpcAwareTransport`
+#### `grpcAwareTransport` {#type-grpcawaretransport}
 
 **What:** A transport wrapper that can switch between a normal HTTP transport and an h2c transport.
 
@@ -145,7 +145,7 @@ type grpcAwareTransport struct {
 
 ## Functions and Methods
 
-### `New`
+### `New` {#func-new}
 
 **What:** Constructs an `http.Handler` reverse proxy for a configured upstream target.
 
@@ -327,7 +327,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `buildH2CTransport`
+### `buildH2CTransport` {#func-buildh2ctransport}
 
 **What:** Builds an `http2.Transport` configured for h2c (HTTP/2 over cleartext TCP).
 
@@ -383,7 +383,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*grpcAwareTransport).RoundTrip`
+### `(*grpcAwareTransport).RoundTrip` {#method-grpcawaretransport-roundtrip}
 
 **What:** Performs the request using either the base transport or the h2c transport.
 
@@ -428,7 +428,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*grpcAwareTransport).shouldUseH2C`
+### `(*grpcAwareTransport).shouldUseH2C` {#method-grpcawaretransport-shoulduseh2c}
 
 **What:** Determines whether a request should be sent over the h2c transport.
 
@@ -480,7 +480,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*grpcAwareTransport).CloseIdleConnections`
+### `(*grpcAwareTransport).CloseIdleConnections` {#method-grpcawaretransport-closeidleconnections}
 
 **What:** Closes idle connections on both the base transport and the h2c transport.
 
@@ -522,7 +522,7 @@ The list below documents the statements inside the function body, including nest
       - **Why:** Performs side effects or delegates work to a helper.
       - **How:** Executes the expression statement.
 
-### `cloneRequest`
+### `cloneRequest` {#func-clonerequest}
 
 **What:** Clones an incoming request into a form suitable for client-side RoundTrip.
 
@@ -587,7 +587,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `sanitizeH2CRequest`
+### `sanitizeH2CRequest` {#func-sanitizeh2crequest}
 
 **What:** Removes hop-by-hop headers and forces the request protocol fields to reflect HTTP/2.
 
@@ -644,7 +644,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `buildTLSConfig`
+### `buildTLSConfig` {#func-buildtlsconfig}
 
 **What:** Builds a `tls.Config` for upstream requests based on the proxy `TLSConfig`.
 
@@ -766,4 +766,22 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Architecture
+
+- [Proxy](../../../../architecture/proxy)
+
+### Guides
+
+- [WebSockets limits](../../../../guides/websockets)
+- [Auth and CORS](../../../../guides/auth-cors)
+- [Troubleshooting](../../../../guides/troubleshooting)
+
+### Neighboring source
+
+- [Server](../server/)
+- [Protocol metrics](../server/protocol_metrics)
 

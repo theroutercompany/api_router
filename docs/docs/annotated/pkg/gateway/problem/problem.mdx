@@ -50,7 +50,7 @@ type Response struct {
 }
 ```
 
-#### `Response`
+#### `Response` {#type-response}
 
 **What:** JSON shape for the gateway's Problem+JSON responses.
 
@@ -61,7 +61,7 @@ type Response struct {
 
 ## Functions and Methods
 
-### `Write`
+### `Write` {#func-write}
 
 **What:** Writes an RFC 7807 Problem+JSON response to an `http.ResponseWriter`.
 
@@ -106,4 +106,16 @@ The list below documents the statements inside the function body, including nest
   - **What:** Assigns _.
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
+
+
+## Related docs
+
+### Reference
+
+- [Problem+JSON](../../../../reference/problems)
+
+### Neighboring source
+
+- [Server middleware](../server/middleware/)
+- [Server](../server/)
 

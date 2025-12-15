@@ -43,7 +43,7 @@ import (
 
 ## Functions and Methods
 
-### `main`
+### `main` {#func-main}
 
 **What:** Program entrypoint that calls `run(context.Background())` and exits on error.
 
@@ -77,7 +77,7 @@ The list below documents the statements inside the function body, including nest
       - **Why:** Performs side effects or delegates work to a helper.
       - **How:** Executes the expression statement.
 
-### `run`
+### `run` {#func-run}
 
 **What:** Loads config, builds the runtime, runs it, and handles shutdown/log flush semantics.
 
@@ -192,4 +192,23 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Start Here
+
+- [Local development](../../../start-here/local-dev)
+- [Repo tour](../../../start-here/repo-tour)
+- [Request lifecycle](../../../start-here/request-lifecycle)
+
+### Guides
+
+- [Run the gateway](../../../guides/running)
+- [Configure upstreams](../../../guides/configuration)
+
+### Neighboring source
+
+- [CLI (apigw)](../apigw/main)
+- [Runtime](../../pkg/gateway/runtime/)
 

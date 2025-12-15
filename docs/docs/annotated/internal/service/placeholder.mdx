@@ -53,7 +53,7 @@ Do not build new production behavior on top of this placeholder type.
 type Placeholder struct{}
 ```
 
-#### `Placeholder`
+#### `Placeholder` {#type-placeholder}
 
 **What:** Empty struct used as scaffolding for future internal services.
 
@@ -66,7 +66,7 @@ type Placeholder struct{}
 
 ## Functions and Methods
 
-### `NewPlaceholder`
+### `NewPlaceholder` {#func-newplaceholder}
 
 **What:** Constructs a no-op placeholder service instance.
 
@@ -88,4 +88,16 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Architecture
+
+- [Runtime composition](../../../architecture/runtime)
+
+### Neighboring source
+
+- [Runtime](../../pkg/gateway/runtime/)
+- [Server](../../pkg/gateway/server/)
 

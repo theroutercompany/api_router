@@ -65,7 +65,7 @@ type Config struct {
 }
 ```
 
-#### `Config`
+#### `Config` {#type-config}
 
 **What:** Configuration values required to run a shadow diff session.
 
@@ -78,7 +78,7 @@ type Config struct {
 
 ## Functions and Methods
 
-### `LoadConfig`
+### `LoadConfig` {#func-loadconfig}
 
 **What:** Reads configuration from a JSON file on disk.
 
@@ -166,4 +166,17 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Guides
+
+- [Shadowdiff](../../../guides/shadowdiff)
+- [Shadowdiff runner script](../../../guides/shadowdiff-runner)
+- [Shadowdiff mock upstreams](../../../guides/shadowdiff-mocks)
+
+### Neighboring source
+
+- [Shadowdiff CLI](../../cmd/shadowdiff/main)
 

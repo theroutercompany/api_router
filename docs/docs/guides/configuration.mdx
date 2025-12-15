@@ -4,9 +4,14 @@ title: Configure Upstreams
 
 Configuration is YAML-first. See `config/examples/gateway.sample.yaml` for a commented template.
 
+Related docs:
+
+- Architecture: [Configuration model](../architecture/config)
+- Reference: [readiness config](../reference/config#readiness), [auth config](../reference/config#auth), [Environment variables](../reference/env)
+- Code: [Config schema + loader](../annotated/pkg/gateway/config/)
+
 Validate config:
 
 ```bash
 go run ./cmd/apigw validate --config gateway.yaml
 ```
-

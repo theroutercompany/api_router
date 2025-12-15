@@ -83,7 +83,7 @@ type Result struct {
 }
 ```
 
-#### `Result`
+#### `Result` {#type-result}
 
 **What:** Result of replaying one fixture against both gateway implementations.
 
@@ -103,7 +103,7 @@ type Runner struct {
 }
 ```
 
-#### `Runner`
+#### `Runner` {#type-runner}
 
 **What:** Configurable runner that executes fixtures and compares responses.
 
@@ -116,7 +116,7 @@ type Runner struct {
 
 ## Functions and Methods
 
-### `(*Runner).Run`
+### `(*Runner).Run` {#method-runner-run}
 
 **What:** Executes all fixtures in a session and returns their results.
 
@@ -235,7 +235,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runner).execute`
+### `(*Runner).execute` {#method-runner-execute}
 
 **What:** Replays a single fixture against both Node and Go base URLs and compares the outcomes.
 
@@ -385,7 +385,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runner).send`
+### `(*Runner).send` {#method-runner-send}
 
 **What:** Sends a fixture request to a specific base URL and returns the HTTP response plus latency.
 
@@ -511,7 +511,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `diffJSON`
+### `diffJSON` {#func-diffjson}
 
 **What:** Produces a stable text diff of two JSON payloads (or raw bytes when not JSON).
 
@@ -621,4 +621,17 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Guides
+
+- [Shadowdiff](../../../guides/shadowdiff)
+- [Shadowdiff runner script](../../../guides/shadowdiff-runner)
+- [Shadowdiff mock upstreams](../../../guides/shadowdiff-mocks)
+
+### Neighboring source
+
+- [Shadowdiff CLI](../../cmd/shadowdiff/main)
 

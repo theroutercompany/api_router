@@ -8,3 +8,7 @@ Regenerate the merged OpenAPI document:
 go run ./cmd/openapi --out dist/openapi.json
 ```
 
+## Deep dive
+
+- Code: [OpenAPI CLI](../annotated/cmd/openapi/main), [Merge service](../annotated/internal/openapi/service)
+- Server route: [Server](../annotated/pkg/gateway/server/) (search for the `/openapi.json` handler)

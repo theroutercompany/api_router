@@ -74,7 +74,7 @@ import (
 type Option func(*options)
 ```
 
-#### `Option`
+#### `Option` {#type-option}
 
 **What:** Functional option used to configure `NewRegistry`.
 
@@ -91,7 +91,7 @@ type options struct {
 }
 ```
 
-#### `options`
+#### `options` {#type-options}
 
 **What:** Internal settings used while constructing a `Registry`.
 
@@ -108,7 +108,7 @@ type Registry struct {
 }
 ```
 
-#### `Registry`
+#### `Registry` {#type-registry}
 
 **What:** Wrapper that holds the namespace string and the underlying Prometheus registry.
 
@@ -119,7 +119,7 @@ type Registry struct {
 
 ## Functions and Methods
 
-### `WithNamespace`
+### `WithNamespace` {#func-withnamespace}
 
 **What:** Sets an optional namespace string on the registry wrapper.
 
@@ -156,7 +156,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Keeps intermediate state available for later steps in the function.
           - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `WithoutDefaultCollectors`
+### `WithoutDefaultCollectors` {#func-withoutdefaultcollectors}
 
 **What:** Disables automatic registration of Go/process collectors.
 
@@ -191,7 +191,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Keeps intermediate state available for later steps in the function.
           - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `NewRegistry`
+### `NewRegistry` {#func-newregistry}
 
 **What:** Constructs a new gateway metrics registry.
 
@@ -267,7 +267,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Registry).Namespace`
+### `(*Registry).Namespace` {#method-registry-namespace}
 
 **What:** Returns the configured namespace string (or empty).
 
@@ -302,7 +302,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Registry).Handler`
+### `(*Registry).Handler` {#method-registry-handler}
 
 **What:** Returns an HTTP handler that serves Prometheus metrics for this registry.
 
@@ -337,7 +337,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Registry).Register`
+### `(*Registry).Register` {#method-registry-register}
 
 **What:** Registers a collector with this registry.
 
@@ -374,7 +374,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `(*Registry).Raw`
+### `(*Registry).Raw` {#method-registry-raw}
 
 **What:** Exposes the underlying `*prometheus.Registry`.
 
@@ -408,4 +408,19 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Architecture
+
+- [Observability](../../../../architecture/observability)
+
+### Reference
+
+- [Metrics](../../../../reference/metrics)
+
+### Neighboring source
+
+- [Protocol metrics](../server/protocol_metrics)
 

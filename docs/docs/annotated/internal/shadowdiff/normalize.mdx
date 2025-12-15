@@ -50,7 +50,7 @@ import "encoding/json"
 
 ## Functions and Methods
 
-### `StripJSONKeys`
+### `StripJSONKeys` {#func-stripjsonkeys}
 
 **What:** Constructs a normalizer that removes a set of keys from JSON objects.
 
@@ -186,7 +186,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `stripKeys`
+### `stripKeys` {#func-stripkeys}
 
 **What:** Recursively deletes keys from JSON objects and traverses arrays/objects.
 
@@ -264,4 +264,17 @@ The list below documents the statements inside the function body, including nest
               - **What:** Calls stripKeys.
               - **Why:** Performs side effects or delegates work to a helper.
               - **How:** Executes the expression statement.
+
+
+## Related docs
+
+### Guides
+
+- [Shadowdiff](../../../guides/shadowdiff)
+- [Shadowdiff runner script](../../../guides/shadowdiff-runner)
+- [Shadowdiff mock upstreams](../../../guides/shadowdiff-mocks)
+
+### Neighboring source
+
+- [Shadowdiff CLI](../../cmd/shadowdiff/main)
 

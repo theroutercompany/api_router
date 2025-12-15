@@ -6,8 +6,13 @@ The admin server exposes control-plane endpoints when enabled. It is intended fo
 
 Deep dive:
 
-- Admin wiring and handlers: `../annotated/pkg/gateway/runtime/runtime`
-- CLI client for admin endpoints: `../annotated/cmd/apigw/main` (search for `adminCommand`)
+- Admin wiring and handlers: [Runtime](../annotated/pkg/gateway/runtime/)
+- CLI client for admin endpoints: [CLI](../annotated/cmd/apigw/main) (search for `adminCommand`)
+
+See also:
+
+- Guide: [Troubleshooting](../guides/troubleshooting)
+- Config keys: [Config reference](./config#admin), [Environment variables](./env#admin)
 
 ## Enable the admin server
 
@@ -36,15 +41,15 @@ The admin server uses a fixed prefix:
 
 - `/__admin/`
 
-### `GET /__admin/status`
+### `GET /__admin/status` {#status}
 
 Returns basic runtime status metadata.
 
-### `GET /__admin/config`
+### `GET /__admin/config` {#config}
 
 Returns the active runtime configuration (with sensitive fields redacted).
 
-### `POST /__admin/reload`
+### `POST /__admin/reload` {#reload}
 
 Requests a config reload. If the runtime was started with a reload callback, it will be invoked.
 

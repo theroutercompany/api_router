@@ -84,7 +84,7 @@ import (
 const daemonChildEnv = "APIGW_DAEMON_CHILD"
 ```
 
-#### `daemonChildEnv`
+#### `daemonChildEnv` {#const-daemonchildenv}
 
 **What:** Environment variable used to mark a background daemon child process.
 
@@ -144,7 +144,7 @@ metrics:
 `
 ```
 
-#### `sampleConfigYAML`
+#### `sampleConfigYAML` {#const-sampleconfigyaml}
 
 **What:** Embedded sample YAML used by the `init` command.
 
@@ -155,7 +155,7 @@ metrics:
 
 ## Functions and Methods
 
-### `main`
+### `main` {#func-main}
 
 **What:** Program entrypoint that dispatches to subcommands.
 
@@ -298,7 +298,7 @@ The list below documents the statements inside the function body, including nest
       - **Why:** Performs side effects or delegates work to a helper.
       - **How:** Executes the expression statement.
 
-### `runCommand`
+### `runCommand` {#func-runcommand}
 
 **What:** Implements `apigw run` to start the gateway runtime and optionally hot-reload on config changes.
 
@@ -798,7 +798,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Performs side effects or delegates work to a helper.
               - **How:** Executes the expression statement.
 
-### `validateCommand`
+### `validateCommand` {#func-validatecommand}
 
 **What:** Implements `apigw validate` to check config validity without starting the server.
 
@@ -888,7 +888,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `initCommand`
+### `initCommand` {#func-initcommand}
 
 **What:** Implements `apigw init` to write a sample configuration file.
 
@@ -989,7 +989,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `usage`
+### `usage` {#func-usage}
 
 **What:** Prints CLI usage text.
 
@@ -1047,7 +1047,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `daemonCommand`
+### `daemonCommand` {#func-daemoncommand}
 
 **What:** Implements `apigw daemon` subcommand dispatch (start/stop/status).
 
@@ -1139,7 +1139,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `daemonStart`
+### `daemonStart` {#func-daemonstart}
 
 **What:** Starts the gateway daemon, optionally in background mode.
 
@@ -1323,7 +1323,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `daemonStop`
+### `daemonStop` {#func-daemonstop}
 
 **What:** Stops the daemon process by sending a signal and waiting for exit.
 
@@ -1549,7 +1549,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `daemonStatus`
+### `daemonStatus` {#func-daemonstatus}
 
 **What:** Reports daemon status based on the PID file.
 
@@ -1651,7 +1651,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `parseSignal`
+### `parseSignal` {#func-parsesignal}
 
 **What:** Parses a signal name or number into a `syscall.Signal`.
 
@@ -1760,7 +1760,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `adminCommand`
+### `adminCommand` {#func-admincommand}
 
 **What:** Implements the `apigw admin` subcommand (status/config/reload).
 
@@ -1900,7 +1900,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `adminGET`
+### `adminGET` {#func-adminget}
 
 **What:** Performs an admin GET request and prints the JSON response body.
 
@@ -2013,7 +2013,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `adminPOST`
+### `adminPOST` {#func-adminpost}
 
 **What:** Performs an admin POST request and prints the response body (or a fallback message).
 
@@ -2139,7 +2139,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `watchConfig`
+### `watchConfig` {#func-watchconfig}
 
 **What:** Watches a config file for changes and emits reloaded `gatewayconfig.Config` values.
 
@@ -2424,7 +2424,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `convertEnvCommand`
+### `convertEnvCommand` {#func-convertenvcommand}
 
 **What:** Implements `apigw convert-env` to snapshot the effective configuration into YAML.
 
@@ -2647,7 +2647,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `targetsFile`
+### `targetsFile` {#func-targetsfile}
 
 **What:** Checks whether a filesystem watcher event refers to the target config file.
 
@@ -2698,4 +2698,33 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Start Here
+
+- [Local development](../../../start-here/local-dev)
+- [Repo tour](../../../start-here/repo-tour)
+- [Request lifecycle](../../../start-here/request-lifecycle)
+
+### Guides
+
+- [Run the gateway](../../../guides/running)
+- [Configure upstreams](../../../guides/configuration)
+- [Auth and CORS](../../../guides/auth-cors)
+- [Troubleshooting](../../../guides/troubleshooting)
+- [Smoke script](../../../guides/smoke)
+
+### Reference
+
+- [Config reference](../../../reference/config)
+- [Environment variables](../../../reference/env)
+- [Admin API](../../../reference/admin-api)
+
+### Neighboring source
+
+- [Runtime](../../pkg/gateway/runtime/)
+- [Config](../../pkg/gateway/config/)
+- [Daemon](../../pkg/gateway/daemon/)
 

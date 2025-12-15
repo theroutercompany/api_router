@@ -48,7 +48,7 @@ type clientLimiter struct {
 }
 ```
 
-#### `clientLimiter`
+#### `clientLimiter` {#type-clientlimiter}
 
 **What:** Per-client bucket holding a `rate.Limiter` and last-seen timestamp.
 
@@ -69,7 +69,7 @@ type rateLimiter struct {
 }
 ```
 
-#### `rateLimiter`
+#### `rateLimiter` {#type-ratelimiter}
 
 **What:** Tracks rate limiting configuration and per-client limiters.
 
@@ -80,7 +80,7 @@ type rateLimiter struct {
 
 ## Functions and Methods
 
-### `newRateLimiter`
+### `newRateLimiter` {#func-newratelimiter}
 
 **What:** Constructs a `rateLimiter` from a window duration and max requests per window.
 
@@ -160,7 +160,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*rateLimiter).allow`
+### `(*rateLimiter).allow` {#method-ratelimiter-allow}
 
 **What:** Returns whether a request should be allowed for a given client key at a given time.
 
@@ -276,7 +276,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*rateLimiter).cleanupLocked`
+### `(*rateLimiter).cleanupLocked` {#method-ratelimiter-cleanuplocked}
 
 **What:** Removes client limiter entries that have not been seen recently.
 
@@ -330,4 +330,34 @@ The list below documents the statements inside the function body, including nest
           - **What:** Calls delete.
           - **Why:** Performs side effects or delegates work to a helper.
           - **How:** Executes the expression statement.
+
+
+## Related docs
+
+### Start Here
+
+- [Repo tour](../../../../start-here/repo-tour)
+- [Request lifecycle](../../../../start-here/request-lifecycle)
+
+### Architecture
+
+- [HTTP server](../../../../architecture/server)
+
+### Guides
+
+- [Auth and CORS](../../../../guides/auth-cors)
+- [WebSockets limits](../../../../guides/websockets)
+- [Webhooks](../../../../guides/webhooks)
+- [Troubleshooting](../../../../guides/troubleshooting)
+
+### Reference
+
+- [Metrics](../../../../reference/metrics)
+- [Problem+JSON](../../../../reference/problems)
+
+### Neighboring source
+
+- [Runtime](../runtime/)
+- [Proxy](../proxy/reverse_proxy)
+- [Config](../config/)
 

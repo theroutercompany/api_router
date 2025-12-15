@@ -86,7 +86,7 @@ var (
 )
 ```
 
-#### `ErrAlreadyRunning`
+#### `ErrAlreadyRunning` {#var-erralreadyrunning}
 
 **What:** Sentinel error returned when `Start()` is called while the runtime is already running.
 
@@ -94,7 +94,7 @@ var (
 
 **How:** Returned when `Runtime.errCh` is non-nil inside `Start()`.
 
-#### `ErrNotRunning`
+#### `ErrNotRunning` {#var-errnotrunning}
 
 **What:** Sentinel error returned when `Wait()` is called before the runtime has started.
 
@@ -102,7 +102,7 @@ var (
 
 **How:** Returned when `Runtime.errCh` is nil inside `Wait()`.
 
-#### `ErrReloadWhileRunning`
+#### `ErrReloadWhileRunning` {#var-errreloadwhilerunning}
 
 **What:** Sentinel error returned when `Reload()` is called while the runtime is running.
 
@@ -137,7 +137,7 @@ type Runtime struct {
 }
 ```
 
-#### `Runtime`
+#### `Runtime` {#type-runtime}
 
 **What:** The primary lifecycle object that owns the server, readiness checker, metrics registry, and admin server.
 
@@ -151,7 +151,7 @@ type Runtime struct {
 type Option func(*Runtime)
 ```
 
-#### `Option`
+#### `Option` {#type-option}
 
 **What:** Functional option type for configuring `Runtime` construction.
 
@@ -168,7 +168,7 @@ type upstreamTransport struct {
 }
 ```
 
-#### `upstreamTransport`
+#### `upstreamTransport` {#type-upstreamtransport}
 
 **What:** A custom `http.RoundTripper` that routes requests to host-specific `*http.Transport` instances.
 
@@ -179,7 +179,7 @@ type upstreamTransport struct {
 
 ## Functions and Methods
 
-### `WithReloadFunc`
+### `WithReloadFunc` {#func-withreloadfunc}
 
 **What:** Runtime option that registers a callback invoked by the admin server on reload requests.
 
@@ -214,7 +214,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Keeps intermediate state available for later steps in the function.
           - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `WithLogger`
+### `WithLogger` {#func-withlogger}
 
 **What:** Runtime option that overrides the logger used by the runtime and underlying server.
 
@@ -256,7 +256,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Keeps intermediate state available for later steps in the function.
               - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `New`
+### `New` {#func-new}
 
 **What:** Constructs a `Runtime` from an already-loaded `gatewayconfig.Config`.
 
@@ -357,7 +357,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runtime).Start`
+### `(*Runtime).Start` {#method-runtime-start}
 
 **What:** Starts serving the public gateway server (and optionally the admin server) in the background.
 
@@ -496,7 +496,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runtime).Wait`
+### `(*Runtime).Wait` {#method-runtime-wait}
 
 **What:** Blocks until the runtime stops and returns the terminal error.
 
@@ -662,7 +662,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runtime).Run`
+### `(*Runtime).Run` {#method-runtime-run}
 
 **What:** Convenience method that calls `Start(ctx)` then `Wait()`.
 
@@ -701,7 +701,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runtime).Shutdown`
+### `(*Runtime).Shutdown` {#method-runtime-shutdown}
 
 **What:** Requests graceful shutdown of the runtime when running.
 
@@ -796,7 +796,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runtime).Reload`
+### `(*Runtime).Reload` {#method-runtime-reload}
 
 **What:** Rebuilds runtime dependencies using a new configuration while the runtime is not running.
 
@@ -887,7 +887,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runtime).Config`
+### `(*Runtime).Config` {#method-runtime-config}
 
 **What:** Returns the runtime's current configuration snapshot.
 
@@ -920,7 +920,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `buildComponents`
+### `buildComponents` {#func-buildcomponents}
 
 **What:** Internal helper that builds the server, readiness checker, and metrics registry from config.
 
@@ -1109,7 +1109,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*upstreamTransport).RoundTrip`
+### `(*upstreamTransport).RoundTrip` {#method-upstreamtransport-roundtrip}
 
 **What:** Selects a per-host transport (when configured) for an outgoing readiness HTTP request.
 
@@ -1160,7 +1160,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*upstreamTransport).CloseIdleConnections`
+### `(*upstreamTransport).CloseIdleConnections` {#method-upstreamtransport-closeidleconnections}
 
 **What:** Closes idle connections for the default transport and all per-host transports.
 
@@ -1202,7 +1202,7 @@ The list below documents the statements inside the function body, including nest
       - **Why:** Performs side effects or delegates work to a helper.
       - **How:** Executes the expression statement.
 
-### `defaultHTTPTransport`
+### `defaultHTTPTransport` {#func-defaulthttptransport}
 
 **What:** Returns a clone of `http.DefaultTransport` when possible, otherwise a new `http.Transport`.
 
@@ -1241,7 +1241,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `buildReadinessTLSConfig`
+### `buildReadinessTLSConfig` {#func-buildreadinesstlsconfig}
 
 **What:** Builds a `tls.Config` for readiness probing based on `gatewayconfig.TLSConfig`.
 
@@ -1363,7 +1363,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `hostFromURL`
+### `hostFromURL` {#func-hostfromurl}
 
 **What:** Extracts the `Host` portion from a base URL string.
 
@@ -1427,7 +1427,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `parseAllowList`
+### `parseAllowList` {#func-parseallowlist}
 
 **What:** Parses `admin.allow` entries into CIDRs (`*net.IPNet`) for IP-based admin authorization.
 
@@ -1540,7 +1540,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runtime).startAdminServer`
+### `(*Runtime).startAdminServer` {#method-runtime-startadminserver}
 
 **What:** Starts the admin HTTP server on `cfg.Admin.Listen`.
 
@@ -1690,7 +1690,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runtime).adminAuth`
+### `(*Runtime).adminAuth` {#method-runtime-adminauth}
 
 **What:** Wraps an admin handler with authorization checks.
 
@@ -1737,7 +1737,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Performs side effects or delegates work to a helper.
           - **How:** Executes the expression statement.
 
-### `(*Runtime).authorizeAdmin`
+### `(*Runtime).authorizeAdmin` {#method-runtime-authorizeadmin}
 
 **What:** Implements admin authorization based on either bearer token or IP allowlist.
 
@@ -1880,7 +1880,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Runtime).handleAdminStatus`
+### `(*Runtime).handleAdminStatus` {#method-runtime-handleadminstatus}
 
 **What:** Admin handler that returns runtime status as JSON.
 
@@ -1931,7 +1931,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `(*Runtime).handleAdminConfig`
+### `(*Runtime).handleAdminConfig` {#method-runtime-handleadminconfig}
 
 **What:** Admin handler that returns the current config as JSON with secrets redacted.
 
@@ -1974,7 +1974,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `(*Runtime).handleAdminReload`
+### `(*Runtime).handleAdminReload` {#method-runtime-handleadminreload}
 
 **What:** Admin handler that requests a reload via the caller-provided reload callback.
 
@@ -2062,7 +2062,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `(*Runtime).AdminAddr`
+### `(*Runtime).AdminAddr` {#method-runtime-adminaddr}
 
 **What:** Returns the bound admin server address (host:port) when enabled.
 
@@ -2094,4 +2094,33 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Start Here
+
+- [Repo tour](../../../../start-here/repo-tour)
+- [Request lifecycle](../../../../start-here/request-lifecycle)
+
+### Architecture
+
+- [Runtime composition](../../../../architecture/runtime)
+
+### Guides
+
+- [Run the gateway](../../../../guides/running)
+- [Troubleshooting](../../../../guides/troubleshooting)
+
+### Reference
+
+- [Admin API](../../../../reference/admin-api)
+- [Metrics](../../../../reference/metrics)
+
+### Neighboring source
+
+- [Config](../config/)
+- [Server](../server/)
+- [Proxy](../proxy/reverse_proxy)
+- [Metrics registry](../metrics/registry)
 

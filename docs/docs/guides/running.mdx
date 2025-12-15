@@ -9,9 +9,19 @@ go run ./cmd/apigw init --path gateway.yaml
 go run ./cmd/apigw run --config gateway.yaml
 ```
 
+Next steps:
+
+- Verify endpoints with the [Smoke script](./smoke)
+- Configure ports/upstreams/secrets: [Config](../reference/config), [HTTP config](../reference/config#http), [readiness config](../reference/config#readiness), [Environment variables](../reference/env)
+
 ## Hot reload config
 
 ```bash
 go run ./cmd/apigw run --config gateway.yaml --watch
 ```
 
+## Deep dive
+
+- Start Here: [Local dev](../start-here/local-dev), [Request lifecycle](../start-here/request-lifecycle)
+- Architecture: [Runtime](../architecture/runtime), [Server](../architecture/server)
+- Annotated source: [CLI](../annotated/cmd/apigw/main), [Runtime](../annotated/pkg/gateway/runtime/)

@@ -51,7 +51,7 @@ type Upstream struct {
 }
 ```
 
-#### `Upstream`
+#### `Upstream` {#type-upstream}
 
 **What:** Identifies an upstream dependency to probe.
 
@@ -71,7 +71,7 @@ type UpstreamReport struct {
 }
 ```
 
-#### `UpstreamReport`
+#### `UpstreamReport` {#type-upstreamreport}
 
 **What:** Outcome of probing a single upstream.
 
@@ -89,7 +89,7 @@ type Report struct {
 }
 ```
 
-#### `Report`
+#### `Report` {#type-report}
 
 **What:** Aggregated readiness status plus per-upstream results.
 
@@ -108,7 +108,7 @@ type Checker struct {
 }
 ```
 
-#### `Checker`
+#### `Checker` {#type-checker}
 
 **What:** Holds readiness probing dependencies and configuration.
 
@@ -119,7 +119,7 @@ type Checker struct {
 
 ## Functions and Methods
 
-### `NewChecker`
+### `NewChecker` {#func-newchecker}
 
 **What:** Constructs a `Checker` with an HTTP client, upstream list, per-probe timeout, and user-agent.
 
@@ -184,7 +184,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Checker).Readiness`
+### `(*Checker).Readiness` {#method-checker-readiness}
 
 **What:** Probes all configured upstreams and returns an aggregated readiness report.
 
@@ -311,7 +311,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Checker).probe`
+### `(*Checker).probe` {#method-checker-probe}
 
 **What:** Probes a single upstream health endpoint and returns an `UpstreamReport`.
 
@@ -486,4 +486,20 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Start Here
+
+- [Request lifecycle](../../../../start-here/request-lifecycle)
+
+### Guides
+
+- [Troubleshooting](../../../../guides/troubleshooting)
+
+### Neighboring source
+
+- [Server](../../../pkg/gateway/server/)
+- [Runtime](../../../pkg/gateway/runtime/)
 

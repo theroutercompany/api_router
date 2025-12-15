@@ -74,7 +74,7 @@ type GraphQLStreamHandler struct {
 }
 ```
 
-#### `GraphQLStreamHandler`
+#### `GraphQLStreamHandler` {#type-graphqlstreamhandler}
 
 **What:** Stateful streaming handler that tracks cancellation.
 
@@ -87,7 +87,7 @@ type GraphQLStreamHandler struct {
 
 ## Functions and Methods
 
-### `NewGraphQLStreamHandler`
+### `NewGraphQLStreamHandler` {#func-newgraphqlstreamhandler}
 
 **What:** Constructs a new streaming handler instance.
 
@@ -110,7 +110,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*GraphQLStreamHandler).ServeHTTP`
+### `(*GraphQLStreamHandler).ServeHTTP` {#method-graphqlstreamhandler-servehttp}
 
 **What:** Implements `http.Handler` by streaming newline-delimited JSON payloads.
 
@@ -264,7 +264,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Performs side effects or delegates work to a helper.
               - **How:** Executes the expression statement.
 
-### `(*GraphQLStreamHandler).Cancelled`
+### `(*GraphQLStreamHandler).Cancelled` {#method-graphqlstreamhandler-cancelled}
 
 **What:** Returns a channel that is closed when the client request context is cancelled.
 
@@ -288,4 +288,22 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Architecture
+
+- [Proxy](../../../../../architecture/proxy)
+
+### Guides
+
+- [WebSockets limits](../../../../../guides/websockets)
+- [Auth and CORS](../../../../../guides/auth-cors)
+- [Troubleshooting](../../../../../guides/troubleshooting)
+
+### Neighboring source
+
+- [Server](../../server/)
+- [Protocol metrics](../../server/protocol_metrics)
 

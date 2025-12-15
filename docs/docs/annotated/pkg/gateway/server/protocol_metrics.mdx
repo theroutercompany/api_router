@@ -83,7 +83,7 @@ type protocolMetrics struct {
 }
 ```
 
-#### `protocolMetrics`
+#### `protocolMetrics` {#type-protocolmetrics}
 
 **What:** Holds the Prometheus collectors used for protocol metrics.
 
@@ -96,7 +96,7 @@ type protocolMetrics struct {
 
 ## Functions and Methods
 
-### `newProtocolMetrics`
+### `newProtocolMetrics` {#func-newprotocolmetrics}
 
 **What:** Constructs and registers the protocol/product collectors.
 
@@ -197,7 +197,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*protocolMetrics).track`
+### `(*protocolMetrics).track` {#method-protocolmetrics-track}
 
 **What:** Produces a per-request tracking function for status/outcome/duration and inflight gauges.
 
@@ -368,7 +368,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Performs side effects or delegates work to a helper.
               - **How:** Executes the expression statement.
 
-### `(*protocolMetrics).hijacked`
+### `(*protocolMetrics).hijacked` {#method-protocolmetrics-hijacked}
 
 **What:** Returns a closure that decrements the websocket connection gauge when an upgraded connection closes.
 
@@ -446,7 +446,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Performs side effects or delegates work to a helper.
           - **How:** Executes the expression statement.
 
-### `trackConnectionForProtocol`
+### `trackConnectionForProtocol` {#func-trackconnectionforprotocol}
 
 **What:** Indicates whether a protocol should be tracked as an "active connection".
 
@@ -495,7 +495,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `classifyProtocol`
+### `classifyProtocol` {#func-classifyprotocol}
 
 **What:** Best-effort classification of a request into a protocol label string.
 
@@ -637,7 +637,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `productFromRequest`
+### `productFromRequest` {#func-productfromrequest}
 
 **What:** Derives the "product" label for a request.
 
@@ -731,4 +731,34 @@ The list below documents the statements inside the function body, including nest
           - **What:** Returns from the current function.
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Start Here
+
+- [Repo tour](../../../../start-here/repo-tour)
+- [Request lifecycle](../../../../start-here/request-lifecycle)
+
+### Architecture
+
+- [HTTP server](../../../../architecture/server)
+
+### Guides
+
+- [Auth and CORS](../../../../guides/auth-cors)
+- [WebSockets limits](../../../../guides/websockets)
+- [Webhooks](../../../../guides/webhooks)
+- [Troubleshooting](../../../../guides/troubleshooting)
+
+### Reference
+
+- [Metrics](../../../../reference/metrics)
+- [Problem+JSON](../../../../reference/problems)
+
+### Neighboring source
+
+- [Runtime](../runtime/)
+- [Proxy](../proxy/reverse_proxy)
+- [Config](../config/)
 

@@ -13,6 +13,7 @@ const sidebars: SidebarsConfig = {
         'start-here/repo-tour',
         'start-here/local-dev',
         'start-here/request-lifecycle',
+        'start-here/docs-map',
         'start-here/glossary',
       ],
     },
@@ -45,6 +46,7 @@ const sidebars: SidebarsConfig = {
           type: 'category',
           label: 'Tooling',
           items: [
+            'guides/documentation',
             'guides/smoke',
             'guides/shadowdiff-runner',
             'guides/shadowdiff-mocks',

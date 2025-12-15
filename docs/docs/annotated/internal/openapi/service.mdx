@@ -84,7 +84,7 @@ const (
 )
 ```
 
-#### `defaultConfigFile`
+#### `defaultConfigFile` {#const-defaultconfigfile}
 
 **What:** Default filename for the OpenAPI merge configuration.
 
@@ -92,7 +92,7 @@ const (
 
 **How:** Used by `resolveConfigPath()` when `OPENAPI_MERGE_CONFIG_PATH` is unset.
 
-#### `defaultDistFile`
+#### `defaultDistFile` {#const-defaultdistfile}
 
 **What:** Default output path for the merged OpenAPI JSON.
 
@@ -111,7 +111,7 @@ type DocumentProvider interface {
 }
 ```
 
-#### `DocumentProvider`
+#### `DocumentProvider` {#type-documentprovider}
 
 **What:** Interface that exposes the merged document bytes.
 
@@ -131,7 +131,7 @@ type Service struct {
 }
 ```
 
-#### `Service`
+#### `Service` {#type-service}
 
 **What:** Service that merges OpenAPI fragments and caches/persists the result.
 
@@ -150,7 +150,7 @@ type cacheEntry struct {
 }
 ```
 
-#### `cacheEntry`
+#### `cacheEntry` {#type-cacheentry}
 
 **What:** In-memory cache of merged document bytes plus the dist file modtime they correspond to.
 
@@ -166,7 +166,7 @@ type cacheEntry struct {
 type Option func(*Service)
 ```
 
-#### `Option`
+#### `Option` {#type-option}
 
 **What:** Functional option for customizing a `Service`.
 
@@ -182,7 +182,7 @@ type mergeConfig struct {
 }
 ```
 
-#### `mergeConfig`
+#### `mergeConfig` {#type-mergeconfig}
 
 **What:** JSON schema for the OpenAPI merge configuration file.
 
@@ -198,7 +198,7 @@ type mergeInput struct {
 }
 ```
 
-#### `mergeInput`
+#### `mergeInput` {#type-mergeinput}
 
 **What:** Single merge input entry describing one OpenAPI fragment file.
 
@@ -209,7 +209,7 @@ type mergeInput struct {
 
 ## Functions and Methods
 
-### `WithConfigPath`
+### `WithConfigPath` {#func-withconfigpath}
 
 **What:** Option that overrides the merge configuration file path.
 
@@ -251,7 +251,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Keeps intermediate state available for later steps in the function.
               - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `WithDistPath`
+### `WithDistPath` {#func-withdistpath}
 
 **What:** Option that overrides where the merged OpenAPI JSON is persisted.
 
@@ -293,7 +293,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Keeps intermediate state available for later steps in the function.
               - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `NewService`
+### `NewService` {#func-newservice}
 
 **What:** Constructs a new OpenAPI merge service.
 
@@ -338,7 +338,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Service).Document`
+### `(*Service).Document` {#method-service-document}
 
 **What:** Returns the merged OpenAPI document as JSON bytes.
 
@@ -498,7 +498,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Service).cachedIfCurrent`
+### `(*Service).cachedIfCurrent` {#method-service-cachedifcurrent}
 
 **What:** Returns cached document bytes when the on-disk dist file is unchanged.
 
@@ -564,7 +564,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Service).readDist`
+### `(*Service).readDist` {#method-service-readdist}
 
 **What:** Reads the dist file and returns its bytes plus modification time.
 
@@ -625,7 +625,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Service).buildDocument`
+### `(*Service).buildDocument` {#method-service-builddocument}
 
 **What:** Loads OpenAPI fragment files and merges them into a single `openapi3.T`.
 
@@ -774,7 +774,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Service).persist`
+### `(*Service).persist` {#method-service-persist}
 
 **What:** Persists merged JSON bytes to the configured dist path.
 
@@ -848,7 +848,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Service).loadConfig`
+### `(*Service).loadConfig` {#method-service-loadconfig}
 
 **What:** Reads and parses the merge configuration JSON file.
 
@@ -939,7 +939,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `mergeDocuments`
+### `mergeDocuments` {#func-mergedocuments}
 
 **What:** Merges multiple `openapi3.T` documents into a single document.
 
@@ -1068,7 +1068,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `mergePaths`
+### `mergePaths` {#func-mergepaths}
 
 **What:** Merges OpenAPI path items and path extensions from one document into another.
 
@@ -1200,7 +1200,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `mergeComponents`
+### `mergeComponents` {#func-mergecomponents}
 
 **What:** Merges OpenAPI Components blocks (schemas, responses, security schemes, and more).
 
@@ -1411,7 +1411,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `mergeComponentMap`
+### `mergeComponentMap` {#func-mergecomponentmap}
 
 **What:** Generic helper to merge OpenAPI component maps while rejecting duplicates.
 
@@ -1488,7 +1488,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `mergeTags`
+### `mergeTags` {#func-mergetags}
 
 **What:** Merges OpenAPI tag entries while avoiding duplicates.
 
@@ -1596,7 +1596,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `mergeServers`
+### `mergeServers` {#func-mergeservers}
 
 **What:** Merges OpenAPI server entries while avoiding duplicates.
 
@@ -1704,7 +1704,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `mergeSecurity`
+### `mergeSecurity` {#func-mergesecurity}
 
 **What:** Merges OpenAPI security requirements slices.
 
@@ -1741,7 +1741,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `resolveConfigPath`
+### `resolveConfigPath` {#func-resolveconfigpath}
 
 **What:** Resolves the merge configuration path from environment or default.
 
@@ -1780,7 +1780,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `fileModTime`
+### `fileModTime` {#func-filemodtime}
 
 **What:** Returns a file's modification time (or zero).
 
@@ -1820,7 +1820,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `clone`
+### `clone` {#func-clone}
 
 **What:** Creates a defensive copy of a byte slice.
 
@@ -1866,4 +1866,16 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Guides
+
+- [OpenAPI](../../../guides/openapi)
+
+### Neighboring source
+
+- [OpenAPI merge service](service)
+- [Gateway server](../../pkg/gateway/server/)
 

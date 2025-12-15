@@ -79,7 +79,7 @@ import (
 const maxRequestBodyBytes int64 = 1 << 20
 ```
 
-#### `maxRequestBodyBytes`
+#### `maxRequestBodyBytes` {#const-maxrequestbodybytes}
 
 **What:** Maximum allowed HTTP request body size (1 MiB).
 
@@ -98,7 +98,7 @@ type readinessReporter interface {
 }
 ```
 
-#### `readinessReporter`
+#### `readinessReporter` {#type-readinessreporter}
 
 **What:** Minimal interface the server needs for readiness reporting.
 
@@ -112,7 +112,7 @@ type readinessReporter interface {
 type Option func(*Server)
 ```
 
-#### `Option`
+#### `Option` {#type-option}
 
 **What:** Functional option type for configuring the `Server` at construction time.
 
@@ -143,7 +143,7 @@ type Server struct {
 }
 ```
 
-#### `Server`
+#### `Server` {#type-server}
 
 **What:** The primary HTTP server wiring object for the gateway.
 
@@ -160,7 +160,7 @@ type deadlineConn struct {
 }
 ```
 
-#### `deadlineConn`
+#### `deadlineConn` {#type-deadlineconn}
 
 **What:** A `net.Conn` wrapper that applies read/write deadlines using a configured timeout.
 
@@ -178,7 +178,7 @@ type websocketLimiter struct {
 }
 ```
 
-#### `websocketLimiter`
+#### `websocketLimiter` {#type-websocketlimiter}
 
 **What:** Concurrency limiter for websocket upgrades.
 
@@ -195,7 +195,7 @@ type websocketContext struct {
 }
 ```
 
-#### `websocketContext`
+#### `websocketContext` {#type-websocketcontext}
 
 **What:** Bookkeeping stored in request context for websocket upgrades.
 
@@ -209,7 +209,7 @@ type websocketContext struct {
 type websocketContextKey struct{}
 ```
 
-#### `websocketContextKey`
+#### `websocketContextKey` {#type-websocketcontextkey}
 
 **What:** Context key type used to store websocket context.
 
@@ -220,7 +220,7 @@ type websocketContextKey struct{}
 
 ## Functions and Methods
 
-### `WithOpenAPIProvider`
+### `WithOpenAPIProvider` {#func-withopenapiprovider}
 
 **What:** Server option that overrides the OpenAPI document provider.
 
@@ -255,7 +255,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Keeps intermediate state available for later steps in the function.
           - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `WithLogger`
+### `WithLogger` {#func-withlogger}
 
 **What:** Server option that overrides the logger used by the server.
 
@@ -297,7 +297,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Keeps intermediate state available for later steps in the function.
               - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `New`
+### `New` {#func-new}
 
 **What:** Constructs a `Server` and wires routes + middleware based on `gatewayconfig.Config`.
 
@@ -615,7 +615,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Server).Start`
+### `(*Server).Start` {#method-server-start}
 
 **What:** Starts listening and serving until context cancellation or server error.
 
@@ -762,7 +762,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Server).Shutdown`
+### `(*Server).Shutdown` {#method-server-shutdown}
 
 **What:** Gracefully stops the underlying HTTP server.
 
@@ -797,7 +797,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Server).mountRoutes`
+### `(*Server).mountRoutes` {#method-server-mountroutes}
 
 **What:** Mounts the fixed gateway routes on the internal `http.ServeMux`.
 
@@ -888,7 +888,7 @@ The list below documents the statements inside the function body, including nest
       - **Why:** Performs side effects or delegates work to a helper.
       - **How:** Executes the expression statement.
 
-### `(*Server).initProxies`
+### `(*Server).initProxies` {#method-server-initproxies}
 
 **What:** Builds upstream reverse proxy handlers from config and wires them into trade/task routes.
 
@@ -975,7 +975,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Keeps intermediate state available for later steps in the function.
               - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `(*Server).initWebhooks`
+### `(*Server).initWebhooks` {#method-server-initwebhooks}
 
 **What:** Registers webhook ingestion endpoints when enabled in config.
 
@@ -1074,7 +1074,7 @@ The list below documents the statements inside the function body, including nest
       - **Why:** Performs side effects or delegates work to a helper.
       - **How:** Executes the expression statement.
 
-### `(*Server).trackRequest`
+### `(*Server).trackRequest` {#method-server-trackrequest}
 
 **What:** Integrates request completion tracking for protocol metrics and websocket limiter release.
 
@@ -1150,7 +1150,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Performs side effects or delegates work to a helper.
               - **How:** Executes the expression statement.
 
-### `(*Server).hijackedRequest`
+### `(*Server).hijackedRequest` {#method-server-hijackedrequest}
 
 **What:** Integrates hijack tracking for protocol metrics and websocket capacity release/idle timeout.
 
@@ -1282,7 +1282,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `websocketLimitMiddleware`
+### `websocketLimitMiddleware` {#func-websocketlimitmiddleware}
 
 **What:** Middleware that enforces websocket concurrency limits and stores websocket bookkeeping in request context.
 
@@ -1427,7 +1427,7 @@ The list below documents the statements inside the function body, including nest
                   - **Why:** Performs side effects or delegates work to a helper.
                   - **How:** Executes the expression statement.
 
-### `(*deadlineConn).Read`
+### `(*deadlineConn).Read` {#method-deadlineconn-read}
 
 **What:** Wraps `net.Conn.Read` with a per-operation read deadline.
 
@@ -1462,7 +1462,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*deadlineConn).Write`
+### `(*deadlineConn).Write` {#method-deadlineconn-write}
 
 **What:** Wraps `net.Conn.Write` with a per-operation write deadline.
 
@@ -1497,7 +1497,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `newWebsocketLimiter`
+### `newWebsocketLimiter` {#func-newwebsocketlimiter}
 
 **What:** Constructs a `websocketLimiter` for the configured max concurrency.
 
@@ -1520,7 +1520,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*websocketLimiter).Acquire`
+### `(*websocketLimiter).Acquire` {#method-websocketlimiter-acquire}
 
 **What:** Attempts to acquire a websocket slot and returns a release function when successful.
 
@@ -1658,7 +1658,7 @@ The list below documents the statements inside the function body, including nest
                   - **Why:** Performs side effects or delegates work to a helper.
                   - **How:** Executes the expression statement.
 
-### `isWebSocketRequest`
+### `isWebSocketRequest` {#func-iswebsocketrequest}
 
 **What:** Detects whether an HTTP request is attempting to upgrade to a WebSocket connection.
 
@@ -1710,7 +1710,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `websocketContextFromRequest`
+### `websocketContextFromRequest` {#func-websocketcontextfromrequest}
 
 **What:** Extracts websocket limiter context from a request.
 
@@ -1779,7 +1779,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Server).buildProtectedHandler`
+### `(*Server).buildProtectedHandler` {#method-server-buildprotectedhandler}
 
 **What:** Wraps an upstream proxy handler with authentication and scope enforcement.
 
@@ -1905,7 +1905,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Performs side effects or delegates work to a helper.
           - **How:** Executes the expression statement.
 
-### `(*Server).writeAuthProblem`
+### `(*Server).writeAuthProblem` {#method-server-writeauthproblem}
 
 **What:** Converts authentication errors into consistent Problem+JSON responses.
 
@@ -1973,7 +1973,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Performs side effects or delegates work to a helper.
           - **How:** Executes the expression statement.
 
-### `clientKey`
+### `clientKey` {#func-clientkey}
 
 **What:** Derives the rate-limit key for a request.
 
@@ -2013,7 +2013,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `clientAddress`
+### `clientAddress` {#func-clientaddress}
 
 **What:** Resolves a best-effort client IP address string for logging and rate limiting.
 
@@ -2095,7 +2095,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `buildCORS`
+### `buildCORS` {#func-buildcors}
 
 **What:** Constructs a CORS policy object from configured allowed origins.
 
@@ -2240,7 +2240,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Server).handleHealth`
+### `(*Server).handleHealth` {#method-server-handlehealth}
 
 **What:** Implements `GET /health` and returns basic process health + metadata.
 
@@ -2300,7 +2300,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `(*Server).handleReadiness`
+### `(*Server).handleReadiness` {#method-server-handlereadiness}
 
 **What:** Implements `GET /readyz` and `GET /readiness` by probing upstreams.
 
@@ -2403,7 +2403,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Keeps intermediate state available for later steps in the function.
   - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `(*Server).handleOpenAPI`
+### `(*Server).handleOpenAPI` {#method-server-handleopenapi}
 
 **What:** Implements `GET /openapi.json` using the configured OpenAPI provider.
 
@@ -2492,4 +2492,34 @@ The list below documents the statements inside the function body, including nest
       - **What:** Calls s.logger.Warnw.
       - **Why:** Performs side effects or delegates work to a helper.
       - **How:** Executes the expression statement.
+
+
+## Related docs
+
+### Start Here
+
+- [Repo tour](../../../../start-here/repo-tour)
+- [Request lifecycle](../../../../start-here/request-lifecycle)
+
+### Architecture
+
+- [HTTP server](../../../../architecture/server)
+
+### Guides
+
+- [Auth and CORS](../../../../guides/auth-cors)
+- [WebSockets limits](../../../../guides/websockets)
+- [Webhooks](../../../../guides/webhooks)
+- [Troubleshooting](../../../../guides/troubleshooting)
+
+### Reference
+
+- [Metrics](../../../../reference/metrics)
+- [Problem+JSON](../../../../reference/problems)
+
+### Neighboring source
+
+- [Runtime](../runtime/)
+- [Proxy](../proxy/reverse_proxy)
+- [Config](../config/)
 

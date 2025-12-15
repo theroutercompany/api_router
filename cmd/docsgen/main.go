@@ -79,6 +79,16 @@ type fileDoc struct {
 	Funcs          []funcEntry
 }
 
+type relatedLink struct {
+	Label string
+	DocID string
+}
+
+type relatedSection struct {
+	Title string
+	Links []relatedLink
+}
+
 func main() {
 	var (
 		repoRoot      = flag.String("repo", ".", "repo root")
@@ -234,6 +244,68 @@ func loadAnnotations(path string) (fileAnnotations, error) {
 func replaceExt(path, ext string) string {
 	base := strings.TrimSuffix(path, filepath.Ext(path))
 	return filepath.ToSlash(base) + ext
+}
+
+func docIDForSrc(relSrcPath string) string {
+	base := strings.TrimSuffix(relSrcPath, filepath.Ext(relSrcPath))
+	base = filepath.ToSlash(base)
+
+	parts := strings.Split(base, "/")
+	if len(parts) >= 2 {
+		last := parts[len(parts)-1]
+		prev := parts[len(parts)-2]
+		if last == prev {
+			return "annotated/" + strings.Join(parts[:len(parts)-1], "/") + "/"
+		}
+	}
+	return "annotated/" + base
+}
+
+func linkToDoc(fromDocID string, toDocID string) string {
+	wantTrailingSlash := strings.HasSuffix(toDocID, "/")
+	fromDir := filepath.Dir(filepath.FromSlash(fromDocID))
+	to := filepath.FromSlash(toDocID)
+	rel, err := filepath.Rel(fromDir, to)
+	if err != nil {
+		out := filepath.ToSlash(toDocID)
+		if wantTrailingSlash && !strings.HasSuffix(out, "/") {
+			out += "/"
+		}
+		return out
+	}
+	out := filepath.ToSlash(rel)
+	if wantTrailingSlash && !strings.HasSuffix(out, "/") {
+		out += "/"
+	}
+	return out
+}
+
+func anchorIDFromSymbolID(symbolID string) string {
+	s := strings.ToLower(strings.TrimSpace(symbolID))
+	if s == "" {
+		return "symbol"
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	lastDash := false
+	for _, r := range s {
+		isAlnum := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
+		if isAlnum {
+			b.WriteRune(r)
+			lastDash = false
+			continue
+		}
+		if lastDash {
+			continue
+		}
+		b.WriteByte('-')
+		lastDash = true
+	}
+	out := strings.Trim(b.String(), "-")
+	if out == "" {
+		return "symbol"
+	}
+	return out
 }
 
 func extractBlocks(fset *token.FileSet, file *ast.File, src []byte) []declBlock {
@@ -985,8 +1057,295 @@ func markdownInlineCode(src string) string {
 	return delim + " " + src + " " + delim
 }
 
+func relatedSectionsForDoc(doc fileDoc) []relatedSection {
+	src := filepath.ToSlash(doc.SrcPath)
+
+	add := func(title string, links []relatedLink) relatedSection {
+		out := make([]relatedLink, 0, len(links))
+		seen := map[string]bool{}
+		for _, l := range links {
+			if strings.TrimSpace(l.DocID) == "" || strings.TrimSpace(l.Label) == "" {
+				continue
+			}
+			key := l.DocID + "\n" + l.Label
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			out = append(out, l)
+		}
+		return relatedSection{Title: title, Links: out}
+	}
+
+	var sections []relatedSection
+
+	// Shared “core navigation” links for most gateway code.
+	coreStartHere := []relatedLink{
+		{Label: "Repo tour", DocID: "start-here/repo-tour"},
+		{Label: "Request lifecycle", DocID: "start-here/request-lifecycle"},
+	}
+	coreArch := []relatedLink{
+		{Label: "Component map", DocID: "architecture/component-map"},
+		{Label: "Configuration model", DocID: "architecture/config"},
+		{Label: "Runtime composition", DocID: "architecture/runtime"},
+		{Label: "HTTP server", DocID: "architecture/server"},
+		{Label: "Proxy", DocID: "architecture/proxy"},
+		{Label: "Observability", DocID: "architecture/observability"},
+	}
+
+	switch src {
+	case "cmd/apigw/main.go":
+		sections = append(sections,
+			add("Start Here", append([]relatedLink{
+				{Label: "Local development", DocID: "start-here/local-dev"},
+			}, coreStartHere...)),
+			add("Guides", []relatedLink{
+				{Label: "Run the gateway", DocID: "guides/running"},
+				{Label: "Configure upstreams", DocID: "guides/configuration"},
+				{Label: "Auth and CORS", DocID: "guides/auth-cors"},
+				{Label: "Troubleshooting", DocID: "guides/troubleshooting"},
+				{Label: "Smoke script", DocID: "guides/smoke"},
+			}),
+			add("Reference", []relatedLink{
+				{Label: "Config reference", DocID: "reference/config"},
+				{Label: "Environment variables", DocID: "reference/env"},
+				{Label: "Admin API", DocID: "reference/admin-api"},
+			}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Runtime", DocID: docIDForSrc("pkg/gateway/runtime/runtime.go")},
+				{Label: "Config", DocID: docIDForSrc("pkg/gateway/config/config.go")},
+				{Label: "Daemon", DocID: docIDForSrc("pkg/gateway/daemon/daemon.go")},
+			}),
+		)
+
+	case "cmd/docsgen/main.go":
+		sections = append(sections,
+			add("Docs system", []relatedLink{
+				{Label: "Docs tooling", DocID: "guides/documentation"},
+				{Label: "Annotated source index", DocID: "annotated/"},
+			}),
+		)
+
+	case "cmd/gateway/main.go":
+		sections = append(sections,
+			add("Start Here", append([]relatedLink{{Label: "Local development", DocID: "start-here/local-dev"}}, coreStartHere...)),
+			add("Guides", []relatedLink{
+				{Label: "Run the gateway", DocID: "guides/running"},
+				{Label: "Configure upstreams", DocID: "guides/configuration"},
+			}),
+			add("Neighboring source", []relatedLink{
+				{Label: "CLI (apigw)", DocID: docIDForSrc("cmd/apigw/main.go")},
+				{Label: "Runtime", DocID: docIDForSrc("pkg/gateway/runtime/runtime.go")},
+			}),
+		)
+
+	case "cmd/openapi/main.go", "internal/openapi/service.go":
+		sections = append(sections,
+			add("Guides", []relatedLink{{Label: "OpenAPI", DocID: "guides/openapi"}}),
+			add("Neighboring source", []relatedLink{
+				{Label: "OpenAPI merge service", DocID: docIDForSrc("internal/openapi/service.go")},
+				{Label: "Gateway server", DocID: docIDForSrc("pkg/gateway/server/server.go")},
+			}),
+		)
+
+	case "cmd/shadowdiff/main.go", "internal/shadowdiff/config.go", "internal/shadowdiff/diff.go", "internal/shadowdiff/fixture.go", "internal/shadowdiff/normalize.go":
+		sections = append(sections,
+			add("Guides", []relatedLink{
+				{Label: "Shadowdiff", DocID: "guides/shadowdiff"},
+				{Label: "Shadowdiff runner script", DocID: "guides/shadowdiff-runner"},
+				{Label: "Shadowdiff mock upstreams", DocID: "guides/shadowdiff-mocks"},
+			}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Shadowdiff CLI", DocID: docIDForSrc("cmd/shadowdiff/main.go")},
+			}),
+		)
+
+	case "pkg/gateway/config/config.go":
+		sections = append(sections,
+			add("Start Here", coreStartHere),
+			add("Architecture", []relatedLink{{Label: "Configuration model", DocID: "architecture/config"}}),
+			add("Guides", []relatedLink{
+				{Label: "Configure upstreams", DocID: "guides/configuration"},
+				{Label: "Auth and CORS", DocID: "guides/auth-cors"},
+				{Label: "Webhooks", DocID: "guides/webhooks"},
+				{Label: "WebSockets limits", DocID: "guides/websockets"},
+			}),
+			add("Reference", []relatedLink{
+				{Label: "Config reference", DocID: "reference/config"},
+				{Label: "Environment variables", DocID: "reference/env"},
+			}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Runtime", DocID: docIDForSrc("pkg/gateway/runtime/runtime.go")},
+				{Label: "Auth", DocID: docIDForSrc("pkg/gateway/auth/authenticator.go")},
+				{Label: "Server middleware", DocID: docIDForSrc("pkg/gateway/server/middleware/middleware.go")},
+			}),
+		)
+
+	case "pkg/gateway/daemon/daemon.go":
+		sections = append(sections,
+			add("Start Here", append([]relatedLink{{Label: "Local development", DocID: "start-here/local-dev"}}, coreStartHere...)),
+			add("Guides", []relatedLink{
+				{Label: "Run the gateway", DocID: "guides/running"},
+				{Label: "Troubleshooting", DocID: "guides/troubleshooting"},
+			}),
+			add("Reference", []relatedLink{
+				{Label: "Admin API", DocID: "reference/admin-api"},
+				{Label: "Environment variables", DocID: "reference/env"},
+			}),
+			add("Neighboring source", []relatedLink{
+				{Label: "CLI (daemon subcommands)", DocID: docIDForSrc("cmd/apigw/main.go")},
+				{Label: "Runtime", DocID: docIDForSrc("pkg/gateway/runtime/runtime.go")},
+			}),
+		)
+
+	case "pkg/gateway/runtime/runtime.go":
+		sections = append(sections,
+			add("Start Here", coreStartHere),
+			add("Architecture", []relatedLink{{Label: "Runtime composition", DocID: "architecture/runtime"}}),
+			add("Guides", []relatedLink{
+				{Label: "Run the gateway", DocID: "guides/running"},
+				{Label: "Troubleshooting", DocID: "guides/troubleshooting"},
+			}),
+			add("Reference", []relatedLink{
+				{Label: "Admin API", DocID: "reference/admin-api"},
+				{Label: "Metrics", DocID: "reference/metrics"},
+			}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Config", DocID: docIDForSrc("pkg/gateway/config/config.go")},
+				{Label: "Server", DocID: docIDForSrc("pkg/gateway/server/server.go")},
+				{Label: "Proxy", DocID: docIDForSrc("pkg/gateway/proxy/reverse_proxy.go")},
+				{Label: "Metrics registry", DocID: docIDForSrc("pkg/gateway/metrics/registry.go")},
+			}),
+		)
+
+	case "pkg/gateway/problem/problem.go":
+		sections = append(sections,
+			add("Reference", []relatedLink{{Label: "Problem+JSON", DocID: "reference/problems"}}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Server middleware", DocID: docIDForSrc("pkg/gateway/server/middleware/middleware.go")},
+				{Label: "Server", DocID: docIDForSrc("pkg/gateway/server/server.go")},
+			}),
+		)
+
+	case "pkg/gateway/server/server.go", "pkg/gateway/server/middleware/middleware.go", "pkg/gateway/server/protocol_metrics.go", "pkg/gateway/server/ratelimiter.go", "pkg/gateway/server/request_metadata.go":
+		sections = append(sections,
+			add("Start Here", coreStartHere),
+			add("Architecture", []relatedLink{{Label: "HTTP server", DocID: "architecture/server"}}),
+			add("Guides", []relatedLink{
+				{Label: "Auth and CORS", DocID: "guides/auth-cors"},
+				{Label: "WebSockets limits", DocID: "guides/websockets"},
+				{Label: "Webhooks", DocID: "guides/webhooks"},
+				{Label: "Troubleshooting", DocID: "guides/troubleshooting"},
+			}),
+			add("Reference", []relatedLink{
+				{Label: "Metrics", DocID: "reference/metrics"},
+				{Label: "Problem+JSON", DocID: "reference/problems"},
+			}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Runtime", DocID: docIDForSrc("pkg/gateway/runtime/runtime.go")},
+				{Label: "Proxy", DocID: docIDForSrc("pkg/gateway/proxy/reverse_proxy.go")},
+				{Label: "Config", DocID: docIDForSrc("pkg/gateway/config/config.go")},
+			}),
+		)
+
+	case "pkg/gateway/proxy/reverse_proxy.go", "pkg/gateway/proxy/testdata/graphql_stream_server.go", "pkg/gateway/proxy/testdata/sse_server.go":
+		sections = append(sections,
+			add("Architecture", []relatedLink{{Label: "Proxy", DocID: "architecture/proxy"}}),
+			add("Guides", []relatedLink{
+				{Label: "WebSockets limits", DocID: "guides/websockets"},
+				{Label: "Auth and CORS", DocID: "guides/auth-cors"},
+				{Label: "Troubleshooting", DocID: "guides/troubleshooting"},
+			}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Server", DocID: docIDForSrc("pkg/gateway/server/server.go")},
+				{Label: "Protocol metrics", DocID: docIDForSrc("pkg/gateway/server/protocol_metrics.go")},
+			}),
+		)
+
+	case "pkg/gateway/auth/authenticator.go":
+		sections = append(sections,
+			add("Guides", []relatedLink{{Label: "Auth and CORS", DocID: "guides/auth-cors"}}),
+			add("Reference", []relatedLink{{Label: "Environment variables", DocID: "reference/env"}}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Config", DocID: docIDForSrc("pkg/gateway/config/config.go")},
+				{Label: "Server middleware", DocID: docIDForSrc("pkg/gateway/server/middleware/middleware.go")},
+			}),
+		)
+
+	case "examples/basic/main.go":
+		sections = append(sections,
+			add("Start Here", []relatedLink{
+				{Label: "Repo tour", DocID: "start-here/repo-tour"},
+				{Label: "Local development", DocID: "start-here/local-dev"},
+			}),
+			add("Guides", []relatedLink{{Label: "Run the gateway", DocID: "guides/running"}}),
+			add("Reference", []relatedLink{{Label: "Config reference", DocID: "reference/config"}}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Runtime", DocID: docIDForSrc("pkg/gateway/runtime/runtime.go")},
+				{Label: "Config", DocID: docIDForSrc("pkg/gateway/config/config.go")},
+			}),
+		)
+
+	case "internal/service/placeholder.go":
+		sections = append(sections,
+			add("Architecture", []relatedLink{{Label: "Runtime composition", DocID: "architecture/runtime"}}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Runtime", DocID: docIDForSrc("pkg/gateway/runtime/runtime.go")},
+				{Label: "Server", DocID: docIDForSrc("pkg/gateway/server/server.go")},
+			}),
+		)
+
+	case "pkg/gateway/webhook/handler.go":
+		sections = append(sections,
+			add("Guides", []relatedLink{{Label: "Webhooks", DocID: "guides/webhooks"}}),
+			add("Reference", []relatedLink{
+				{Label: "Config reference", DocID: "reference/config"},
+				{Label: "Problem+JSON", DocID: "reference/problems"},
+			}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Config", DocID: docIDForSrc("pkg/gateway/config/config.go")},
+				{Label: "Server", DocID: docIDForSrc("pkg/gateway/server/server.go")},
+			}),
+		)
+
+	case "pkg/gateway/metrics/registry.go", "pkg/log/logger.go":
+		sections = append(sections,
+			add("Architecture", []relatedLink{{Label: "Observability", DocID: "architecture/observability"}}),
+			add("Reference", []relatedLink{{Label: "Metrics", DocID: "reference/metrics"}}),
+			add("Neighboring source", []relatedLink{{Label: "Protocol metrics", DocID: docIDForSrc("pkg/gateway/server/protocol_metrics.go")}}),
+		)
+
+	case "internal/platform/health/health.go":
+		sections = append(sections,
+			add("Start Here", []relatedLink{
+				{Label: "Request lifecycle", DocID: "start-here/request-lifecycle"},
+			}),
+			add("Guides", []relatedLink{{Label: "Troubleshooting", DocID: "guides/troubleshooting"}}),
+			add("Neighboring source", []relatedLink{
+				{Label: "Server", DocID: docIDForSrc("pkg/gateway/server/server.go")},
+				{Label: "Runtime", DocID: docIDForSrc("pkg/gateway/runtime/runtime.go")},
+			}),
+		)
+
+	default:
+		// For unclassified files (examples, placeholders, etc.), still provide a core navigation path.
+		sections = append(sections, add("Architecture", coreArch))
+	}
+
+	var out []relatedSection
+	for _, sec := range sections {
+		if len(sec.Links) == 0 {
+			continue
+		}
+		out = append(out, sec)
+	}
+	return out
+}
+
 func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 	var buf bytes.Buffer
+
+	currentDocID := docIDForSrc(doc.SrcPath)
 
 	fmt.Fprintf(&buf, "---\n")
 	fmt.Fprintf(&buf, "title: %q\n", doc.Title)
@@ -1030,7 +1389,7 @@ func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 			fmt.Fprintf(&buf, "```go title=%q showLineNumbers\n%s\n```\n\n", fmt.Sprintf("%s#L%d", doc.SrcPath, block.StartLine), block.Snippet)
 
 			for _, sym := range block.Symbols {
-				fmt.Fprintf(&buf, "#### %s\n\n", sym.Heading)
+				fmt.Fprintf(&buf, "#### %s {#%s}\n\n", sym.Heading, anchorIDFromSymbolID(sym.ID))
 				writeWhatHowWhy(&buf, resolveSymbol(anns, sym.ID))
 			}
 		}
@@ -1039,10 +1398,22 @@ func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 	if len(doc.Funcs) > 0 {
 		fmt.Fprintf(&buf, "\n## Functions and Methods\n\n")
 		for _, fn := range doc.Funcs {
-			fmt.Fprintf(&buf, "### %s\n\n", fn.Heading)
+			fmt.Fprintf(&buf, "### %s {#%s}\n\n", fn.Heading, anchorIDFromSymbolID(fn.ID))
 			writeWhatHowWhy(&buf, resolveSymbol(anns, fn.ID))
 			fmt.Fprintf(&buf, "```go title=%q showLineNumbers\n%s\n```\n\n", fmt.Sprintf("%s#L%d", doc.SrcPath, fn.StartLine), fn.Snippet)
 			writeWalkthrough(&buf, fn.Steps)
+		}
+	}
+
+	related := relatedSectionsForDoc(doc)
+	if len(related) > 0 {
+		fmt.Fprintf(&buf, "\n## Related docs\n\n")
+		for _, sec := range related {
+			fmt.Fprintf(&buf, "### %s\n\n", sec.Title)
+			for _, l := range sec.Links {
+				fmt.Fprintf(&buf, "- [%s](%s)\n", l.Label, linkToDoc(currentDocID, l.DocID))
+			}
+			fmt.Fprintf(&buf, "\n")
 		}
 	}
 

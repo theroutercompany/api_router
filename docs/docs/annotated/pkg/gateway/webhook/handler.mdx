@@ -58,7 +58,7 @@ const (
 )
 ```
 
-#### `defaultMaxBodyBytes`
+#### `defaultMaxBodyBytes` {#const-defaultmaxbodybytes}
 
 **What:** Default maximum request body size (1 MiB) for webhook payloads.
 
@@ -75,7 +75,7 @@ const (
 var errUpstreamRetryable = errors.New("retryable upstream failure")
 ```
 
-#### `errUpstreamRetryable`
+#### `errUpstreamRetryable` {#var-errupstreamretryable}
 
 **What:** Sentinel error used to mark failures that should be retried.
 
@@ -104,7 +104,7 @@ type Options struct {
 }
 ```
 
-#### `Options`
+#### `Options` {#type-options}
 
 **What:** Configuration for the webhook handler (target, secret, signature header, retry/backoff/timeouts, client/logger, body size).
 
@@ -129,7 +129,7 @@ type webhookHandler struct {
 }
 ```
 
-#### `webhookHandler`
+#### `webhookHandler` {#type-webhookhandler}
 
 **What:** Internal handler implementation that holds immutable webhook configuration.
 
@@ -146,7 +146,7 @@ type errBodyTooLarge struct {
 }
 ```
 
-#### `errBodyTooLarge`
+#### `errBodyTooLarge` {#type-errbodytoolarge}
 
 **What:** Error type returned when the request body exceeds the configured size limit.
 
@@ -157,7 +157,7 @@ type errBodyTooLarge struct {
 
 ## Functions and Methods
 
-### `New`
+### `New` {#func-new}
 
 **What:** Constructs a webhook `http.Handler` with signature verification and forwarding settings.
 
@@ -308,7 +308,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*webhookHandler).ServeHTTP`
+### `(*webhookHandler).ServeHTTP` {#method-webhookhandler-servehttp}
 
 **What:** Main HTTP handler for webhook ingestion.
 
@@ -463,7 +463,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `(*webhookHandler).verifySignature`
+### `(*webhookHandler).verifySignature` {#method-webhookhandler-verifysignature}
 
 **What:** Verifies the incoming webhook signature header against the request body.
 
@@ -551,7 +551,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*webhookHandler).forwardWithRetry`
+### `(*webhookHandler).forwardWithRetry` {#method-webhookhandler-forwardwithretry}
 
 **What:** Forwards the webhook payload with retry and backoff on retryable failures.
 
@@ -681,7 +681,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*webhookHandler).forwardOnce`
+### `(*webhookHandler).forwardOnce` {#method-webhookhandler-forwardonce}
 
 **What:** Performs a single forwarding attempt to the configured target.
 
@@ -790,7 +790,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `readRequestBody`
+### `readRequestBody` {#func-readrequestbody}
 
 **What:** Reads the request body up to a maximum number of bytes.
 
@@ -859,7 +859,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `computeHMAC`
+### `computeHMAC` {#func-computehmac}
 
 **What:** Computes an HMAC-SHA256 digest for a request body using a secret key.
 
@@ -892,7 +892,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `copyHeaders`
+### `copyHeaders` {#func-copyheaders}
 
 **What:** Copies HTTP headers from the incoming webhook request to the forwarded request.
 
@@ -934,7 +934,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `increaseBackoff`
+### `increaseBackoff` {#func-increasebackoff}
 
 **What:** Computes the next backoff duration for a retry loop with an upper bound.
 
@@ -974,7 +974,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*errBodyTooLarge).Error`
+### `(*errBodyTooLarge).Error` {#method-errbodytoolarge-error}
 
 **What:** Formats an error message describing how much the request exceeded the body size limit.
 
@@ -996,4 +996,21 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Guides
+
+- [Webhooks](../../../../guides/webhooks)
+
+### Reference
+
+- [Config reference](../../../../reference/config)
+- [Problem+JSON](../../../../reference/problems)
+
+### Neighboring source
+
+- [Config](../config/)
+- [Server](../server/)
 

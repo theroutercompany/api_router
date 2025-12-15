@@ -109,7 +109,7 @@ const (
 )
 ```
 
-#### `defaultPort`
+#### `defaultPort` {#const-defaultport}
 
 **What:** Default public HTTP listen port (`8080`).
 
@@ -117,7 +117,7 @@ const (
 
 **How:** Used in `Default()` and by `normalize()` when `http.port` is `0`.
 
-#### `defaultShutdownTimeout`
+#### `defaultShutdownTimeout` {#const-defaultshutdowntimeout}
 
 **What:** Default graceful shutdown timeout for the HTTP server.
 
@@ -125,7 +125,7 @@ const (
 
 **How:** Used in `Default()` and by `normalize()` when `http.shutdownTimeout` is unset/invalid.
 
-#### `defaultReadinessTimeout`
+#### `defaultReadinessTimeout` {#const-defaultreadinesstimeout}
 
 **What:** Default timeout for readiness probe HTTP calls.
 
@@ -133,7 +133,7 @@ const (
 
 **How:** Used in `Default()` and by `normalize()` when `readiness.timeout` is unset/invalid.
 
-#### `defaultReadinessUserAgent`
+#### `defaultReadinessUserAgent` {#const-defaultreadinessuseragent}
 
 **What:** Default `User-Agent` header used for readiness probe requests.
 
@@ -141,7 +141,7 @@ const (
 
 **How:** Defaulted in `Default()`/`normalize()` and used by the readiness checker HTTP client.
 
-#### `defaultHealthPath`
+#### `defaultHealthPath` {#const-defaulthealthpath}
 
 **What:** Default upstream health check path (`/health`) used for readiness probing.
 
@@ -149,7 +149,7 @@ const (
 
 **How:** Used in `Default()` and reinforced by `normalize()` (including leading-slash canonicalization).
 
-#### `defaultRateLimitWindow`
+#### `defaultRateLimitWindow` {#const-defaultratelimitwindow}
 
 **What:** Default duration of the rate-limit window.
 
@@ -157,7 +157,7 @@ const (
 
 **How:** Used in `Default()` and by `normalize()` when `rateLimit.window` is unset/invalid.
 
-#### `defaultRateLimitMax`
+#### `defaultRateLimitMax` {#const-defaultratelimitmax}
 
 **What:** Default maximum number of requests allowed per rate-limit window.
 
@@ -165,7 +165,7 @@ const (
 
 **How:** Used in `Default()` and by `normalize()` when `rateLimit.max` is unset/invalid.
 
-#### `defaultMetricsEnabled`
+#### `defaultMetricsEnabled` {#const-defaultmetricsenabled}
 
 **What:** Default toggle for metrics exposure.
 
@@ -173,7 +173,7 @@ const (
 
 **How:** Set by `Default()`; overridden by YAML/env; consumed by runtime/server wiring.
 
-#### `defaultAdminListen`
+#### `defaultAdminListen` {#const-defaultadminlisten}
 
 **What:** Default listen address for the admin control-plane server.
 
@@ -181,7 +181,7 @@ const (
 
 **How:** Applied by `normalize()` when `admin.listen` is empty.
 
-#### `defaultWebSocketMaxConcurrent`
+#### `defaultWebSocketMaxConcurrent` {#const-defaultwebsocketmaxconcurrent}
 
 **What:** Default maximum number of concurrent WebSocket upgrades (`0` = unlimited).
 
@@ -189,7 +189,7 @@ const (
 
 **How:** Defaulted in `Default()`/`normalize()` and enforced by server middleware prior to upgrade.
 
-#### `defaultWebSocketIdleTimeout`
+#### `defaultWebSocketIdleTimeout` {#const-defaultwebsocketidletimeout}
 
 **What:** Default idle timeout for WebSocket connections (when idle enforcement is enabled).
 
@@ -197,7 +197,7 @@ const (
 
 **How:** Defaulted in `Default()`/`normalize()` and enforced by the server by wrapping hijacked `net.Conn` read/write deadlines.
 
-#### `defaultConfigEnvVar`
+#### `defaultConfigEnvVar` {#const-defaultconfigenvvar}
 
 **What:** Environment variable name (`APIGW_CONFIG`) that points to a default YAML config file path.
 
@@ -205,7 +205,7 @@ const (
 
 **How:** Reads `os.Getenv(defaultConfigEnvVar)` inside `Load()` and tries it as an additional YAML input (before `WithPath(...)` options).
 
-#### `defaultWebhookSignatureHeader`
+#### `defaultWebhookSignatureHeader` {#const-defaultwebhooksignatureheader}
 
 **What:** Default header name that carries the webhook HMAC signature (`X-Webhook-Signature`).
 
@@ -213,7 +213,7 @@ const (
 
 **How:** Applied by `normalize()` when `webhooks.endpoints[].signatureHeader` is empty.
 
-#### `defaultWebhookMaxAttempts`
+#### `defaultWebhookMaxAttempts` {#const-defaultwebhookmaxattempts}
 
 **What:** Default maximum number of webhook forwarding attempts.
 
@@ -221,7 +221,7 @@ const (
 
 **How:** Applied by `normalize()` when `webhooks.endpoints[].maxAttempts` is unset/invalid.
 
-#### `defaultWebhookBackoff`
+#### `defaultWebhookBackoff` {#const-defaultwebhookbackoff}
 
 **What:** Default initial backoff duration between webhook delivery attempts.
 
@@ -229,7 +229,7 @@ const (
 
 **How:** Applied by `normalize()` when `webhooks.endpoints[].initialBackoff` is unset/invalid.
 
-#### `defaultWebhookTimeout`
+#### `defaultWebhookTimeout` {#const-defaultwebhooktimeout}
 
 **What:** Default timeout for a single webhook forwarding attempt.
 
@@ -237,7 +237,7 @@ const (
 
 **How:** Applied by `normalize()` when `webhooks.endpoints[].timeout` is unset/invalid.
 
-#### `envTradePrefix`
+#### `envTradePrefix` {#const-envtradeprefix}
 
 **What:** Prefix (`TRADE`) used to build trade upstream env var names.
 
@@ -245,7 +245,7 @@ const (
 
 **How:** Used by `applyEnvOverrides()`/`applyUpstreamOverrides()` to locate trade upstream overrides.
 
-#### `envTaskPrefix`
+#### `envTaskPrefix` {#const-envtaskprefix}
 
 **What:** Prefix (`TASK`) used to build task upstream env var names.
 
@@ -253,7 +253,7 @@ const (
 
 **How:** Used by `applyEnvOverrides()`/`applyUpstreamOverrides()` to locate task upstream overrides.
 
-#### `envPort`
+#### `envPort` {#const-envport}
 
 **What:** Env var (`PORT`) overriding the public HTTP listen port.
 
@@ -261,7 +261,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` as an integer into `http.port`.
 
-#### `envShutdownTimeout`
+#### `envShutdownTimeout` {#const-envshutdowntimeout}
 
 **What:** Env var (`SHUTDOWN_TIMEOUT_MS`) overriding `http.shutdownTimeout` (milliseconds).
 
@@ -269,7 +269,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` via `parsePositiveDurationMillis`.
 
-#### `envReadinessTimeout`
+#### `envReadinessTimeout` {#const-envreadinesstimeout}
 
 **What:** Env var (`READINESS_TIMEOUT_MS`) overriding `readiness.timeout` (milliseconds).
 
@@ -277,7 +277,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` via `parsePositiveDurationMillis`.
 
-#### `envReadinessUserAgent`
+#### `envReadinessUserAgent` {#const-envreadinessuseragent}
 
 **What:** Env var (`READINESS_USER_AGENT`) overriding `readiness.userAgent`.
 
@@ -285,7 +285,7 @@ const (
 
 **How:** Read by `applyEnvOverrides()` as a string.
 
-#### `envGitSHA`
+#### `envGitSHA` {#const-envgitsha}
 
 **What:** Env var (`GIT_SHA`) used to stamp build/version metadata.
 
@@ -293,7 +293,7 @@ const (
 
 **How:** Read by `Default()` (and optionally overwritten by `applyEnvOverrides()`).
 
-#### `envJWTSecret`
+#### `envJWTSecret` {#const-envjwtsecret}
 
 **What:** Env var (`JWT_SECRET`) holding the symmetric key used for JWT verification.
 
@@ -301,7 +301,7 @@ const (
 
 **How:** Read by `applyEnvOverrides()` into `auth.secret`; consumed by `pkg/gateway/auth`.
 
-#### `envJWTAudience`
+#### `envJWTAudience` {#const-envjwtaudience}
 
 **What:** Env var (`JWT_AUDIENCE`) configuring acceptable JWT audiences.
 
@@ -309,7 +309,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` using `splitAndTrim` into `auth.audiences`.
 
-#### `envJWTIssuer`
+#### `envJWTIssuer` {#const-envjwtissuer}
 
 **What:** Env var (`JWT_ISSUER`) configuring the expected JWT issuer.
 
@@ -317,7 +317,7 @@ const (
 
 **How:** Read by `applyEnvOverrides()` into `auth.issuer`.
 
-#### `envCorsAllowedOrigins`
+#### `envCorsAllowedOrigins` {#const-envcorsallowedorigins}
 
 **What:** Env var (`CORS_ALLOWED_ORIGINS`) overriding `cors.allowedOrigins`.
 
@@ -325,7 +325,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` using `splitAndTrim`.
 
-#### `envRateLimitWindow`
+#### `envRateLimitWindow` {#const-envratelimitwindow}
 
 **What:** Env var (`RATE_LIMIT_WINDOW_MS`) overriding `rateLimit.window` (milliseconds).
 
@@ -333,7 +333,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` via `parsePositiveDurationMillis`.
 
-#### `envRateLimitMax`
+#### `envRateLimitMax` {#const-envratelimitmax}
 
 **What:** Env var (`RATE_LIMIT_MAX`) overriding `rateLimit.max`.
 
@@ -341,7 +341,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` as an integer.
 
-#### `envMetricsEnabled`
+#### `envMetricsEnabled` {#const-envmetricsenabled}
 
 **What:** Env var (`METRICS_ENABLED`) controlling metrics exposure.
 
@@ -349,7 +349,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` as a boolean into `metrics.enabled`.
 
-#### `envAdminEnabled`
+#### `envAdminEnabled` {#const-envadminenabled}
 
 **What:** Env var (`ADMIN_ENABLED`) toggling the admin server.
 
@@ -357,7 +357,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` as a boolean into `admin.enabled`.
 
-#### `envAdminListen`
+#### `envAdminListen` {#const-envadminlisten}
 
 **What:** Env var (`ADMIN_LISTEN`) overriding `admin.listen`.
 
@@ -365,7 +365,7 @@ const (
 
 **How:** Read by `applyEnvOverrides()`; defaulted by `normalize()` when missing.
 
-#### `envAdminToken`
+#### `envAdminToken` {#const-envadmintoken}
 
 **What:** Env var (`ADMIN_TOKEN`) holding a bearer token for admin authentication.
 
@@ -373,7 +373,7 @@ const (
 
 **How:** Read by `applyEnvOverrides()` into `admin.token`.
 
-#### `envAdminAllow`
+#### `envAdminAllow` {#const-envadminallow}
 
 **What:** Env var (`ADMIN_ALLOW`) configuring an IP/CIDR allowlist for admin endpoints.
 
@@ -381,7 +381,7 @@ const (
 
 **How:** Parsed by `applyEnvOverrides()` using `splitAndTrim` and validated in `Validate()`.
 
-#### `envTLSInsecureSkipVerify`
+#### `envTLSInsecureSkipVerify` {#const-envtlsinsecureskipverify}
 
 **What:** Env var suffix (`_TLS_INSECURE_SKIP_VERIFY`) disabling upstream TLS verification for readiness checks.
 
@@ -391,7 +391,7 @@ const (
 
 **Notes:** Avoid in production; disables server certificate verification.
 
-#### `envTLSEnabled`
+#### `envTLSEnabled` {#const-envtlsenabled}
 
 **What:** Env var suffix (`_TLS_ENABLED`) toggling upstream TLS behavior.
 
@@ -399,7 +399,7 @@ const (
 
 **How:** Parsed by `applyUpstreamOverrides()` as a boolean.
 
-#### `envTLSCAFile`
+#### `envTLSCAFile` {#const-envtlscafile}
 
 **What:** Env var suffix (`_TLS_CA_FILE`) providing a PEM CA bundle path for upstream TLS verification.
 
@@ -407,7 +407,7 @@ const (
 
 **How:** Read by `applyUpstreamOverrides()` and used by the runtime readiness TLS client configuration.
 
-#### `envTLSCertFile`
+#### `envTLSCertFile` {#const-envtlscertfile}
 
 **What:** Env var suffix (`_TLS_CERT_FILE`) providing a client certificate path for upstream mTLS.
 
@@ -415,7 +415,7 @@ const (
 
 **How:** Read by `applyUpstreamOverrides()`; validated together with `_TLS_KEY_FILE`.
 
-#### `envTLSKeyFile`
+#### `envTLSKeyFile` {#const-envtlskeyfile}
 
 **What:** Env var suffix (`_TLS_KEY_FILE`) providing a client private key path for upstream mTLS.
 
@@ -423,7 +423,7 @@ const (
 
 **How:** Read by `applyUpstreamOverrides()`; validated together with `_TLS_CERT_FILE`.
 
-#### `envAPIURL`
+#### `envAPIURL` {#const-envapiurl}
 
 **What:** Env var suffix (`_API_URL`) appended to an upstream prefix to form the upstream base URL variable.
 
@@ -431,7 +431,7 @@ const (
 
 **How:** Read by `applyUpstreamOverrides()` as `prefix + envAPIURL`.
 
-#### `envHealthPath`
+#### `envHealthPath` {#const-envhealthpath}
 
 **What:** Env var suffix (`_HEALTH_PATH`) appended to an upstream prefix to form the upstream health path variable.
 
@@ -459,7 +459,7 @@ type Config struct {
 }
 ```
 
-#### `Config`
+#### `Config` {#type-config}
 
 **What:** Root configuration object for the gateway runtime and SDK.
 
@@ -476,7 +476,7 @@ type HTTPConfig struct {
 }
 ```
 
-#### `HTTPConfig`
+#### `HTTPConfig` {#type-httpconfig}
 
 **What:** Public HTTP server configuration (port and shutdown timeout).
 
@@ -494,7 +494,7 @@ type ReadinessConfig struct {
 }
 ```
 
-#### `ReadinessConfig`
+#### `ReadinessConfig` {#type-readinessconfig}
 
 **What:** Readiness probing configuration (timeout, user-agent, upstream list).
 
@@ -513,7 +513,7 @@ type UpstreamConfig struct {
 }
 ```
 
-#### `UpstreamConfig`
+#### `UpstreamConfig` {#type-upstreamconfig}
 
 **What:** Upstream service configuration (name, base URL, health path, TLS options).
 
@@ -533,7 +533,7 @@ type TLSConfig struct {
 }
 ```
 
-#### `TLSConfig`
+#### `TLSConfig` {#type-tlsconfig}
 
 **What:** Upstream TLS/mTLS configuration for readiness checks (enable, CA file, client cert/key, skip verify).
 
@@ -551,7 +551,7 @@ type AuthConfig struct {
 }
 ```
 
-#### `AuthConfig`
+#### `AuthConfig` {#type-authconfig}
 
 **What:** JWT verification configuration (secret, audiences, issuer).
 
@@ -567,7 +567,7 @@ type CORSConfig struct {
 }
 ```
 
-#### `CORSConfig`
+#### `CORSConfig` {#type-corsconfig}
 
 **What:** CORS configuration (allowed origins).
 
@@ -584,7 +584,7 @@ type RateLimitConfig struct {
 }
 ```
 
-#### `RateLimitConfig`
+#### `RateLimitConfig` {#type-ratelimitconfig}
 
 **What:** Rate limiting configuration (window and max requests).
 
@@ -600,7 +600,7 @@ type MetricsConfig struct {
 }
 ```
 
-#### `MetricsConfig`
+#### `MetricsConfig` {#type-metricsconfig}
 
 **What:** Metrics enablement configuration.
 
@@ -617,7 +617,7 @@ type WebSocketConfig struct {
 }
 ```
 
-#### `WebSocketConfig`
+#### `WebSocketConfig` {#type-websocketconfig}
 
 **What:** WebSocket connection policy (max concurrent and idle timeout).
 
@@ -636,7 +636,7 @@ type AdminConfig struct {
 }
 ```
 
-#### `AdminConfig`
+#### `AdminConfig` {#type-adminconfig}
 
 **What:** Configuration for the admin/control-plane HTTP server (enable, listen, token, allowlist).
 
@@ -653,7 +653,7 @@ type WebhookConfig struct {
 }
 ```
 
-#### `WebhookConfig`
+#### `WebhookConfig` {#type-webhookconfig}
 
 **What:** Webhook ingestion configuration (enabled flag and endpoint list).
 
@@ -676,7 +676,7 @@ type WebhookEndpointConfig struct {
 }
 ```
 
-#### `WebhookEndpointConfig`
+#### `WebhookEndpointConfig` {#type-webhookendpointconfig}
 
 **What:** Per-endpoint webhook configuration (path, target URL, secret, signature header, retry/backoff, timeout).
 
@@ -690,7 +690,7 @@ type WebhookEndpointConfig struct {
 type Duration time.Duration
 ```
 
-#### `Duration`
+#### `Duration` {#type-duration}
 
 **What:** A YAML-friendly wrapper around `time.Duration`.
 
@@ -704,7 +704,7 @@ type Duration time.Duration
 type Option func(*loaderOptions)
 ```
 
-#### `Option`
+#### `Option` {#type-option}
 
 **What:** Functional option type used to customize how `Load()` behaves.
 
@@ -721,7 +721,7 @@ type loaderOptions struct {
 }
 ```
 
-#### `loaderOptions`
+#### `loaderOptions` {#type-loaderoptions}
 
 **What:** Internal accumulator for config-loading options (YAML paths and env lookup function).
 
@@ -732,7 +732,7 @@ type loaderOptions struct {
 
 ## Functions and Methods
 
-### `(Duration).AsDuration`
+### `(Duration).AsDuration` {#method-duration-asduration}
 
 **What:** Converts the wrapper to a `time.Duration`.
 
@@ -755,7 +755,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(Duration).MarshalYAML`
+### `(Duration).MarshalYAML` {#method-duration-marshalyaml}
 
 **What:** Encodes a `Duration` as a Go duration string for YAML output.
 
@@ -778,7 +778,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Duration).UnmarshalYAML`
+### `(*Duration).UnmarshalYAML` {#method-duration-unmarshalyaml}
 
 **What:** Parses a YAML scalar into a `Duration`.
 
@@ -927,7 +927,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Ends the current execution path and hands control back to the caller.
           - **How:** Executes a `return` statement (possibly returning values).
 
-### `DurationFrom`
+### `DurationFrom` {#func-durationfrom}
 
 **What:** Converts `time.Duration` into the config `Duration` wrapper type.
 
@@ -950,7 +950,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `Default`
+### `Default` {#func-default}
 
 **What:** Constructs a baseline `Config` with safe defaults.
 
@@ -1022,7 +1022,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `WithPath`
+### `WithPath` {#func-withpath}
 
 **What:** Option that adds a YAML config path to attempt loading.
 
@@ -1064,7 +1064,7 @@ The list below documents the statements inside the function body, including nest
               - **Why:** Keeps intermediate state available for later steps in the function.
               - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `WithLookupEnv`
+### `WithLookupEnv` {#func-withlookupenv}
 
 **What:** Option that overrides how environment variables are looked up.
 
@@ -1099,7 +1099,7 @@ The list below documents the statements inside the function body, including nest
           - **Why:** Keeps intermediate state available for later steps in the function.
           - **How:** Evaluates the right-hand side expressions and stores results in the left-hand variables.
 
-### `Load`
+### `Load` {#func-load}
 
 **What:** Loads configuration by merging defaults, YAML file(s), and environment overrides.
 
@@ -1302,7 +1302,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `applyEnvOverrides`
+### `applyEnvOverrides` {#func-applyenvoverrides}
 
 **What:** Applies environment-variable overrides to an existing `Config`.
 
@@ -1766,7 +1766,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `applyUpstreamOverrides`
+### `applyUpstreamOverrides` {#func-applyupstreamoverrides}
 
 **What:** Applies per-upstream env overrides for a given upstream prefix (e.g. `TRADE`, `TASK`).
 
@@ -1972,7 +1972,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Config).normalize`
+### `(*Config).normalize` {#method-config-normalize}
 
 **What:** Fills in derived defaults and canonicalizes fields after YAML/env overrides.
 
@@ -2221,7 +2221,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(Config).Validate`
+### `(Config).Validate` {#method-config-validate}
 
 **What:** Performs semantic validation of configuration values.
 
@@ -2791,7 +2791,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Config).ensureUpstream`
+### `(*Config).ensureUpstream` {#method-config-ensureupstream}
 
 **What:** Ensures an upstream entry exists for the provided prefix/name and returns it.
 
@@ -2858,7 +2858,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `parsePositiveDurationMillis`
+### `parsePositiveDurationMillis` {#func-parsepositivedurationmillis}
 
 **What:** Parses a millisecond duration env var into a `time.Duration`.
 
@@ -2910,7 +2910,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `splitAndTrim`
+### `splitAndTrim` {#func-splitandtrim}
 
 **What:** Splits a delimited string into trimmed tokens (comma/space/semicolon separators).
 
@@ -2978,7 +2978,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `ensureLeadingSlash`
+### `ensureLeadingSlash` {#func-ensureleadingslash}
 
 **What:** Ensures a URL path begins with `/`.
 
@@ -3024,4 +3024,34 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Start Here
+
+- [Repo tour](../../../../start-here/repo-tour)
+- [Request lifecycle](../../../../start-here/request-lifecycle)
+
+### Architecture
+
+- [Configuration model](../../../../architecture/config)
+
+### Guides
+
+- [Configure upstreams](../../../../guides/configuration)
+- [Auth and CORS](../../../../guides/auth-cors)
+- [Webhooks](../../../../guides/webhooks)
+- [WebSockets limits](../../../../guides/websockets)
+
+### Reference
+
+- [Config reference](../../../../reference/config)
+- [Environment variables](../../../../reference/env)
+
+### Neighboring source
+
+- [Runtime](../runtime/)
+- [Auth](../auth/authenticator)
+- [Server middleware](../server/middleware/)
 

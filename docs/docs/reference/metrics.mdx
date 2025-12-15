@@ -6,8 +6,13 @@ The gateway exposes Prometheus metrics when `metrics.enabled` is true.
 
 Deep dive:
 
-- Metrics registry wrapper: `../annotated/pkg/gateway/metrics/registry`
-- Protocol metrics collectors: `../annotated/pkg/gateway/server/protocol_metrics`
+- Metrics registry wrapper: [Registry](../annotated/pkg/gateway/metrics/registry)
+- Protocol metrics collectors: [Protocol metrics](../annotated/pkg/gateway/server/protocol_metrics)
+
+See also:
+
+- Architecture: [Observability](../architecture/observability)
+- Guide: [Troubleshooting](../guides/troubleshooting)
 
 ## Endpoint
 
@@ -22,7 +27,7 @@ All protocol metrics are labeled by:
 - `protocol`: `http`, `websocket`, `sse`, `grpc`, or `unknown`
 - `product`: derived from `X-Router-Product` or URL prefixes (e.g. `trade`, `task`, `unknown`)
 
-### `gateway_protocol_requests_total`
+### `gateway_protocol_requests_total` {#gateway-protocol-requests-total}
 
 Counter of proxied requests labeled by:
 
@@ -30,21 +35,21 @@ Counter of proxied requests labeled by:
 - `product`
 - `outcome` (`success` or `error`)
 
-### `gateway_protocol_inflight`
+### `gateway_protocol_inflight` {#gateway-protocol-inflight}
 
 Gauge of in-flight proxied requests labeled by:
 
 - `protocol`
 - `product`
 
-### `gateway_protocol_request_duration_seconds`
+### `gateway_protocol_request_duration_seconds` {#gateway-protocol-request-duration-seconds}
 
 Histogram of upstream request duration labeled by:
 
 - `protocol`
 - `product`
 
-### `gateway_protocol_active_connections`
+### `gateway_protocol_active_connections` {#gateway-protocol-active-connections}
 
 Gauge of active long-lived connections labeled by:
 

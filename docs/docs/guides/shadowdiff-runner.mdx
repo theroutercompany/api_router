@@ -10,6 +10,11 @@ It is a convenience wrapper that:
 2. Starts the Go gateway (`go run ./cmd/gateway`) wired to those upstreams.
 3. Optionally runs the shadow diff CLI against a provided Node gateway (`NODE_BASE_URL=...`).
 
+See also:
+
+- [Shadowdiff](./shadowdiff)
+- [Shadowdiff mock upstreams](./shadowdiff-mocks)
+
 ## Inputs (environment variables)
 
 The script is configured entirely via env vars (each has a default):
@@ -158,6 +163,6 @@ go run ./cmd/shadowdiff --config "$tmp_config"
 
 ## Deep dive
 
-- Shadowdiff CLI entrypoint: `../annotated/cmd/shadowdiff/main`
-- Core diff logic: `../annotated/internal/shadowdiff/diff`
-- Mock upstreams: `./shadowdiff-mocks`
+- Shadowdiff CLI entrypoint: [Shadowdiff CLI](../annotated/cmd/shadowdiff/main)
+- Core diff logic: [Diff runner](../annotated/internal/shadowdiff/diff)
+- Mock upstreams: [Mock upstreams](./shadowdiff-mocks)

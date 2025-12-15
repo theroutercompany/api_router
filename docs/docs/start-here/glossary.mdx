@@ -2,8 +2,7 @@
 title: Glossary
 ---
 
-- **Upstream**: A backend service the gateway proxies to (e.g. trade/task).
-- **Readiness**: `GET /readyz` performs upstream checks before reporting healthy.
-- **Admin server**: Control-plane HTTP server (status/config/reload) typically bound to localhost.
-- **Problem+JSON**: Standard error format returned by some gateway handlers.
-
+- **Upstream**: A backend service the gateway proxies to (e.g. trade/task). See [Proxy](../architecture/proxy).
+- **Readiness**: `GET /readyz` performs upstream checks before reporting healthy. See [Troubleshooting](../guides/troubleshooting) and [Health checker](../annotated/internal/platform/health/).
+- **Admin server**: Control-plane HTTP server (status/config/reload) typically bound to localhost. See [Admin API](../reference/admin-api).
+- **Problem+JSON**: Standard error format returned by some gateway handlers. See [Problem+JSON](../reference/problems).

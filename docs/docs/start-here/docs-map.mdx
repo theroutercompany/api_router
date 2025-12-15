@@ -1,0 +1,73 @@
+---
+title: Docs Map
+---
+
+This page is a cross-reference map for quickly jumping between:
+
+- **Guides** (how to do a task)
+- **Reference** (exact keys/fields/endpoints)
+- **Annotated Source** (line-by-line implementation)
+
+## By task
+
+### Run the gateway {#run}
+
+- Guide: [Run the gateway](../guides/running)
+- Config + env: [Config reference](../reference/config), [Environment variables](../reference/env)
+- Code: [CLI wiring](../annotated/cmd/apigw/main), [Runtime](../annotated/pkg/gateway/runtime/)
+
+### Configure upstreams {#config}
+
+- Guide: [Configure upstreams](../guides/configuration)
+- Reference: [Config reference](../reference/config), [Environment variables](../reference/env)
+- Code: [Config loader/schema](../annotated/pkg/gateway/config/)
+
+### Auth + CORS {#auth}
+
+- Guide: [Auth and CORS](../guides/auth-cors)
+- Reference: [Environment variables](../reference/env), [Problem+JSON](../reference/problems)
+- Code: [Authenticator](../annotated/pkg/gateway/auth/authenticator), [Middleware](../annotated/pkg/gateway/server/middleware/)
+
+### WebSockets {#websockets}
+
+- Guide: [WebSockets limits](../guides/websockets)
+- Reference: [Config reference](../reference/config), [Metrics](../reference/metrics)
+- Code: [Server](../annotated/pkg/gateway/server/), [Proxy](../annotated/pkg/gateway/proxy/reverse_proxy)
+
+### Webhooks {#webhooks}
+
+- Guide: [Webhooks](../guides/webhooks)
+- Reference: [Config reference](../reference/config), [Problem+JSON](../reference/problems)
+- Code: [Webhook handler](../annotated/pkg/gateway/webhook/handler), [Webhook config](../annotated/pkg/gateway/config/)
+
+### Metrics + observability {#observability}
+
+- Architecture: [Observability](../architecture/observability)
+- Reference: [Metrics](../reference/metrics)
+- Code: [Metrics registry](../annotated/pkg/gateway/metrics/registry), [Protocol metrics](../annotated/pkg/gateway/server/protocol_metrics), [Logger](../annotated/pkg/log/logger)
+
+### Admin API {#admin}
+
+- Reference: [Admin API](../reference/admin-api)
+- Code: [Runtime admin wiring](../annotated/pkg/gateway/runtime/), [CLI admin client](../annotated/cmd/apigw/main)
+
+### OpenAPI {#openapi}
+
+- Guide: [OpenAPI](../guides/openapi)
+- Code: [OpenAPI CLI](../annotated/cmd/openapi/main), [Merge service](../annotated/internal/openapi/service), [Server route](../annotated/pkg/gateway/server/)
+
+### Shadowdiff {#shadowdiff}
+
+- Guide: [Shadowdiff](../guides/shadowdiff)
+- Tooling: [Runner script](../guides/shadowdiff-runner), [Mock upstreams](../guides/shadowdiff-mocks)
+- Code: [Shadowdiff CLI](../annotated/cmd/shadowdiff/main), [Diff runner](../annotated/internal/shadowdiff/diff)
+
+### Smoke checks {#smoke}
+
+- Tooling: [Smoke script](../guides/smoke)
+- Code: [CLI](../annotated/cmd/apigw/main), [Server routes](../annotated/pkg/gateway/server/)
+
+### Documentation tooling {#docs}
+
+- Tooling: [Documentation tooling](../guides/documentation)
+- Code: [Docs generator](../annotated/cmd/docsgen/main)

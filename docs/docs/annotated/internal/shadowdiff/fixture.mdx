@@ -70,7 +70,7 @@ type Fixture struct {
 }
 ```
 
-#### `Fixture`
+#### `Fixture` {#type-fixture}
 
 **What:** A single captured HTTP request scenario.
 
@@ -83,7 +83,7 @@ type Fixture struct {
 
 ## Functions and Methods
 
-### `LoadFixtures`
+### `LoadFixtures` {#func-loadfixtures}
 
 **What:** Loads one or more fixture files from disk.
 
@@ -163,4 +163,17 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Guides
+
+- [Shadowdiff](../../../guides/shadowdiff)
+- [Shadowdiff runner script](../../../guides/shadowdiff-runner)
+- [Shadowdiff mock upstreams](../../../guides/shadowdiff-mocks)
+
+### Neighboring source
+
+- [Shadowdiff CLI](../../cmd/shadowdiff/main)
 

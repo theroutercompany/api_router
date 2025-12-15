@@ -72,7 +72,7 @@ var (
 )
 ```
 
-#### `once`
+#### `once` {#var-once}
 
 **What:** Ensures default logger initialization happens exactly once.
 
@@ -80,7 +80,7 @@ var (
 
 **How:** The `ensureDefault` function calls `once.Do(...)` with the initialization closure.
 
-#### `mu`
+#### `mu` {#var-mu}
 
 **What:** Synchronizes access to `global` and `syncLogger`.
 
@@ -88,7 +88,7 @@ var (
 
 **How:** The `Shared` function uses `RLock`; `Configure` and `ensureDefault` use `Lock`.
 
-#### `global`
+#### `global` {#var-global}
 
 **What:** Holds the current process-wide logger implementation.
 
@@ -96,7 +96,7 @@ var (
 
 **How:** Set during `ensureDefault` or `Configure` and accessed under `mu`.
 
-#### `syncLogger`
+#### `syncLogger` {#var-synclogger}
 
 **What:** Function used by `Sync()` to flush the active logger backend.
 
@@ -120,7 +120,7 @@ type Logger interface {
 }
 ```
 
-#### `Logger`
+#### `Logger` {#type-logger}
 
 **What:** Minimal structured logging interface used across the gateway.
 
@@ -136,7 +136,7 @@ type Logger interface {
 type noopLogger struct{}
 ```
 
-#### `noopLogger`
+#### `noopLogger` {#type-nooplogger}
 
 **What:** Implementation of `Logger` that discards all logs.
 
@@ -152,7 +152,7 @@ type zapLogger struct {
 }
 ```
 
-#### `zapLogger`
+#### `zapLogger` {#type-zaplogger}
 
 **What:** Adapter that wraps a `*zap.SugaredLogger` to implement `Logger`.
 
@@ -163,7 +163,7 @@ type zapLogger struct {
 
 ## Functions and Methods
 
-### `(noopLogger).Debugw`
+### `(noopLogger).Debugw` {#method-nooplogger-debugw}
 
 **What:** Discards a debug-level log call.
 
@@ -175,7 +175,7 @@ type zapLogger struct {
 func (noopLogger) Debugw(string, ...any) {}
 ```
 
-### `(noopLogger).Infow`
+### `(noopLogger).Infow` {#method-nooplogger-infow}
 
 **What:** Discards an info-level log call.
 
@@ -187,7 +187,7 @@ func (noopLogger) Debugw(string, ...any) {}
 func (noopLogger) Infow(string, ...any)  {}
 ```
 
-### `(noopLogger).Warnw`
+### `(noopLogger).Warnw` {#method-nooplogger-warnw}
 
 **What:** Discards a warning-level log call.
 
@@ -199,7 +199,7 @@ func (noopLogger) Infow(string, ...any)  {}
 func (noopLogger) Warnw(string, ...any)  {}
 ```
 
-### `(noopLogger).Errorw`
+### `(noopLogger).Errorw` {#method-nooplogger-errorw}
 
 **What:** Discards an error-level log call.
 
@@ -211,7 +211,7 @@ func (noopLogger) Warnw(string, ...any)  {}
 func (noopLogger) Errorw(string, ...any) {}
 ```
 
-### `(*zapLogger).Debugw`
+### `(*zapLogger).Debugw` {#method-zaplogger-debugw}
 
 **What:** Emits a debug-level structured log entry.
 
@@ -234,7 +234,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `(*zapLogger).Infow`
+### `(*zapLogger).Infow` {#method-zaplogger-infow}
 
 **What:** Emits an info-level structured log entry.
 
@@ -257,7 +257,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `(*zapLogger).Warnw`
+### `(*zapLogger).Warnw` {#method-zaplogger-warnw}
 
 **What:** Emits a warning-level structured log entry.
 
@@ -280,7 +280,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `(*zapLogger).Errorw`
+### `(*zapLogger).Errorw` {#method-zaplogger-errorw}
 
 **What:** Emits an error-level structured log entry.
 
@@ -303,7 +303,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `Shared`
+### `Shared` {#func-shared}
 
 **What:** Returns the process-wide shared logger.
 
@@ -344,7 +344,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `Configure`
+### `Configure` {#func-configure}
 
 **What:** Replaces the global shared logger and its sync function.
 
@@ -431,7 +431,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Performs side effects or delegates work to a helper.
   - **How:** Executes the expression statement.
 
-### `NewZapLogger`
+### `NewZapLogger` {#func-newzaplogger}
 
 **What:** Adapts a `*zap.Logger` to the package's `Logger` interface.
 
@@ -478,7 +478,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `NewZapSugaredLogger`
+### `NewZapSugaredLogger` {#func-newzapsugaredlogger}
 
 **What:** Adapts a `*zap.SugaredLogger` to the package's `Logger` interface.
 
@@ -523,7 +523,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `NewNoop`
+### `NewNoop` {#func-newnoop}
 
 **What:** Constructs a logger that discards all output.
 
@@ -546,7 +546,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `Sync`
+### `Sync` {#func-sync}
 
 **What:** Flushes any buffered log entries for the current global logger.
 
@@ -604,7 +604,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `ensureDefault`
+### `ensureDefault` {#func-ensuredefault}
 
 **What:** Initializes the default Zap-backed global logger exactly once.
 
@@ -726,4 +726,19 @@ The list below documents the statements inside the function body, including nest
           - **What:** Calls mu.Unlock.
           - **Why:** Performs side effects or delegates work to a helper.
           - **How:** Executes the expression statement.
+
+
+## Related docs
+
+### Architecture
+
+- [Observability](../../../architecture/observability)
+
+### Reference
+
+- [Metrics](../../../reference/metrics)
+
+### Neighboring source
+
+- [Protocol metrics](../gateway/server/protocol_metrics)
 

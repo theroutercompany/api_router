@@ -54,7 +54,7 @@ var (
 )
 ```
 
-#### `errMissingAuthorization`
+#### `errMissingAuthorization` {#var-errmissingauthorization}
 
 **What:** Auth error returned when the Authorization header is missing.
 
@@ -62,7 +62,7 @@ var (
 
 **How:** Returned by `Authenticate` when the header is empty.
 
-#### `errMalformedHeader`
+#### `errMalformedHeader` {#var-errmalformedheader}
 
 **What:** Auth error returned when the Authorization header is not a valid Bearer token format.
 
@@ -70,7 +70,7 @@ var (
 
 **How:** Returned by `Authenticate` when the header does not split into `Bearer <token>`.
 
-#### `errTokenInvalid`
+#### `errTokenInvalid` {#var-errtokeninvalid}
 
 **What:** Auth error returned when the token cannot be validated or is not valid.
 
@@ -91,7 +91,7 @@ type Principal struct {
 }
 ```
 
-#### `Principal`
+#### `Principal` {#type-principal}
 
 **What:** Represents an authenticated caller (subject + scopes + token string).
 
@@ -109,7 +109,7 @@ type Error struct {
 }
 ```
 
-#### `Error`
+#### `Error` {#type-error}
 
 **What:** Structured authentication error including HTTP status and error messaging.
 
@@ -127,7 +127,7 @@ type Authenticator struct {
 }
 ```
 
-#### `Authenticator`
+#### `Authenticator` {#type-authenticator}
 
 **What:** Validates JWT bearer tokens and produces principals.
 
@@ -145,7 +145,7 @@ type gatewayClaims struct {
 }
 ```
 
-#### `gatewayClaims`
+#### `gatewayClaims` {#type-gatewayclaims}
 
 **What:** JWT claims struct that supports both `scope` and `scp` scope encodings.
 
@@ -156,7 +156,7 @@ type gatewayClaims struct {
 
 ## Functions and Methods
 
-### `(Error).Error`
+### `(Error).Error` {#method-error-error}
 
 **What:** Implements the `error` interface for auth errors.
 
@@ -191,7 +191,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `New`
+### `New` {#func-new}
 
 **What:** Constructs an `Authenticator` from `gatewayconfig.AuthConfig`.
 
@@ -231,7 +231,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Authenticator).Authenticate`
+### `(*Authenticator).Authenticate` {#method-authenticator-authenticate}
 
 **What:** Validates the request's bearer token and returns a `Principal`.
 
@@ -348,7 +348,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Authenticator).parseToken`
+### `(*Authenticator).parseToken` {#method-authenticator-parsetoken}
 
 **What:** Parses and validates a JWT token string and extracts identity/scope information.
 
@@ -463,7 +463,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*Principal).HasAnyScope`
+### `(*Principal).HasAnyScope` {#method-principal-hasanyscope}
 
 **What:** Checks whether the principal has at least one of the required scopes.
 
@@ -512,7 +512,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `(*gatewayClaims).Scopes`
+### `(*gatewayClaims).Scopes` {#method-gatewayclaims-scopes}
 
 **What:** Returns scopes extracted from gateway JWT claims.
 
@@ -563,4 +563,20 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Guides
+
+- [Auth and CORS](../../../../guides/auth-cors)
+
+### Reference
+
+- [Environment variables](../../../../reference/env)
+
+### Neighboring source
+
+- [Config](../config/)
+- [Server middleware](../server/middleware/)
 

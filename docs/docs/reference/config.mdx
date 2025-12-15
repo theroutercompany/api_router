@@ -4,6 +4,12 @@ title: Config Reference
 
 The gateway’s configuration schema is defined in `pkg/gateway/config/config.go` and is loaded by the CLI (`cmd/apigw`) and the runtime (`pkg/gateway/runtime`).
 
+See also:
+
+- Guide: [Configure upstreams](../guides/configuration)
+- Architecture: [Configuration model](../architecture/config)
+- Env overrides: [Environment variables](./env)
+
 ## Load order and precedence
 
 Configuration is applied in layers (later layers win):
@@ -15,7 +21,7 @@ Configuration is applied in layers (later layers win):
 
 Deep dive:
 
-- Annotated schema and loader: `../annotated/pkg/gateway/config/config`
+- Annotated schema and loader: [pkg/gateway/config/config.go](../annotated/pkg/gateway/config/)
 
 ## Example configuration
 
@@ -77,12 +83,12 @@ admin:
 
 ## Key sections
 
-### `http`
+### `http` {#http}
 
 - `http.port`: public listen port (default `8080`)
 - `http.shutdownTimeout`: graceful shutdown timeout (default `15s`)
 
-### `readiness`
+### `readiness` {#readiness}
 
 Readiness checks probe configured upstreams before reporting healthy.
 
@@ -94,7 +100,7 @@ Readiness checks probe configured upstreams before reporting healthy.
   - `healthPath`: upstream health path (default `/health`)
   - `tls.*`: TLS/mTLS options for upstream calls
 
-### `auth`
+### `auth` {#auth}
 
 JWT validation settings:
 
@@ -102,20 +108,20 @@ JWT validation settings:
 - `auth.issuer`: expected issuer claim
 - `auth.audiences[]`: expected audience claim(s)
 
-### `cors`
+### `cors` {#cors}
 
 - `cors.allowedOrigins[]`: allowed browser origins
 
-### `rateLimit`
+### `rateLimit` {#ratelimit}
 
 - `rateLimit.window`: rate limit window duration
 - `rateLimit.max`: max requests per window
 
-### `metrics`
+### `metrics` {#metrics}
 
 - `metrics.enabled`: enables `/metrics` exposure
 
-### `admin`
+### `admin` {#admin}
 
 Control-plane endpoints (status/config/reload):
 
@@ -124,7 +130,7 @@ Control-plane endpoints (status/config/reload):
 - `admin.token`: optional bearer token for admin requests
 - `admin.allow[]`: optional allowlist of CIDR/IP entries
 
-### `websocket`
+### `websocket` {#websocket}
 
 Websocket limits are configured under:
 
@@ -133,9 +139,9 @@ Websocket limits are configured under:
 
 Deep dive:
 
-- Annotated websocket config: `../annotated/pkg/gateway/config/config` (search for `WebSocketConfig`)
+- Annotated websocket config: [Config schema](../annotated/pkg/gateway/config/) (search for `WebSocketConfig`)
 
-### `webhooks`
+### `webhooks` {#webhooks}
 
 Webhook ingestion and forwarding configuration lives under:
 
@@ -144,5 +150,5 @@ Webhook ingestion and forwarding configuration lives under:
 
 Deep dive:
 
-- Config schema and validation: `../annotated/pkg/gateway/config/config`
+- Config schema and validation: [Config schema](../annotated/pkg/gateway/config/)
 - Handler behavior: `../annotated/pkg/gateway/webhook/handler`

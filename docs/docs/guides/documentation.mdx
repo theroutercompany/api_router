@@ -1,0 +1,43 @@
+---
+title: Documentation Tooling
+---
+
+This repo’s documentation site is a Docusaurus project located under `docs/`.
+
+The “Annotated Source” section is generated from Go source to provide symbol-by-symbol and statement-by-statement (walkthrough) documentation with syntax-highlighted snippets.
+
+## Where things live
+
+- Docusaurus site root: `docs/`
+- Docs content: `docs/docs/`
+- Annotated source output (generated): `docs/docs/annotated/`
+- Human commentary for annotated pages: `docs/annotations/`
+- Generator CLI: `cmd/docsgen/main.go`
+
+## Regenerate annotated source pages
+
+From the repo root:
+
+```bash
+go run ./cmd/docsgen
+```
+
+Notes:
+
+- Generated MDX is committed to the repo so the site can build without running Go during the docs build.
+- Edit commentary in `docs/annotations/**` and re-run docsgen rather than editing `docs/docs/annotated/**` by hand.
+
+## Walkthrough depth/size controls
+
+```bash
+# Disable statement walkthroughs entirely
+go run ./cmd/docsgen -walkthrough=false
+
+# Increase coverage for very large functions
+go run ./cmd/docsgen -walkthrough-max-depth 8 -walkthrough-max-steps 2000
+```
+
+## Deep dive
+
+- Generator (annotated): [docsgen](../annotated/cmd/docsgen/main)
+- Annotation authoring notes (repo file): https://github.com/theroutercompany/api_router/blob/main/docs/annotations/README.md

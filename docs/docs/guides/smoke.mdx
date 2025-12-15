@@ -6,6 +6,12 @@ The repo includes a small bash script that performs a “sanity check” against
 
 This is intentionally lightweight: it validates the gateway is up, can serve its health/readiness endpoints, and (optionally) can proxy authenticated requests.
 
+See also:
+
+- [Run the gateway](./running)
+- [Request lifecycle](../start-here/request-lifecycle)
+- [Server routes](../annotated/pkg/gateway/server/)
+
 ## Inputs (environment variables)
 
 - `SMOKE_BASE_URL` (or `BASE_URL`): base URL of the running gateway (default `http://localhost:8080`)

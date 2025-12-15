@@ -48,7 +48,7 @@ const (
 )
 ```
 
-#### `requestIDKey`
+#### `requestIDKey` {#const-requestidkey}
 
 **What:** Context key used to store the request ID string.
 
@@ -56,7 +56,7 @@ const (
 
 **How:** Written by `ensureRequestIDs` and read by `requestIDFromContext`.
 
-#### `traceIDKey`
+#### `traceIDKey` {#const-traceidkey}
 
 **What:** Context key used to store the trace ID string.
 
@@ -73,7 +73,7 @@ const (
 type contextKey string
 ```
 
-#### `contextKey`
+#### `contextKey` {#type-contextkey}
 
 **What:** Private typed context key for request metadata.
 
@@ -84,7 +84,7 @@ type contextKey string
 
 ## Functions and Methods
 
-### `ensureRequestIDs`
+### `ensureRequestIDs` {#func-ensurerequestids}
 
 **What:** Ensures a request has both request and trace identifiers and returns a request with an updated context.
 
@@ -164,7 +164,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `requestIDFromContext`
+### `requestIDFromContext` {#func-requestidfromcontext}
 
 **What:** Extracts the request ID from context.
 
@@ -215,7 +215,7 @@ The list below documents the statements inside the function body, including nest
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
 
-### `traceIDFromContext`
+### `traceIDFromContext` {#func-traceidfromcontext}
 
 **What:** Extracts the trace ID from context.
 
@@ -265,4 +265,34 @@ The list below documents the statements inside the function body, including nest
   - **What:** Returns from the current function.
   - **Why:** Ends the current execution path and hands control back to the caller.
   - **How:** Executes a `return` statement (possibly returning values).
+
+
+## Related docs
+
+### Start Here
+
+- [Repo tour](../../../../start-here/repo-tour)
+- [Request lifecycle](../../../../start-here/request-lifecycle)
+
+### Architecture
+
+- [HTTP server](../../../../architecture/server)
+
+### Guides
+
+- [Auth and CORS](../../../../guides/auth-cors)
+- [WebSockets limits](../../../../guides/websockets)
+- [Webhooks](../../../../guides/webhooks)
+- [Troubleshooting](../../../../guides/troubleshooting)
+
+### Reference
+
+- [Metrics](../../../../reference/metrics)
+- [Problem+JSON](../../../../reference/problems)
+
+### Neighboring source
+
+- [Runtime](../runtime/)
+- [Proxy](../proxy/reverse_proxy)
+- [Config](../config/)
 

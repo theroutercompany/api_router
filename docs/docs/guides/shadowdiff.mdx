@@ -71,13 +71,13 @@ The core implementation lives in:
 
 ## Deep dive (annotated source)
 
-- CLI entrypoint: `../annotated/cmd/shadowdiff/main`
-- Runner + diffing: `../annotated/internal/shadowdiff/diff`
-- Config schema/loading: `../annotated/internal/shadowdiff/config`
-- Fixture schema/loading: `../annotated/internal/shadowdiff/fixture`
-- Normalization helpers: `../annotated/internal/shadowdiff/normalize`
+- CLI entrypoint: [Shadowdiff CLI](../annotated/cmd/shadowdiff/main)
+- Runner + diffing: [Diff runner](../annotated/internal/shadowdiff/diff)
+- Config schema/loading: [Config](../annotated/internal/shadowdiff/config)
+- Fixture schema/loading: [Fixtures](../annotated/internal/shadowdiff/fixture)
+- Normalization helpers: [Normalize](../annotated/internal/shadowdiff/normalize)
 
 ## Deep dive (tooling)
 
-- Runner script (bash): `./shadowdiff-runner`
-- Mock upstreams (node): `./shadowdiff-mocks`
+- Runner script (bash): [shadowdiff-run.sh](./shadowdiff-runner)
+- Mock upstreams (node): [mock-upstreams.mjs](./shadowdiff-mocks)
