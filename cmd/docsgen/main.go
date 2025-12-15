@@ -119,6 +119,7 @@ func main() {
 func coreFiles() []string {
 	return []string{
 		"cmd/apigw/main.go",
+		"cmd/docsgen/main.go",
 		"cmd/gateway/main.go",
 		"cmd/openapi/main.go",
 

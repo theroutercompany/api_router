@@ -41,6 +41,15 @@ const sidebars: SidebarsConfig = {
         'guides/webhooks',
         'guides/openapi',
         'guides/shadowdiff',
+        {
+          type: 'category',
+          label: 'Tooling',
+          items: [
+            'guides/smoke',
+            'guides/shadowdiff-runner',
+            'guides/shadowdiff-mocks',
+          ],
+        },
         'guides/troubleshooting',
       ],
     },

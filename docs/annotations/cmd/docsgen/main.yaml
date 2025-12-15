@@ -1,0 +1,252 @@
+file: cmd/docsgen/main.go
+title: cmd/docsgen/main.go
+overview:
+  what: |
+    Generates "Annotated Source" documentation pages for Go files.
+
+    Each generated page includes:
+    - source metadata (package, file path, GitHub link)
+    - rendered declaration blocks (imports, const/var/type) with line numbers
+    - per-symbol "What / Why / How" commentary (loaded from YAML annotations)
+    - per-function statement walkthroughs (including nested blocks and inline closures)
+  why: |
+    The gateway codebase is small enough to read, but large enough that intent and invariants can be lost during onboarding or refactors.
+
+    This generator exists to:
+    - keep docs synchronized with source (structure/snippets are AST-driven)
+    - keep intent explanations editable (human text in YAML)
+    - enable "line-by-line" onboarding without manually maintaining huge MDX files
+  how: |
+    For each input Go file, the generator:
+    1. Parses the file with `go/parser` into an AST.
+    2. Extracts declaration blocks and function/method declarations.
+    3. Loads per-file annotations from `docs/annotations/<path>.yaml`.
+    4. Renders an MDX page under `docs/docs/annotated/<path>.mdx` with syntax-highlighted Go snippets.
+    5. Optionally writes/refreshes YAML stubs (`-init-annotations`) to keep the symbol list current.
+  notes: |
+    The rendered MDX is intentionally treated as build output: edit YAML, re-run docsgen, and commit the regenerated MDX.
+
+    MDX authoring gotchas:
+    - Avoid raw `<` in prose unless it is inside inline code.
+    - Avoid starting YAML values with backticks (some YAML parsers can be finicky).
+symbols:
+  func appendKV:
+    what: Appends a key/value pair to a YAML mapping node.
+    why: The generator writes YAML stubs with stable key ordering and formatting without relying on struct tag marshaling behavior.
+    how: "Extends `node.Content` with two scalar nodes: the key and the value node."
+    notes: ""
+  func buildGenDeclBlock:
+    what: Builds a `declBlock` (snippet + symbol IDs) from a Go `GenDecl` (imports/const/var/type).
+    why: Declaration blocks are the backbone of the page's symbol index and let readers jump directly to the relevant type/constant/variable.
+    how: Slices the original source for a faithful snippet, then derives stable symbol IDs from `ValueSpec` and `TypeSpec` nodes.
+    notes: ""
+  func condenseSnippet:
+    what: Produces a short, single-line summary of a code fragment.
+    why: Walkthrough steps render code inline; long multi-line statements would make the MDX unreadable.
+    how: Normalizes whitespace/newlines into a single line and truncates by rune count.
+    notes: ""
+  func coreFiles:
+    what: Returns the curated list of Go files that the docs site treats as the "core" reading path.
+    why: Keeps the annotated source section focused on primary entrypoints and runtime packages rather than every incidental file in the repo.
+    how: Returns a static slice of repo-relative paths; passing explicit CLI args overrides this list.
+    notes: ""
+  func describeStmt:
+    what: Produces a generic "What/Why/How" explanation for a single Go statement node.
+    why: Walkthroughs need reasonable defaults even when no human-authored commentary exists for each individual statement.
+    how: Uses a type switch over `ast.Stmt` implementations and emits short intent-focused strings (with special handling for guard `if` statements).
+    notes: ""
+  func ensureAnnotationFile:
+    what: Creates or updates an annotation YAML file with stubs for all extracted symbol IDs.
+    why: When source changes, the docs need a stable place for humans to add explanations without manually discovering new symbol names.
+    how: Loads the existing YAML (if present), backfills missing `file/title`, inserts missing `symbols` keys, and rewrites the YAML deterministically.
+    notes: ""
+  func exprListString:
+    what: Formats a list of expressions into a readable string.
+    why: Used to generate better inline descriptions (for example, "Defines x, y") and switch/case headings.
+    how: Prints each expression with `go/printer` and joins the results with commas.
+    notes: ""
+  func extractBlocks:
+    what: Extracts top-level declaration blocks from a Go file (imports/const/var/type).
+    why: The docs show declarations grouped by kind with the original source formatting and line numbers.
+    how: Walks `file.Decls`, filters `*ast.GenDecl`, and converts each supported token kind into a `declBlock`.
+    notes: ""
+  func extractFuncs:
+    what: Extracts top-level functions and methods into `funcEntry` records.
+    why: Functions/methods are the main behavioral units readers look for when onboarding or debugging.
+    how: Iterates `*ast.FuncDecl` nodes, computes stable IDs for functions vs methods, slices source snippets, and optionally attaches walkthrough steps.
+    notes: ""
+  func extractWalkthroughSteps:
+    what: Produces a statement-by-statement walkthrough for a function body.
+    why: Implements the "line-by-line" requirement by explaining what each statement does and how it fits into the function logic.
+    how: Walks the function's top-level statements with `walkStmt`, respecting `MaxSteps` and emitting a truncation sentinel when exceeded.
+    notes: ""
+  func funcLitsInExpr:
+    what: Finds inline function literals (closures) within an expression tree.
+    why: Core gateway code frequently embeds closures (handlers, callbacks); walkthroughs should not skip their bodies.
+    how: Uses `ast.Inspect` to collect `*ast.FuncLit` nodes and returns them in discovery order.
+    notes: ""
+  func generateFile:
+    what: Generates a single annotated MDX page for one repo-relative Go source file.
+    why: Keeps the main loop simple and enables ad-hoc generation by passing file paths as CLI arguments.
+    how: Reads and parses source, extracts blocks/functions, optionally initializes annotation stubs, loads annotations, renders MDX, and writes output.
+    notes: ""
+  func isGuardIf:
+    what: Detects whether an `if` statement is an early-return guard clause.
+    why: Walkthrough prose is clearer when guard clauses are labeled as "short-circuit on error/precondition failure".
+    how: Treats an `if` with no `else` and a body containing a `return` as a guard.
+    notes: ""
+  func loadAnnotations:
+    what: Loads per-file annotation YAML into `fileAnnotations`.
+    why: Human commentary is kept separate from generated output so explanations can be edited without touching the rendered MDX.
+    how: Reads `docs/annotations/<path>.yaml`, unmarshals via `yaml.v3`, and normalizes missing `symbols` to an empty map.
+    notes: ""
+  func looksLikeOrderedList:
+    what: Heuristically detects whether a string begins with an ordered-list marker.
+    why: Markdown ordered lists can break when rendered inline on the same line as a label.
+    how: Checks for a run of digits followed by `.` and then whitespace.
+    notes: ""
+  func main:
+    what: CLI entrypoint that wires flags and drives per-file generation.
+    why: Provides a simple "regenerate all docs" workflow while still allowing one-off runs on specific files.
+    how: Parses flags, chooses either the curated core list or explicit file args, and runs `generateFile` while collecting errors.
+    notes: ""
+  func markdownInlineCode:
+    what: Wraps arbitrary text as safe markdown inline code, even if it contains backticks.
+    why: Walkthrough bullet items include code previews; unescaped backticks would break markdown rendering.
+    how: Finds the longest run of backticks in the source and chooses a delimiter one longer (adding spaces when needed).
+    notes: ""
+  func marshalAnnotations:
+    what: Serializes `fileAnnotations` to YAML with deterministic ordering and formatting.
+    why: Deterministic output reduces noisy diffs and makes it safe to auto-refresh stubs in commits.
+    how: Builds a `yaml.Node` tree, sorts symbol keys, encodes with indentation, and returns the resulting bytes.
+    notes: ""
+  func nodeString:
+    what: Renders an AST node (expression/statement) to a compact Go code string.
+    why: Walkthrough headings and certain heuristic descriptions need readable fragments without hand-assembling them.
+    how: Uses `go/printer.Fprint` against a shared `token.FileSet`, then trims whitespace.
+    notes: ""
+  func receiverTypeString:
+    what: Formats a method receiver type as Go source text.
+    why: Method symbol IDs should remain stable and human-recognizable (for example, `method (*Server).ServeHTTP`).
+    how: Prints the receiver type AST node via `go/printer` and trims whitespace.
+    notes: ""
+  func render:
+    what: Renders a `fileDoc` plus annotations into the final MDX document bytes.
+    why: Centralizes all MDX formatting so generated pages remain consistent across files and easy to evolve.
+    how: Writes frontmatter, source metadata, overview, grouped declaration blocks, per-symbol commentary, then function sections with snippets and walkthroughs.
+    notes: ""
+  func replaceExt:
+    what: Replaces the file extension and normalizes paths to forward slashes.
+    why: The generator needs stable cross-platform paths for both annotation lookups and MDX output routing.
+    how: Uses `filepath.Ext`/`strings.TrimSuffix` and returns a slash-normalized path with the provided extension.
+    notes: ""
+  func resolveSymbol:
+    what: Retrieves the human-authored annotation for a symbol ID, applying sensible defaults.
+    why: Prevents pages from rendering empty sections when a symbol is new or commentary is incomplete.
+    how: Looks up `anns.Symbols[id]` and backfills missing `what/why/how` fields with generic guidance.
+    notes: ""
+  func sliceSource:
+    what: Extracts the exact source substring for a token position span.
+    why: Using the original bytes preserves formatting and comments in the displayed snippet (instead of pretty-printing the AST).
+    how: Converts `token.Pos` to byte offsets using the `token.FileSet`, validates bounds, and returns a trimmed substring.
+    notes: ""
+  func truncateRunes:
+    what: Truncates a string to a maximum rune length, adding an ellipsis when needed.
+    why: Walkthrough code previews need a predictable size regardless of Unicode input.
+    how: Converts to `[]rune` for safe truncation and appends `…` when the string exceeds the limit.
+    notes: ""
+  func walkCaseClause:
+    what: Converts a `switch` case clause into a walkthrough step (with nested statement children).
+    why: Switch bodies often hold substantial logic that should appear in walkthroughs, not as an opaque single statement.
+    how: Builds a `case ...:` / `default:` header, then walks the clause body via `walkStmtList` respecting depth/step limits.
+    notes: ""
+  func walkCommClause:
+    what: Converts a `select` communication clause into a walkthrough step (with nested statement children).
+    why: Select blocks coordinate concurrency; documenting each branch improves comprehension of control flow.
+    how: Builds a `case <comm>:` / `default:` header, then walks the clause body via `walkStmtList`.
+    notes: ""
+  func walkFuncLit:
+    what: Converts an inline function literal into a walkthrough step and walks its body as nested steps.
+    why: Closures often contain the "real" behavior in handler-heavy code; including them satisfies the line-by-line documentation goal.
+    how: Emits a synthetic step for the closure and then recursively walks the closure body if present.
+    notes: ""
+  func walkFuncLitsFromExpr:
+    what: Finds and walks all closures nested inside an expression.
+    why: Many statements embed closures in call arguments; without this, walkthroughs would skip important behavior.
+    how: Extracts `*ast.FuncLit` values from the expression and wraps each using `walkFuncLit`.
+    notes: ""
+  func walkStmt:
+    what: Converts a statement into a walkthrough step and recursively collects nested steps.
+    why: Implements structured, nested walkthrough output that matches how humans mentally model control flow.
+    how: Describes the statement, increments a shared step counter, and then dives into child blocks/branches (if/for/switch/select) and embedded closures.
+    notes: ""
+  func walkStmtList:
+    what: Walks a list of statements into walkthrough steps.
+    why: Common helper used for all block-like constructs to keep recursion logic consistent.
+    how: Iterates the list, calling `walkStmt` while respecting max-steps limits.
+    notes: ""
+  func writeLabeledText:
+    what: Writes a labeled markdown paragraph (or block) for a `What/Why/How/Notes` field.
+    why: Improves MDX rendering for multi-paragraph text and lists by placing labels on their own line when needed.
+    how: Detects multiline/list-looking values and chooses either `**Label:** value` or a block form with blank lines.
+    notes: ""
+  func writeWalkthrough:
+    what: Writes the "Walkthrough" section for a function/method.
+    why: Walkthroughs are optional; this keeps MDX output small for simple files while enabling deep dives where useful.
+    how: Emits a short introduction and delegates to `writeWalkthroughSteps` for nested bullet rendering.
+    notes: ""
+  func writeWalkthroughSteps:
+    what: Recursively renders walkthrough steps as nested markdown lists.
+    why: Nested list formatting is finicky; centralizing it avoids inconsistencies across pages and enables future formatting changes in one place.
+    how: Prints each step with line number, inline-code snippet, and What/Why/How bullets; prints children under a "Nested steps" bullet.
+    notes: ""
+  func writeWhatHowWhy:
+    what: Writes the standard "What / Why / How" (and optional Notes) block for an annotation.
+    why: Keeps pages consistent and makes it easy to visually scan intent for every symbol.
+    how: Delegates each field to `writeLabeledText` and conditionally includes Notes when non-empty.
+    notes: ""
+  func yamlStringNode:
+    what: Builds a YAML scalar node for a string value, choosing literal style for multiline text.
+    why: Multiline annotations should remain readable in YAML and should round-trip without awkward escaping.
+    how: Trims whitespace and sets `yaml.LiteralStyle` when the value contains newlines.
+    notes: ""
+  type annotationText:
+    what: Holds the human-authored explanation fields for a symbol or file overview.
+    why: Separates intent-focused prose from the rendered MDX, making documentation maintainable and reviewable.
+    how: Loaded from YAML and rendered into MDX by `writeWhatHowWhy`.
+    notes: ""
+  type declBlock:
+    what: Represents one top-level declaration block (imports/const/var/type) for rendering.
+    why: Go groups declarations; rendering them as blocks preserves source structure and reduces duplication.
+    how: Stores the section label, starting line, original snippet, and derived symbol IDs for the block.
+    notes: ""
+  type fileAnnotations:
+    what: Parsed representation of a per-source-file annotation YAML document.
+    why: Allows commentary to be associated with stable symbol IDs independent of line movements or formatting changes.
+    how: Contains a file path, title, overview text, and a map of symbol IDs to `annotationText`.
+    notes: ""
+  type fileDoc:
+    what: In-memory model of everything needed to render one annotated MDX page.
+    why: Keeps extraction (AST/source) separate from rendering (MDX) and makes the generator easier to evolve.
+    how: Populated by `generateFile` from parsed AST and annotation YAML, then consumed by `render`.
+    notes: ""
+  type funcEntry:
+    what: Represents a single function or method section in the rendered docs.
+    why: Bundles stable identity, a source snippet, and walkthrough steps so rendering stays straightforward.
+    how: Built by `extractFuncs` and rendered under "Functions and Methods".
+    notes: ""
+  type symbolEntry:
+    what: Minimal representation of a declared symbol used to build the per-block index.
+    why: Allows the generator to attach YAML commentary using stable IDs without duplicating full AST structures.
+    how: Stores the stable symbol ID and the human-friendly heading used in MDX.
+    notes: ""
+  type walkStep:
+    what: One node in the statement walkthrough tree (possibly with nested children).
+    why: Nested control flow needs nested documentation to avoid flattening complex behavior into an unreadable list.
+    how: Captures line number, condensed code preview, What/Why/How strings, and recursively nested steps.
+    notes: ""
+  type walkthroughConfig:
+    what: Controls whether walkthroughs are generated and how deep/large they are.
+    why: Some functions are large; limits keep docs readable and builds fast while still allowing deeper output when needed.
+    how: Passed through extraction helpers and enforced by `walkStmt`/`extractWalkthroughSteps`.
+    notes: ""

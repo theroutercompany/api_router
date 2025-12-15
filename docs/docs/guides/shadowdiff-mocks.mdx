@@ -1,0 +1,130 @@
+---
+title: Shadowdiff Mock Upstreams
+---
+
+Shadowdiff runs are most useful when the Go gateway is wired to predictable upstream behavior.
+
+The repository provides a small Node script that starts two local HTTP servers:
+
+- trade mock on `127.0.0.1:4001`
+- task mock on `127.0.0.1:4002`
+
+These mocks are used by `scripts/shadowdiff-run.sh` by default.
+
+## Source: `shadowdiff/mock-upstreams.mjs`
+
+```javascript title="shadowdiff/mock-upstreams.mjs"
+#!/usr/bin/env node
+
+import http from 'node:http';
+
+function createServer(port, name) {
+  const server = http.createServer((req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+
+    if (req.url === '/health') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', upstream: name }));
+      return;
+    }
+
+    if (name === 'trade' && url.pathname.startsWith('/v1/trade')) {
+      if (url.searchParams.get('simulate') === 'error') {
+        res.writeHead(502, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ status: 'error', message: 'trade upstream failure' }));
+        return;
+      }
+
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          orderId: '42',
+          status: 'confirmed',
+        }),
+      );
+      return;
+    }
+
+    if (name === 'task' && url.pathname.startsWith('/v1/task')) {
+      if (url.searchParams.get('simulate') === 'timeout') {
+        setTimeout(() => {
+          res.writeHead(504, { 'content-type': 'application/json' });
+          res.end(JSON.stringify({ status: 'timeout' }));
+        }, 200);
+        return;
+      }
+
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          jobId: 'a1b2',
+          state: 'synced',
+        }),
+      );
+      return;
+    }
+
+    res.writeHead(404, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ status: 'unknown' }));
+  });
+
+  server.listen(port, '127.0.0.1', () => {
+    console.log(`[mock-upstream] ${name} listening on port ${port}`);
+  });
+
+  return server;
+}
+
+const servers = [
+  createServer(4001, 'trade'),
+  createServer(4002, 'task'),
+];
+
+function shutdown() {
+  console.log('[mock-upstream] shutting down');
+  for (const server of servers) {
+    server.close();
+  }
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+```
+
+## Walkthrough (line-by-line intent)
+
+### Imports and server factory
+
+- `import http from 'node:http'`:
+  - **What:** uses the built-in Node HTTP server module.
+  - **Why:** avoids dependencies for a small, predictable mock.
+  - **How:** creates a plain HTTP server with a request handler closure.
+- `createServer(port, name)`:
+  - **What:** creates and starts one HTTP server instance bound to a fixed port.
+  - **Why:** the script needs one server for trade and one for task, with slightly different routing behavior.
+  - **How:** wires a request handler that pattern-matches `req.url` and `url.pathname`.
+
+### Routing behavior
+
+- `GET /health`:
+  - **What:** returns `200` JSON with `{ status: "ok", upstream: <name> }`.
+  - **Why:** the Go gateway readiness checks (`/readyz`) probe upstream health endpoints.
+  - **How:** uses `res.writeHead(200, ...)` then `res.end(JSON.stringify(...))`.
+- Trade routes (`/v1/trade...`):
+  - **Success path:** returns `200` JSON with a fixed `orderId` and status.
+  - **Error simulation:** when `?simulate=error`, returns `502` JSON `{ status: "error", message: ... }`.
+- Task routes (`/v1/task...`):
+  - **Success path:** returns `200` JSON with a fixed `jobId` and state.
+  - **Timeout simulation:** when `?simulate=timeout`, delays and returns `504` JSON `{ status: "timeout" }`.
+- Unknown routes:
+  - returns `404` JSON `{ status: "unknown" }` to make mistakes obvious during fixture development.
+
+### Lifecycle management
+
+- The `servers` array keeps track of both running server instances so they can be shut down together.
+- `shutdown()`:
+  - **What:** closes all servers and exits the process.
+  - **Why:** ensures clean teardown when the wrapper script kills the process or you press Ctrl-C.
+  - **How:** calls `server.close()` for each server and then `process.exit(0)`.
+- `process.on('SIGINT' | 'SIGTERM', shutdown)` installs signal handlers so cleanup runs on interrupts/termination.

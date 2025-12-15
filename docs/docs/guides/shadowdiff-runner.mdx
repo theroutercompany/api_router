@@ -1,0 +1,163 @@
+---
+title: Shadowdiff Runner Script
+---
+
+This page documents the helper script `scripts/shadowdiff-run.sh`.
+
+It is a convenience wrapper that:
+
+1. Starts the local mock upstreams (`shadowdiff/mock-upstreams.mjs`).
+2. Starts the Go gateway (`go run ./cmd/gateway`) wired to those upstreams.
+3. Optionally runs the shadow diff CLI against a provided Node gateway (`NODE_BASE_URL=...`).
+
+## Inputs (environment variables)
+
+The script is configured entirely via env vars (each has a default):
+
+- `NODE_BASE_URL`: if empty, the script boots the local stack but skips the diff run.
+- `GO_BASE_URL`: where the Go gateway will be reachable (default `http://127.0.0.1:8080`).
+- `GO_PORT`: port to start the Go gateway on (default `8080`).
+- `TRADE_API_URL`: trade upstream URL for the Go gateway (default `http://127.0.0.1:4001`).
+- `TASK_API_URL`: task upstream URL for the Go gateway (default `http://127.0.0.1:4002`).
+- `JWT_SECRET`: JWT secret injected into the Go gateway for authenticated routes (default is a fixed dev-only string).
+- `SHADOWDIFF_CONFIG`: shadowdiff config file path to start from (default `shadowdiff.config.example.json`).
+
+## Source: `scripts/shadowdiff-run.sh`
+
+```bash title="scripts/shadowdiff-run.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+
+NODE_BASE_URL="${NODE_BASE_URL:-}"
+GO_BASE_URL="${GO_BASE_URL:-http://127.0.0.1:8080}"
+TRADE_URL="${TRADE_API_URL:-http://127.0.0.1:4001}"
+TASK_URL="${TASK_API_URL:-http://127.0.0.1:4002}"
+GO_PORT="${GO_PORT:-8080}"
+JWT_SECRET="${JWT_SECRET:-shadowdiff-secret-key-0123456789abcdef}"
+CONFIG_PATH="${SHADOWDIFF_CONFIG:-shadowdiff.config.example.json}"
+
+cleanup() {
+  echo "[shadowdiff] cleaning up"
+  for pid in "${GO_PID:-}" "${UPSTREAM_PID:-}"; do
+    if [[ -n "${pid:-}" ]]; then
+      kill "$pid" >/dev/null 2>&1 || true
+    fi
+  done
+}
+
+trap cleanup EXIT
+
+wait_for() {
+  local url="$1"
+  for _ in {1..30}; do
+    if curl -skf "$url" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+  echo "Timed out waiting for $url" >&2
+  return 1
+}
+
+echo "[shadowdiff] starting mock upstreams"
+node shadowdiff/mock-upstreams.mjs &
+UPSTREAM_PID=$!
+sleep 1
+
+echo "[shadowdiff] starting Go gateway"
+PORT="$GO_PORT" \
+TRADE_API_URL="$TRADE_URL" \
+TASK_API_URL="$TASK_URL" \
+TRADE_HEALTH_PATH=/health \
+TASK_HEALTH_PATH=/health \
+READINESS_TIMEOUT_MS=1000 \
+JWT_SECRET="$JWT_SECRET" \
+go run ./cmd/gateway >/tmp/shadowdiff-go.log 2>&1 &
+GO_PID=$!
+
+wait_for "$GO_BASE_URL/health"
+
+if [[ -z "$NODE_BASE_URL" ]]; then
+  echo "[shadowdiff] NODE_BASE_URL not provided; skipping diff run"
+  exit 0
+fi
+
+echo "[shadowdiff] running shadow diff against ${NODE_BASE_URL}"
+tmp_config=$(mktemp)
+trap 'rm -f "$tmp_config"; cleanup' EXIT
+
+NODE_BASE_URL="$NODE_BASE_URL" \
+GO_BASE_URL="$GO_BASE_URL" \
+CONFIG_PATH="$CONFIG_PATH" \
+TMP_CONFIG="$tmp_config" \
+python - <<'PY'
+import json, os, sys
+config_path = os.environ["CONFIG_PATH"]
+node_base = os.environ["NODE_BASE_URL"]
+go_base = os.environ["GO_BASE_URL"]
+tmp_path = os.environ["TMP_CONFIG"]
+with open(config_path, "r", encoding="utf-8") as f:
+    cfg = json.load(f)
+cfg["nodeBaseUrl"] = node_base
+cfg["goBaseUrl"] = go_base
+with open(tmp_path, "w", encoding="utf-8") as f:
+    json.dump(cfg, f)
+PY
+
+go run ./cmd/shadowdiff --config "$tmp_config"
+```
+
+## Walkthrough (line-by-line intent)
+
+### Shell safety and configuration defaults
+
+- `set -euo pipefail`: strict bash semantics for reliable orchestration.
+- The `...="${VAR:-default}"` assignments:
+  - **What:** establish default values but allow overrides.
+  - **Why:** makes it easy to run the script locally without env setup, while still supporting CI/integration runs.
+  - **How:** uses bash parameter expansion.
+
+### `cleanup`
+
+- **What:** best-effort process cleanup for backgrounded child processes.
+- **Why:** ensures the local mock upstreams and Go gateway aren’t left running after the script exits or fails.
+- **How:** tracks PIDs in `GO_PID` and `UPSTREAM_PID`, then `kill`s them on exit (ignoring errors).
+
+### `wait_for`
+
+- **What:** polling readiness helper for “wait until a URL responds successfully”.
+- **Why:** the script must not start the diff run until the Go gateway is actually serving.
+- **How:** loops up to 30 times, using `curl -skf` (silent, insecure TLS allowed, fail on non-2xx/3xx) and sleeping between attempts.
+
+### Start phase: upstream mocks
+
+- `node shadowdiff/mock-upstreams.mjs &`:
+  - **What:** starts two simple local HTTP servers simulating trade/task upstreams.
+  - **Why:** provides deterministic upstream behavior for diffing and fixture replay.
+  - **How:** background the Node process and store its PID for cleanup.
+
+### Start phase: Go gateway
+
+- The environment prefix before `go run ./cmd/gateway` injects:
+  - `PORT`: where the gateway should listen.
+  - `TRADE_API_URL` / `TASK_API_URL`: upstream routing targets.
+  - `*_HEALTH_PATH`: ensures `/readyz` probes hit the mock upstreams’ `/health`.
+  - `READINESS_TIMEOUT_MS`: make readiness checks fail fast in local runs.
+  - `JWT_SECRET`: enables authenticated proxy paths for the fixture set.
+- Output is redirected to `/tmp/shadowdiff-go.log`:
+  - **Why:** keep the script output focused on orchestration and diff results.
+
+### Optional diff phase
+
+- If `NODE_BASE_URL` is unset, the script exits after confirming the Go gateway is healthy.
+- If `NODE_BASE_URL` is set:
+  - a temp config file is created with `mktemp`
+  - a small inline Python snippet rewrites `nodeBaseUrl` and `goBaseUrl` in the JSON config
+    - **Why Python:** avoids requiring `jq` while still producing valid JSON.
+  - the script runs `go run ./cmd/shadowdiff --config "$tmp_config"`.
+
+## Deep dive
+
+- Shadowdiff CLI entrypoint: `../annotated/cmd/shadowdiff/main`
+- Core diff logic: `../annotated/internal/shadowdiff/diff`
+- Mock upstreams: `./shadowdiff-mocks`

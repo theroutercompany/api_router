@@ -1,0 +1,114 @@
+---
+title: Smoke Script
+---
+
+The repo includes a small bash script that performs a “sanity check” against a running gateway instance.
+
+This is intentionally lightweight: it validates the gateway is up, can serve its health/readiness endpoints, and (optionally) can proxy authenticated requests.
+
+## Inputs (environment variables)
+
+- `SMOKE_BASE_URL` (or `BASE_URL`): base URL of the running gateway (default `http://localhost:8080`)
+- `SMOKE_JWT`: if set, enables proxy checks and is sent as `Authorization: Bearer <token>`
+
+## Source: `scripts/smoke/smoke.sh`
+
+```bash title="scripts/smoke/smoke.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE_URL=${SMOKE_BASE_URL:-${BASE_URL:-http://localhost:8080}}
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+print_step() {
+  printf '\n==> %s\n' "$1"
+}
+
+check_endpoint() {
+  local path=$1
+  local expected_status=${2:-200}
+  shift 2 || true
+  local curl_args=("$@")
+
+  local body_file="${TMP_DIR}/response.json"
+  local status
+  status=$(curl --silent --show-error --location \
+    --write-out '%{http_code}' \
+    --output "$body_file" \
+    "${BASE_URL}${path}" \
+    "${curl_args[@]}")
+
+  if [[ "$status" != "$expected_status" ]]; then
+    echo "❌ ${path} returned status ${status}, expected ${expected_status}" >&2
+    cat "$body_file" >&2
+    exit 1
+  fi
+
+  echo "✅ ${path} (${status})"
+  cat "$body_file"
+}
+
+print_step "Health checks"
+check_endpoint "/health"
+check_endpoint "/readyz"
+check_endpoint "/openapi.json"
+
+if [[ -n "${SMOKE_JWT:-}" ]]; then
+  AUTH_HEADER=(--header "Authorization: Bearer ${SMOKE_JWT}")
+  print_step "Proxy smoke"
+  check_endpoint "/v1/trade/orders?id=42" 200 "${AUTH_HEADER[@]}"
+  check_endpoint "/v1/task/jobs" 200 \
+    --header "Content-Type: application/json" \
+    "${AUTH_HEADER[@]}" \
+    --data '{"name":"smoke-test"}'
+else
+  echo "Skipping proxy smoke tests (set SMOKE_JWT to enable)"
+fi
+
+print_step "All smoke checks passed"
+```
+
+## Walkthrough (line-by-line intent)
+
+### Shell safety and setup
+
+- `set -euo pipefail`:
+  - **What:** enables strict bash error handling (`-e` fail on error, `-u` fail on unset vars, `pipefail` propagate pipeline failures).
+  - **Why:** smoke scripts should fail fast; silent partial failures are worse than loud failures.
+  - **How:** makes non-zero exit codes stop the script and prevents accidental use of empty env vars.
+- `BASE_URL=...`:
+  - **What:** selects the gateway base URL with precedence `SMOKE_BASE_URL` then `BASE_URL` then default.
+  - **Why:** works both for ad-hoc local runs and CI/integration environments.
+  - **How:** uses bash parameter expansion with fallbacks.
+- `TMP_DIR=$(mktemp -d)` + `trap ... EXIT`:
+  - **What:** creates a temporary directory and guarantees cleanup.
+  - **Why:** response bodies are written to disk for debugging on failure.
+  - **How:** the trap runs even on early exit, so temp files don’t accumulate.
+
+### `print_step`
+
+- **What:** prints a section header.
+- **Why:** makes output readable when running many checks.
+- **How:** uses `printf` so output formatting is consistent across shells.
+
+### `check_endpoint`
+
+- **Inputs:** `path`, `expected_status` (default `200`), then optional extra curl args.
+- **Core idea:** run `curl`, capture HTTP status, and print body; fail if status mismatches.
+- **Key mechanics:**
+  - Writes response body to `${TMP_DIR}/response.json` using curl’s `--output`.
+  - Captures status code using curl’s `--write-out '%{http_code}'`.
+  - Supports additional curl arguments via an array (`curl_args`) to safely preserve quoting.
+  - On mismatch:
+    - prints a clear failure message
+    - prints the response body to stderr (useful when it’s a problem+json payload)
+    - exits non-zero to fail the script.
+
+### Main flow
+
+- Always checks:
+  - `GET /health` (basic liveness)
+  - `GET /readyz` (readiness + upstream probe visibility)
+  - `GET /openapi.json` (OpenAPI merge + static serving)
+- If `SMOKE_JWT` is set, also checks proxy endpoints for trade/task using the bearer token.
