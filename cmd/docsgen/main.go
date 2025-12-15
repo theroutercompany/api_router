@@ -89,6 +89,17 @@ type relatedSection struct {
 	Links []relatedLink
 }
 
+func countWalkSteps(steps []walkStep) int {
+	total := 0
+	for _, step := range steps {
+		total++
+		if len(step.Children) > 0 {
+			total += countWalkSteps(step.Children)
+		}
+	}
+	return total
+}
+
 func main() {
 	var (
 		repoRoot      = flag.String("repo", ".", "repo root")
@@ -1346,9 +1357,13 @@ func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 	var buf bytes.Buffer
 
 	currentDocID := docIDForSrc(doc.SrcPath)
+	related := relatedSectionsForDoc(doc)
 
 	fmt.Fprintf(&buf, "---\n")
 	fmt.Fprintf(&buf, "title: %q\n", doc.Title)
+	if strings.TrimSpace(doc.AnnotationPath) != "" && strings.TrimSpace(githubBase) != "" {
+		fmt.Fprintf(&buf, "custom_edit_url: %q\n", githubBase+doc.AnnotationPath)
+	}
 	fmt.Fprintf(&buf, "---\n\n")
 
 	fmt.Fprintf(&buf, "<!--\n")
@@ -1357,7 +1372,7 @@ func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 	fmt.Fprintf(&buf, "Edit commentary in `%s`.\n", doc.AnnotationPath)
 	fmt.Fprintf(&buf, "-->\n\n")
 
-	fmt.Fprintf(&buf, "## Source\n\n")
+	fmt.Fprintf(&buf, "## Source {#source}\n\n")
 	fmt.Fprintf(&buf, "- Package: `%s`\n", doc.PackageName)
 	fmt.Fprintf(&buf, "- File: `%s`\n", doc.SrcPath)
 	fmt.Fprintf(&buf, "- GitHub: %s%s\n\n", githubBase, doc.SrcPath)
@@ -1369,7 +1384,7 @@ func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 		overview.Why = "These docs exist to make onboarding and code review faster by explaining intent, not just mechanics."
 	}
 
-	fmt.Fprintf(&buf, "## Overview\n\n")
+	fmt.Fprintf(&buf, "## Overview {#overview}\n\n")
 	writeWhatHowWhy(&buf, overview)
 
 	sectionOrder := []string{"Imports", "Constants", "Variables", "Types"}
@@ -1378,12 +1393,27 @@ func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 		blocksBySection[block.Label] = append(blocksBySection[block.Label], block)
 	}
 
+	fmt.Fprintf(&buf, "\n## Contents {#contents}\n\n")
+	for _, section := range sectionOrder {
+		if len(blocksBySection[section]) == 0 {
+			continue
+		}
+		fmt.Fprintf(&buf, "- [%s](#%s)\n", section, strings.ToLower(section))
+	}
+	if len(doc.Funcs) > 0 {
+		fmt.Fprintf(&buf, "- [Functions and Methods](#functions-and-methods)\n")
+	}
+	if len(related) > 0 {
+		fmt.Fprintf(&buf, "- [Related docs](#related-docs)\n")
+	}
+	fmt.Fprintf(&buf, "\n")
+
 	for _, section := range sectionOrder {
 		blocks := blocksBySection[section]
 		if len(blocks) == 0 {
 			continue
 		}
-		fmt.Fprintf(&buf, "\n## %s\n\n", section)
+		fmt.Fprintf(&buf, "\n## %s {#%s}\n\n", section, strings.ToLower(section))
 		for i, block := range blocks {
 			fmt.Fprintf(&buf, "### `%s` block %d\n\n", block.Kind, i+1)
 			fmt.Fprintf(&buf, "```go title=%q showLineNumbers\n%s\n```\n\n", fmt.Sprintf("%s#L%d", doc.SrcPath, block.StartLine), block.Snippet)
@@ -1396,7 +1426,7 @@ func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 	}
 
 	if len(doc.Funcs) > 0 {
-		fmt.Fprintf(&buf, "\n## Functions and Methods\n\n")
+		fmt.Fprintf(&buf, "\n## Functions and Methods {#functions-and-methods}\n\n")
 		for _, fn := range doc.Funcs {
 			fmt.Fprintf(&buf, "### %s {#%s}\n\n", fn.Heading, anchorIDFromSymbolID(fn.ID))
 			writeWhatHowWhy(&buf, resolveSymbol(anns, fn.ID))
@@ -1405,9 +1435,8 @@ func render(doc fileDoc, anns fileAnnotations, githubBase string) []byte {
 		}
 	}
 
-	related := relatedSectionsForDoc(doc)
 	if len(related) > 0 {
-		fmt.Fprintf(&buf, "\n## Related docs\n\n")
+		fmt.Fprintf(&buf, "\n## Related docs {#related-docs}\n\n")
 		for _, sec := range related {
 			fmt.Fprintf(&buf, "### %s\n\n", sec.Title)
 			for _, l := range sec.Links {
@@ -1425,7 +1454,18 @@ func writeWalkthrough(buf *bytes.Buffer, steps []walkStep) {
 		return
 	}
 
+	totalSteps := countWalkSteps(steps)
+
 	fmt.Fprintf(buf, "#### Walkthrough\n\n")
+	if totalSteps > 25 {
+		fmt.Fprintf(buf, "<details>\n")
+		fmt.Fprintf(buf, "<summary>Expand walkthrough (%d steps)</summary>\n\n", totalSteps)
+		fmt.Fprintf(buf, "The list below documents the statements inside the function body, including nested blocks and inline closures.\n\n")
+		writeWalkthroughSteps(buf, steps, 0)
+		fmt.Fprintf(buf, "\n</details>\n\n")
+		return
+	}
+
 	fmt.Fprintf(buf, "The list below documents the statements inside the function body, including nested blocks and inline closures.\n\n")
 	writeWalkthroughSteps(buf, steps, 0)
 	fmt.Fprintf(buf, "\n")
