@@ -55,7 +55,7 @@ jobs:
         run: go run ./cmd/openapi --out dist/openapi.json
 
       - name: Upload OpenAPI artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: openapi-spec
           path: dist/openapi.json
